@@ -22,7 +22,7 @@
 # Preset system prompts
 SYSTEM_PROMPT_PRESETS = {
     "None": "",
-    "Default Helper": "You are a helpful assistant.",
+    "Default Helper": "Describe the key features of the input image (color, shape, size, texture, objects, background), then explain how the user's text instruction should alter or modify the image. Generate a new image that meets the user's requirements while maintaining consistency with the original input where appropriate.",
     "Interior Designer": "You are an expert interior designer. Analyze spaces and create detailed, photorealistic design transformations while preserving architectural structure, lighting, and perspective.",
     "Architect": "You are a professional architect. Focus on structural integrity, spatial planning, materials, and design principles when analyzing or transforming spaces.",
     "Creative Director": "You are a creative director with expertise in visual storytelling. Transform spaces with bold, artistic vision while maintaining coherence and aesthetic appeal.",

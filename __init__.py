@@ -15,6 +15,7 @@ from .archai3d_qwen_encoder_v2 import ArchAi3D_Qwen_Encoder_V2
 from .archai3d_qwen_image_scale import ArchAi3D_Qwen_Image_Scale
 from .archai3d_qwen_system_prompt import ArchAi3D_Qwen_System_Prompt
 from .archai3d_qwen_encoder_simple import ArchAi3D_Qwen_Encoder_Simple
+from .archai3d_qwen_encoder_simple_v2 import ArchAi3dQwenEncoderSimpleV2
 
 # Define node class mappings for ComfyUI
 NODE_CLASS_MAPPINGS = {
@@ -23,6 +24,7 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_Qwen_Image_Scale": ArchAi3D_Qwen_Image_Scale,
     "ArchAi3D_Qwen_System_Prompt": ArchAi3D_Qwen_System_Prompt,
     "ArchAi3D_Qwen_Encoder_Simple": ArchAi3D_Qwen_Encoder_Simple,
+    "ArchAi3dQwenEncoderSimpleV2": ArchAi3dQwenEncoderSimpleV2,
 }
 
 # Define display names for the UI
@@ -32,6 +34,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Qwen_Image_Scale": "ArchAi3D Qwen Image Scale",
     "ArchAi3D_Qwen_System_Prompt": "ArchAi3D Qwen System Prompt",
     "ArchAi3D_Qwen_Encoder_Simple": "ArchAi3D Qwen Encoder Simple",
+    "ArchAi3dQwenEncoderSimpleV2": "ArchAi3D Qwen Encoder Simple V2",
 }
 
 # Export the mappings for ComfyUI

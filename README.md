@@ -33,11 +33,12 @@ Or use **ComfyUI Manager**: Search for "ArchAi3d Qwen"
 
 ### What You Get
 
-**5 Custom Nodes** (all under `ArchAi3d/Qwen` category):
+**6 Custom Nodes** (all under `ArchAi3d/Qwen` category):
 
 - 🎨 **Qwen Encoder V1** - Standard strength controls
 - 🎨 **Qwen Encoder V2** - Advanced interpolation (recommended)
 - 🎨 **Qwen Encoder Simple** - Easy-to-use version
+- 🎨 **Qwen Encoder Simple V2** - Multi-image direct input (no resizing, up to 3 VL images + 3 latents)
 - 📏 **Qwen Image Scale** - Smart aspect ratio scaling (23 presets)
 - 💬 **Qwen System Prompt** - Preset prompt loader
 
