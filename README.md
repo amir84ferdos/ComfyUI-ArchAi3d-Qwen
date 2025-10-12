@@ -33,7 +33,7 @@ Or use **ComfyUI Manager**: Search for "ArchAi3d Qwen"
 
 ### What You Get
 
-**6 Custom Nodes** (all under `ArchAi3d/Qwen` category):
+**7 Custom Nodes** (all under `ArchAi3d/Qwen` category):
 
 - 🎨 **Qwen Encoder V1** - Standard strength controls
 - 🎨 **Qwen Encoder V2** - Advanced interpolation (recommended)
@@ -41,6 +41,7 @@ Or use **ComfyUI Manager**: Search for "ArchAi3d Qwen"
 - 🎨 **Qwen Encoder Simple V2** - Multi-image direct input (no resizing, up to 3 VL images + 3 latents)
 - 📏 **Qwen Image Scale** - Smart aspect ratio scaling (23 presets)
 - 💬 **Qwen System Prompt** - Preset prompt loader
+- 🏗️ **Room Transform Prompt** - Visual prompt builder with **103+ materials** (user-customizable via YAML)
 
 ---
 
@@ -73,7 +74,7 @@ Your support helps me:
 - Separate control for context and user text strength
 - Per-image latent strength controls
 
-### 📐 Smart Image Scaling  
+### 📐 Smart Image Scaling
 - **23 preferred aspect ratios** optimized for Qwen-VL
 - Auto or manual aspect ratio selection
 - Pixel-perfect alignment between VL and latent
@@ -83,6 +84,20 @@ Your support helps me:
 - Interior Designer, Architect, Creative Director
 - Luxury Designer, Minimalist, Renovation Expert
 - Quick preset switching for different styles
+
+### 🏗️ Room Transform Prompt Builder (NEW!)
+- **3 workflow modes**: Remove Only, Remove + Paint All, Remove + Paint Selective
+- **103+ material presets** loaded from `config/materials.yaml`
+  - 32 floor materials (marble, hardwood, concrete, tile, carpet, stone)
+  - 36 wall materials (paint, wallpaper, wood, brick, concrete, tile)
+  - 35 ceiling materials (paint, architectural, beams, industrial, wood)
+- **User-customizable material library** - edit YAML file to add your own materials!
+- **Material tags system** for organization (rich_dark, bright_light, low_contrast)
+- **Custom material override** for unique specifications
+- **System prompt presets** (3 optimized options + existing presets)
+- **Quality controls**: preserve lighting/perspective/POV, clean edges, no halos
+- **Optimized prompt structure** based on proven patterns
+- Perfect for creating empty rooms or complete room transformations
 
 ---
 
@@ -118,6 +133,8 @@ Your support helps me:
 
 ## 📖 Basic Usage
 
+### Standard Workflow (Interior Design from Empty Room)
+
 ```
 1. Load your empty room image
    ↓
@@ -138,7 +155,83 @@ Your support helps me:
    └→ Generate beautiful interior design!
 ```
 
+### Room Transform Workflow (Empty Room Creation + Redesign)
+
+```
+1. Load your under-construction/cluttered room image
+   ↓
+2. ArchAi3D Qwen Image Scale
+   ├→ Scales for VL encoder
+   └→ Scales for latent processing
+   ↓
+3. ArchAi3D Room Transform Prompt
+   ├─ Select mode (Remove Only / Remove + Paint All / Remove + Paint Selective)
+   ├─ Specify objects to remove (tools/debris/cables/etc)
+   ├─ Choose floor material (18+ presets or custom)
+   ├─ Choose wall material (18+ presets or custom)
+   ├─ Choose ceiling material (18+ presets or custom)
+   ├─ Toggle quality controls (preserve lighting/perspective/etc)
+   └→ Get optimized prompt
+   ↓
+4. ArchAi3D Qwen System Prompt (optional)
+   └→ Use "Interior Designer" or "Renovation Expert" preset
+   ↓
+5. ArchAi3D Qwen Encoder V2
+   ├─ Connect scaled images
+   ├─ Connect prompt from Room Transform Prompt node
+   ├─ Adjust strength controls
+   └→ Get conditioning
+   ↓
+6. Connect to your sampler
+   └→ Generate clean empty room or fully redesigned space!
+```
+
 **For detailed workflows and presets, check my Patreon!**
+
+---
+
+## 🎨 Customizing Materials
+
+The Room Transform Prompt node loads materials from `config/materials.yaml`. You can easily customize this file!
+
+### Adding Your Own Materials
+
+Edit `config/materials.yaml` and add new materials:
+
+```yaml
+floors:
+  - name: "My Custom Floor"
+    description: "my custom floor material (detailed description for AI)"
+    tags: [bright_light, low_contrast]  # Choose from: rich_dark, bright_light, low_contrast, all
+```
+
+### Material Tags
+
+Each material can have multiple tags for organization:
+- **`rich_dark`** - Dark, dramatic materials (black, dark wood, navy, etc.)
+- **`bright_light`** - Light, bright materials (white, cream, beige, etc.)
+- **`low_contrast`** - Smooth, minimal texture (flat paints, polished surfaces)
+- **`all`** - Always shown (use for "Keep Original" and "Custom")
+
+### Example Custom Material
+
+```yaml
+floors:
+  - name: "Weathered Reclaimed Wood"
+    description: "weathered reclaimed wood planks (rustic, aged patina, natural variations)"
+    tags: [rich_dark]
+```
+
+After editing the YAML file, restart ComfyUI to load the new materials.
+
+### Multi-Language Support
+
+You can create language-specific files:
+- `config/materials_en.yaml` (English)
+- `config/materials_es.yaml` (Spanish)
+- `config/materials_fa.yaml` (Persian/Farsi)
+
+Then modify the Python file to load the appropriate language file.
 
 ---
 

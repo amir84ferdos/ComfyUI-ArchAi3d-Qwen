@@ -1,0 +1,578 @@
+# ArchAi3D Room Transform Prompt - Material Library
+#
+# This file defines all available materials for floor, wall, and ceiling surfaces.
+# Users can edit this file to customize materials, add new ones, or change descriptions.
+#
+# Structure:
+#   - name: Material display name (shown in dropdown)
+#   - description: Detailed description for AI prompt generation
+#   - tags: Style categories (used for filtering and organization)
+#
+# Available tags:
+#   - all: Always shown (Keep Original, Custom)
+#   - rich_dark: Dark, dramatic materials (black, dark wood, navy, charcoal, etc.)
+#   - bright_light: Light, bright materials (white, cream, beige, light woods, etc.)
+#   - low_contrast: Smooth, minimal texture (flat paints, polished surfaces, etc.)
+#
+# Author: Amir Ferdos (ArchAi3d)
+# Email: Amir84ferdos@gmail.com
+# License: MIT
+
+# ============================================================
+# FLOOR MATERIALS (32 total)
+# ============================================================
+
+floors:
+  # Special options
+  - name: "Keep Original"
+    description: ""
+    tags: [all]
+
+  - name: "Custom"
+    description: "CUSTOM"
+    tags: [all]
+
+  # Marble (5)
+  - name: "Polished Black Marble"
+    description: "polished black marble (fine white veining, realistic reflections)"
+    tags: [rich_dark]
+
+  - name: "Polished White Marble"
+    description: "polished white marble (gray veining, high gloss)"
+    tags: [bright_light, low_contrast]
+
+  - name: "Beige Marble"
+    description: "beige marble (cream tones, subtle veining, polished)"
+    tags: [bright_light]
+
+  - name: "Green Marble"
+    description: "green marble (dark veining, polished luxury finish)"
+    tags: [rich_dark]
+
+  - name: "Carrara Marble"
+    description: "Carrara marble (white with gray veining, polished)"
+    tags: [bright_light, low_contrast]
+
+  # Hardwood (6)
+  - name: "Oak Hardwood"
+    description: "natural oak hardwood (medium grain, matte finish)"
+    tags: [bright_light]
+
+  - name: "Walnut Hardwood"
+    description: "dark walnut hardwood (fine grain, semi-gloss)"
+    tags: [rich_dark]
+
+  - name: "Cherry Hardwood"
+    description: "cherry hardwood (reddish tone, smooth grain)"
+    tags: [rich_dark]
+
+  - name: "Maple Hardwood"
+    description: "light maple hardwood (subtle grain, natural finish)"
+    tags: [bright_light, low_contrast]
+
+  - name: "Herringbone Parquet"
+    description: "herringbone oak parquet (classic pattern, natural finish)"
+    tags: [bright_light]
+
+  - name: "Dark Wood Planks"
+    description: "dark wood planks (wide boards, matte finish)"
+    tags: [rich_dark]
+
+  # Concrete (3)
+  - name: "Polished Concrete"
+    description: "polished concrete (smooth, minimal texture)"
+    tags: [low_contrast]
+
+  - name: "Raw Concrete"
+    description: "raw concrete (industrial, slight texture)"
+    tags: [low_contrast]
+
+  - name: "Stained Concrete"
+    description: "stained concrete (dark gray, smooth modern finish)"
+    tags: [rich_dark, low_contrast]
+
+  # Tile (6)
+  - name: "Ceramic Tile"
+    description: "ceramic tile (uniform, matte)"
+    tags: [bright_light, low_contrast]
+
+  - name: "Porcelain Tile"
+    description: "large porcelain tile (seamless, polished)"
+    tags: [bright_light, low_contrast]
+
+  - name: "Black Tile"
+    description: "black tile (large format, polished, minimal grout lines)"
+    tags: [rich_dark, low_contrast]
+
+  - name: "White Tile"
+    description: "white tile (clean, matte, modern)"
+    tags: [bright_light, low_contrast]
+
+  - name: "Hexagon Tile"
+    description: "hexagon tile (geometric pattern, matte white)"
+    tags: [bright_light]
+
+  - name: "Terrazzo Tile"
+    description: "terrazzo tile (colorful aggregate, polished)"
+    tags: [bright_light]
+
+  # Stone (4)
+  - name: "Natural Stone"
+    description: "natural stone flooring (textured, earthy)"
+    tags: [bright_light]
+
+  - name: "Slate Tile"
+    description: "slate tile (dark gray, natural texture)"
+    tags: [rich_dark]
+
+  - name: "Travertine"
+    description: "travertine stone (beige, natural texture)"
+    tags: [bright_light]
+
+  - name: "Limestone"
+    description: "limestone flooring (light beige, smooth)"
+    tags: [bright_light, low_contrast]
+
+  # Other (3)
+  - name: "Light Gray Carpet"
+    description: "light gray carpet (plush, soft texture)"
+    tags: [bright_light, low_contrast]
+
+  - name: "Beige Carpet"
+    description: "beige carpet (neutral, soft pile)"
+    tags: [bright_light, low_contrast]
+
+  - name: "Epoxy Resin"
+    description: "epoxy resin floor (glossy, seamless, modern)"
+    tags: [low_contrast]
+
+
+# ============================================================
+# WALL MATERIALS (36 total)
+# ============================================================
+
+walls:
+  # Special options
+  - name: "Keep Original"
+    description: ""
+    tags: [all]
+
+  - name: "Custom"
+    description: "CUSTOM"
+    tags: [all]
+
+  # Painted Walls (10)
+  - name: "Flat White"
+    description: "uniform flat white, smooth matte"
+    tags: [bright_light, low_contrast]
+
+  - name: "Flat Navy"
+    description: "uniform flat navy, seamless/featureless"
+    tags: [rich_dark, low_contrast]
+
+  - name: "Flat Gray"
+    description: "uniform flat gray, modern matte"
+    tags: [low_contrast]
+
+  - name: "Flat Light Gray"
+    description: "uniform flat light gray, contemporary smooth"
+    tags: [bright_light, low_contrast]
+
+  - name: "Flat Beige"
+    description: "uniform flat beige, warm neutral"
+    tags: [bright_light, low_contrast]
+
+  - name: "Flat Charcoal"
+    description: "uniform flat charcoal, deep matte"
+    tags: [rich_dark, low_contrast]
+
+  - name: "Flat Sage Green"
+    description: "uniform flat sage green, calm modern"
+    tags: [bright_light, low_contrast]
+
+  - name: "Flat Cream"
+    description: "uniform flat cream, warm soft"
+    tags: [bright_light, low_contrast]
+
+  - name: "Flat Black"
+    description: "uniform flat black, dramatic matte"
+    tags: [rich_dark, low_contrast]
+
+  - name: "Flat Taupe"
+    description: "uniform flat taupe, sophisticated neutral"
+    tags: [low_contrast]
+
+  # Wallpaper (4)
+  - name: "Textured Wallpaper"
+    description: "subtle textured wallpaper (neutral tone)"
+    tags: [bright_light]
+
+  - name: "Geometric Wallpaper"
+    description: "geometric pattern wallpaper (modern, subtle)"
+    tags: [bright_light]
+
+  - name: "Fabric Wallpaper"
+    description: "fabric textured wallpaper (luxury, subtle texture)"
+    tags: [bright_light]
+
+  - name: "Floral Wallpaper"
+    description: "delicate floral wallpaper (elegant, soft colors)"
+    tags: [bright_light]
+
+  # Wood (5)
+  - name: "Wood Panels"
+    description: "vertical wood panels (natural finish)"
+    tags: [bright_light]
+
+  - name: "Horizontal Wood Panels"
+    description: "horizontal wood slat panels (modern, natural)"
+    tags: [bright_light]
+
+  - name: "Dark Wood Paneling"
+    description: "dark wood paneling (rich, traditional)"
+    tags: [rich_dark]
+
+  - name: "Light Wood Panels"
+    description: "light wood panels (Scandinavian, minimal)"
+    tags: [bright_light, low_contrast]
+
+  - name: "Shiplap"
+    description: "white shiplap (farmhouse style, horizontal planks)"
+    tags: [bright_light, low_contrast]
+
+  # Stone/Brick (5)
+  - name: "Exposed Brick"
+    description: "exposed brick (clean, modern style)"
+    tags: [rich_dark]
+
+  - name: "White Brick"
+    description: "white painted brick (clean, textured)"
+    tags: [bright_light]
+
+  - name: "Red Brick"
+    description: "red brick wall (industrial, authentic)"
+    tags: [rich_dark]
+
+  - name: "Stone Accent Wall"
+    description: "natural stone accent wall (textured, earthy)"
+    tags: [bright_light]
+
+  - name: "Marble Wall Panels"
+    description: "white marble wall panels (luxury, veined)"
+    tags: [bright_light]
+
+  # Concrete/Industrial (3)
+  - name: "Concrete Finish"
+    description: "smooth concrete finish (industrial modern)"
+    tags: [low_contrast]
+
+  - name: "Raw Concrete"
+    description: "raw concrete wall (industrial, textured)"
+    tags: [rich_dark]
+
+  - name: "Textured Concrete"
+    description: "textured concrete (modern, subtle pattern)"
+    tags: [low_contrast]
+
+  # Tile (3)
+  - name: "White Subway Tile"
+    description: "white subway tile (classic, glossy)"
+    tags: [bright_light, low_contrast]
+
+  - name: "Gray Tile"
+    description: "large gray tile (modern, minimal grout)"
+    tags: [low_contrast]
+
+  - name: "Mosaic Tile"
+    description: "mosaic tile accent (artistic, colorful)"
+    tags: [bright_light]
+
+  # Other (3)
+  - name: "Plaster"
+    description: "smooth plaster finish (Mediterranean, textured)"
+    tags: [bright_light, low_contrast]
+
+  - name: "Venetian Plaster"
+    description: "Venetian plaster (polished, luxurious sheen)"
+    tags: [bright_light]
+
+  - name: "Cork Wall"
+    description: "cork wall panels (natural, textured)"
+    tags: [bright_light]
+
+
+# ============================================================
+# CEILING MATERIALS (35 total)
+# ============================================================
+
+ceilings:
+  # Special options
+  - name: "Keep Original"
+    description: ""
+    tags: [all]
+
+  - name: "Custom"
+    description: "CUSTOM"
+    tags: [all]
+
+  # Painted Ceilings (7)
+  - name: "Flat White"
+    description: "uniform flat white, smooth modern"
+    tags: [bright_light, low_contrast]
+
+  - name: "Flat Yellow"
+    description: "uniform flat yellow, smooth"
+    tags: [bright_light, low_contrast]
+
+  - name: "Flat Gray"
+    description: "uniform flat gray, contemporary"
+    tags: [low_contrast]
+
+  - name: "Flat Light Gray"
+    description: "uniform flat light gray, soft modern"
+    tags: [bright_light, low_contrast]
+
+  - name: "Flat Cream"
+    description: "uniform flat cream, warm subtle"
+    tags: [bright_light, low_contrast]
+
+  - name: "Flat Black"
+    description: "uniform flat black, dramatic modern"
+    tags: [rich_dark, low_contrast]
+
+  - name: "Flat Navy"
+    description: "uniform flat navy, bold architectural"
+    tags: [rich_dark, low_contrast]
+
+  # Smooth/Modern (3)
+  - name: "Modern Smooth"
+    description: "smooth white modern ceiling"
+    tags: [bright_light, low_contrast]
+
+  - name: "Matte White"
+    description: "matte white ceiling (seamless, clean)"
+    tags: [bright_light, low_contrast]
+
+  - name: "Glossy White"
+    description: "glossy white ceiling (reflective, modern)"
+    tags: [bright_light, low_contrast]
+
+  # Architectural Details (5)
+  - name: "Coffered"
+    description: "coffered ceiling (white, architectural detail)"
+    tags: [bright_light]
+
+  - name: "Tray Ceiling"
+    description: "tray ceiling (recessed center, modern)"
+    tags: [bright_light]
+
+  - name: "Vaulted"
+    description: "vaulted ceiling (high, architectural)"
+    tags: [bright_light]
+
+  - name: "Cathedral"
+    description: "cathedral ceiling (peaked, spacious)"
+    tags: [bright_light]
+
+  - name: "Cove Lighting"
+    description: "cove ceiling with indirect lighting (modern, elegant)"
+    tags: [bright_light]
+
+  # Beams (3)
+  - name: "Exposed Beams"
+    description: "exposed wooden beams (natural finish)"
+    tags: [bright_light]
+
+  - name: "White Beams"
+    description: "white painted beams (coastal, clean)"
+    tags: [bright_light]
+
+  - name: "Dark Wood Beams"
+    description: "dark wood beams (rustic, dramatic)"
+    tags: [rich_dark]
+
+  # Industrial (3)
+  - name: "Industrial"
+    description: "exposed concrete ceiling (industrial style)"
+    tags: [rich_dark]
+
+  - name: "Exposed Ductwork"
+    description: "exposed ductwork and pipes (industrial loft)"
+    tags: [rich_dark]
+
+  - name: "Raw Concrete"
+    description: "raw concrete ceiling (modern industrial)"
+    tags: [rich_dark, low_contrast]
+
+  # Wood (3)
+  - name: "Wood Planks"
+    description: "wood plank ceiling (natural, warm)"
+    tags: [bright_light]
+
+  - name: "Tongue and Groove"
+    description: "tongue and groove wood ceiling (classic)"
+    tags: [bright_light]
+
+  - name: "Cedar Planks"
+    description: "cedar plank ceiling (natural, aromatic)"
+    tags: [bright_light]
+
+  # Textured (3)
+  - name: "Popcorn Texture"
+    description: "popcorn textured ceiling (traditional)"
+    tags: [bright_light]
+
+  - name: "Smooth Plaster"
+    description: "smooth plaster ceiling (Mediterranean)"
+    tags: [bright_light, low_contrast]
+
+  - name: "Textured Plaster"
+    description: "textured plaster ceiling (artistic)"
+    tags: [bright_light]
+
+  # Other (3)
+  - name: "Acoustic Panels"
+    description: "acoustic panel ceiling (modern, sound-absorbing)"
+    tags: [low_contrast]
+
+  - name: "Metal Panels"
+    description: "metal panel ceiling (industrial modern)"
+    tags: [rich_dark]
+
+  - name: "Fabric Draped"
+    description: "fabric draped ceiling (luxury, soft)"
+    tags: [bright_light]
+
+
+# ============================================================
+# PHOTOGRAPHY STYLES (Realism & Sharpness Presets)
+# ============================================================
+
+photography_styles:
+  - name: "None"
+    description: ""
+    keywords: []
+
+  - name: "Architectural Photography"
+    description: "professional architectural photography, sharp focus, high detail, wide angle perspective, tilt-shift lens, even exposure, natural color accuracy"
+    keywords: ["architectural photography", "tilt-shift", "sharp focus", "professional"]
+
+  - name: "Real Estate Photography"
+    description: "bright professional real estate photo, HDR lighting, sharp details, vibrant colors, wide angle, well-lit, magazine quality"
+    keywords: ["real estate", "HDR", "bright", "professional"]
+
+  - name: "Interior Magazine Quality"
+    description: "high-end interior design magazine photo, crisp details, perfect lighting, color-accurate, shallow depth of field, professional composition, editorial quality"
+    keywords: ["magazine", "editorial", "high-end", "crisp"]
+
+  - name: "Photorealistic Render"
+    description: "photorealistic 3D rendering, ray-traced lighting, accurate reflections, high resolution, physically accurate materials, cinematic quality, ultra-detailed"
+    keywords: ["photorealistic", "ray-traced", "3D render", "ultra-detailed"]
+
+  - name: "DSLR Professional"
+    description: "shot with professional DSLR camera, 50mm lens, sharp focus, natural bokeh, accurate colors, high dynamic range, RAW quality"
+    keywords: ["DSLR", "50mm", "RAW", "professional camera"]
+
+  - name: "Ultra Sharp"
+    description: "maximum sharpness and clarity, extreme detail, crisp edges, enhanced contrast, professional color grading, studio lighting quality"
+    keywords: ["ultra sharp", "extreme detail", "crisp", "maximum clarity"]
+
+  - name: "Natural Light"
+    description: "natural window light, soft shadows, realistic color temperature, ambient lighting, authentic atmosphere, organic feel"
+    keywords: ["natural light", "window light", "soft shadows", "ambient"]
+
+  - name: "Studio Perfect"
+    description: "professional studio lighting setup, perfectly even exposure, no harsh shadows, color-corrected, commercial quality, clean and polished"
+    keywords: ["studio lighting", "perfect exposure", "commercial", "polished"]
+
+
+# ============================================================
+# LIGHTING PRESETS
+# ============================================================
+
+lighting_presets:
+  - name: "Keep Original"
+    description: ""
+    keywords: []
+
+  - name: "Natural Daylight"
+    description: "bright natural daylight flooding through windows, soft ambient light, realistic shadows, color temperature 5500K, natural outdoor illumination"
+    keywords: ["natural daylight", "window light", "bright", "5500K"]
+
+  - name: "Golden Hour"
+    description: "warm golden hour sunlight, soft orange glow, long shadows, color temperature 3000K, warm and inviting atmosphere"
+    keywords: ["golden hour", "warm sunlight", "3000K", "orange glow"]
+
+  - name: "Overcast Soft"
+    description: "soft diffused overcast daylight, even lighting, minimal shadows, color temperature 6500K, gentle and uniform illumination"
+    keywords: ["overcast", "soft light", "diffused", "6500K"]
+
+  - name: "Morning Light"
+    description: "fresh morning sunlight, cool white light, gentle shadows, color temperature 5000K, crisp and clean atmosphere"
+    keywords: ["morning light", "5000K", "fresh", "cool white"]
+
+  - name: "Evening Warm"
+    description: "warm evening interior lighting, soft yellow glow, cozy atmosphere, color temperature 2700K, intimate and inviting"
+    keywords: ["evening light", "warm glow", "2700K", "cozy"]
+
+  - name: "Bright Studio"
+    description: "professional studio lighting, bright even illumination, no harsh shadows, color temperature 5000K, commercial photography quality"
+    keywords: ["studio lighting", "bright", "even", "commercial"]
+
+  - name: "Dramatic Side Light"
+    description: "strong directional side lighting, defined shadows, high contrast, sculptural quality, architectural drama"
+    keywords: ["side light", "dramatic", "high contrast", "directional"]
+
+  - name: "Soft Ambient"
+    description: "gentle ambient lighting throughout space, soft diffused glow, minimal shadows, comfortable atmosphere, subtle illumination"
+    keywords: ["ambient", "soft glow", "diffused", "subtle"]
+
+  - name: "Cove Lighting"
+    description: "indirect cove lighting from ceiling/walls, soft upward glow, modern atmosphere, even diffused illumination, architectural accent"
+    keywords: ["cove lighting", "indirect", "upward glow", "architectural"]
+
+  - name: "Spotlight Accent"
+    description: "focused spotlight accents on key features, dramatic highlights, controlled illumination, gallery-style lighting, emphasis on detail"
+    keywords: ["spotlight", "accent", "dramatic", "gallery lighting"]
+
+  - name: "Chandelier Ambient"
+    description: "warm chandelier light filling space, soft ambient glow, elegant atmosphere, multiple light sources, sophisticated illumination"
+    keywords: ["chandelier", "warm glow", "elegant", "ambient"]
+
+  - name: "Under-Cabinet LED"
+    description: "modern under-cabinet LED strips, clean white light, task lighting, color temperature 4000K, contemporary and functional"
+    keywords: ["LED strips", "under-cabinet", "4000K", "modern"]
+
+  - name: "Recessed Downlight"
+    description: "recessed ceiling downlights, focused illumination, modern clean look, even distribution, architectural lighting design"
+    keywords: ["recessed", "downlight", "modern", "clean"]
+
+  - name: "Track Lighting"
+    description: "adjustable track lighting system, directional beams, gallery-style, focused accent lighting, contemporary design"
+    keywords: ["track lighting", "directional", "gallery", "adjustable"]
+
+  - name: "Pendant Warm"
+    description: "warm pendant lights hanging from ceiling, cozy glow, decorative illumination, color temperature 2700K, inviting atmosphere"
+    keywords: ["pendant lights", "warm", "2700K", "decorative"]
+
+
+# ============================================================
+# STYLE FILTER DEFINITIONS
+# ============================================================
+
+style_filters:
+  - label: "All Materials"
+    description: "Show all available materials (103 total)"
+    tags: [all]
+
+  - label: "Rich & Dark"
+    description: "Dark, dramatic materials - black marble, dark woods, charcoal, navy, industrial"
+    tags: [rich_dark]
+
+  - label: "Bright & Light"
+    description: "Light, airy materials - white, cream, beige, light woods, bright colors"
+    tags: [bright_light]
+
+  - label: "Low Contrast / Smooth"
+    description: "Minimal texture, smooth finishes - flat paints, polished surfaces, seamless materials"
+    tags: [low_contrast]
