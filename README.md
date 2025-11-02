@@ -23,13 +23,32 @@ Perfect for architects, interior designers, real estate professionals, and AI en
 
 ### Installation
 
+**Method 1: ComfyUI Manager (Recommended)**
+1. Open ComfyUI Manager
+2. Search for "ArchAi3d Qwen"
+3. Click Install
+4. Restart ComfyUI
+
+**Method 2: Comfy Registry**
+```bash
+# Coming soon - Automated publishing to Comfy Registry
+# Will be available after v2.1.0 release
+```
+
+**Method 3: Git Clone (Manual)**
 ```bash
 cd ComfyUI/custom_nodes/
 git clone https://github.com/amir84ferdos/ComfyUI-ArchAi3d-Qwen.git
+cd ComfyUI-ArchAi3d-Qwen
+pip install -r requirements.txt  # Installs PyYAML
 # Restart ComfyUI
 ```
 
-Or use **ComfyUI Manager**: Search for "ArchAi3d Qwen"
+**Method 4: PyPI (Coming Soon)**
+```bash
+# After v2.1.0 release
+pip install comfyui-archai3d-qwen
+```
 
 ### What You Get
 
@@ -568,21 +587,41 @@ Then modify the Python file to load the appropriate language file.
 
 ## ⚖️ License
 
-### Personal & Non-Commercial Use
-**FREE** - Use these nodes for personal projects, learning, and non-commercial purposes.
+This project uses a **Dual License** model:
 
-### Commercial Use  
-**Requires License** - If you want to use these nodes for:
-- Commercial interior design services
-- Paid client work
-- Business applications
-- Reselling or redistributing
+### 1. Personal & Non-Commercial Use (FREE)
 
-**Please contact me for commercial licensing:**
-- 📧 Email: Amir84ferdos@gmail.com
-- 💼 LinkedIn: [linkedin.com/in/archai3d](https://www.linkedin.com/in/archai3d/)
+**FREE** - Use these nodes for:
+- ✅ Personal projects and learning
+- ✅ Educational purposes
+- ✅ Research and development
+- ✅ Portfolio work (non-paid)
+- ✅ Open-source contributions
+- ✅ Academic projects
 
-**Commercial licenses are affordable and support continued development!**
+### 2. Commercial Use (LICENSE REQUIRED)
+
+**Requires Commercial License** - If you want to use these nodes for:
+- ❌ Commercial interior design services
+- ❌ Paid client work and projects
+- ❌ Business applications and operations
+- ❌ Reselling or redistributing
+- ❌ Incorporating into commercial products
+- ❌ Revenue-generating activities
+
+### Get a Commercial License
+
+**Contact for commercial licensing:**
+- 📧 **Email**: Amir84ferdos@gmail.com
+- 💼 **LinkedIn**: [linkedin.com/in/archai3d](https://www.linkedin.com/in/archai3d/)
+
+**Commercial licenses are reasonably priced and support continued development!**
+
+### Full License Text
+
+For complete license details, see [license_file.txt](license_file.txt)
+
+**Note**: Using this software for commercial purposes without a valid commercial license constitutes copyright infringement and breach of the license agreement.
 
 ---
 

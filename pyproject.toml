@@ -1,0 +1,329 @@
+[project]
+name = "comfyui-archai3d-qwen"
+version = "2.1.0"
+description = "Professional AI Interior Design Toolkit - Advanced Qwen-VL nodes for ComfyUI with 38+ custom nodes for architectural visualization and interior design workflows"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "Dual License: Free for personal/non-commercial use, Commercial license required for business use"}
+authors = [
+    {name = "Amir Ferdos", email = "Amir84ferdos@gmail.com"}
+]
+maintainers = [
+    {name = "Amir Ferdos", email = "Amir84ferdos@gmail.com"}
+]
+keywords = [
+    "comfyui",
+    "qwen",
+    "qwen-vl",
+    "interior-design",
+    "architectural-visualization",
+    "ai-design",
+    "image-editing",
+    "camera-control",
+    "material-visualization",
+    "room-design"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Other Audience",
+    "Topic :: Artistic Software",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "black>=23.0",
+    "flake8>=6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/amir84ferdos/ComfyUI-ArchAi3d-Qwen"
+Repository = "https://github.com/amir84ferdos/ComfyUI-ArchAi3d-Qwen"
+Issues = "https://github.com/amir84ferdos/ComfyUI-ArchAi3d-Qwen/issues"
+Documentation = "https://github.com/amir84ferdos/ComfyUI-ArchAi3d-Qwen#readme"
+"Commercial License" = "https://www.linkedin.com/in/archai3d/"
+"Support on Patreon" = "https://patreon.com/archai3d"
+LinkedIn = "https://www.linkedin.com/in/archai3d/"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["nodes", "nodes.core", "nodes.core.encoders", "nodes.core.prompts", "nodes.core.utils", "nodes.camera", "nodes.editing", "nodes.utils", "config"]
+
+[tool.setuptools.package-data]
+config = ["*.yaml"]
+
+# Black code formatting configuration
+[tool.black]
+line-length = 120
+target-version = ['py38', 'py39', 'py310', 'py311']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+# Comfy Registry specific metadata
+[tool.comfy]
+PublisherId = "archai3d"
+DisplayName = "ArchAi3D Qwen - Professional Interior Design Toolkit"
+Icon = ""
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Encoder"
+name = "Qwen Encoder"
+category = "ArchAi3d/Qwen/Core"
+description = "Core Qwen-VL encoder with strength controls"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Encoder_V2"
+name = "Qwen Encoder V2"
+category = "ArchAi3d/Qwen/Core"
+description = "Advanced Qwen-VL encoder with two-stage interpolation (recommended)"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Encoder_V3"
+name = "Qwen Encoder V3 (Preset Balance + CFG)"
+category = "ArchAi3d/Qwen/Core"
+description = "Qwen-VL encoder with preset balance and CFG control"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Encoder_Simple"
+name = "Qwen Encoder Simple"
+category = "ArchAi3d/Qwen/Core"
+description = "Simplified Qwen-VL encoder for easy use"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3dQwenEncoderSimpleV2"
+name = "Qwen Encoder Simple V2"
+category = "ArchAi3d/Qwen/Core"
+description = "Simple Qwen encoder with multi-image direct input (up to 3 VL images + 3 latents)"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Clean_Room_Prompt"
+name = "Clean Room Prompt Builder"
+category = "ArchAi3d/Qwen/Prompts"
+description = "Visual prompt builder for room cleaning and redesign with 103+ materials"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_System_Prompt"
+name = "Qwen System Prompt"
+category = "ArchAi3d/Qwen/Prompts"
+description = "Preset system prompt loader for different design styles"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Image_Scale"
+name = "Qwen Image Scale"
+category = "ArchAi3d/Qwen/Utils"
+description = "Smart aspect ratio scaling with 23 Qwen-VL optimized presets"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Material_Changer"
+name = "Material Changer"
+category = "ArchAi3d/Qwen/Editing"
+description = "Interior design material visualization with 48 presets"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Watermark_Removal"
+name = "Watermark Removal"
+category = "ArchAi3d/Qwen/Editing"
+description = "Remove watermarks, text, and logos from images"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Colorization"
+name = "Colorization"
+category = "ArchAi3d/Qwen/Editing"
+description = "Convert B&W to color with historical era context"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Style_Transfer"
+name = "Style Transfer"
+category = "ArchAi3d/Qwen/Editing"
+description = "Apply 8 artistic styles to specific objects"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Camera_View_Selector"
+name = "Camera View Selector"
+category = "ArchAi3d/Qwen/Camera"
+description = "Quick selection from 22 professional viewpoints"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Scene_Photographer"
+name = "Scene Photographer"
+category = "ArchAi3d/Qwen/Camera"
+description = "Position camera to frame specific subjects with 14 presets"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Environment_Navigator"
+name = "Environment Navigator"
+category = "ArchAi3d/Qwen/Camera"
+description = "Move and rotate through environments with 14 navigation patterns"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Object_Rotation_V2"
+name = "Object Rotation V2"
+category = "ArchAi3d/Qwen/Camera"
+description = "Orbit around objects for 360° views with 19 cinematography presets"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Person_Perspective"
+name = "Person Perspective"
+category = "ArchAi3d/Qwen/Camera"
+description = "Person/character perspective control with identity preservation"
+
+# Camera Control - Exterior
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Exterior_View_Control"
+name = "Exterior View Control"
+category = "ArchAi3d/Qwen/Camera/Exterior"
+description = "Professional exterior viewpoint control"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Exterior_Navigation"
+name = "Exterior Navigation"
+category = "ArchAi3d/Qwen/Camera/Exterior"
+description = "Navigate exterior architectural scenes"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Exterior_Focus"
+name = "Exterior Focus"
+category = "ArchAi3d/Qwen/Camera/Exterior"
+description = "Focus control for exterior architectural photography"
+
+# Camera Control - Interior
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Interior_View_Control"
+name = "Interior View Control"
+category = "ArchAi3d/Qwen/Camera/Interior"
+description = "Professional interior viewpoint control"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Interior_Navigation"
+name = "Interior Navigation"
+category = "ArchAi3d/Qwen/Camera/Interior"
+description = "Navigate interior spaces"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Interior_Focus"
+name = "Interior Focus"
+category = "ArchAi3d/Qwen/Camera/Interior"
+description = "Focus control for interior photography"
+
+# Camera Control - Object
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Object_View_Control"
+name = "Object View Control"
+category = "ArchAi3d/Qwen/Camera/Object"
+description = "Object viewpoint and perspective control"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Object_Position_Control"
+name = "Object Position Control"
+category = "ArchAi3d/Qwen/Camera/Object"
+description = "Control object positioning in scene"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Object_Rotation_Control"
+name = "Object Rotation Control"
+category = "ArchAi3d/Qwen/Camera/Object"
+description = "Precise object rotation control"
+
+# Camera Control - Person
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Person_View_Control"
+name = "Person View Control"
+category = "ArchAi3d/Qwen/Camera/Person"
+description = "Person/character viewpoint control"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Person_Position_Control"
+name = "Person Position Control"
+category = "ArchAi3d/Qwen/Camera/Person"
+description = "Control person positioning in scene"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Person_Perspective_Control"
+name = "Person Perspective Control"
+category = "ArchAi3d/Qwen/Camera/Person"
+description = "Person perspective with identity preservation"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Qwen_Person_Cinematographer"
+name = "Person Cinematographer"
+category = "ArchAi3d/Qwen/Camera/Person"
+description = "Cinematic person photography control"
+
+# Utility Nodes
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Mask_To_Position_Guide"
+name = "Mask to Position Guide"
+category = "ArchAi3d/Qwen/Utils"
+description = "Convert masks to position guides"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Position_Guide_Prompt_Builder"
+name = "Position Guide Prompt Builder"
+category = "ArchAi3d/Qwen/Utils"
+description = "Build prompts with position guides"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Simple_Position_Prompt"
+name = "Simple Position Prompt"
+category = "ArchAi3d/Qwen/Utils"
+description = "Simple position-based prompt builder"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Color_Correction_BT709"
+name = "Color Correction BT.709"
+category = "ArchAi3d/Qwen/Utils"
+description = "BT.709 color space correction"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Color_Correction_Advanced"
+name = "Color Correction Advanced"
+category = "ArchAi3d/Qwen/Utils"
+description = "Advanced color correction tools"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Average_Color"
+name = "Average Color"
+category = "ArchAi3d/Qwen/Utils"
+description = "Calculate average color from image"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Solid_Color_Image"
+name = "Solid Color Image"
+category = "ArchAi3d/Qwen/Utils"
+description = "Generate solid color images"
+
+[[tool.comfy.NodeList]]
+id = "ArchAi3D_Mask_Crop_Rotate"
+name = "Mask Crop & Rotate"
+category = "ArchAi3d/Qwen/Utils"
+description = "Crop and rotate masks with precision"

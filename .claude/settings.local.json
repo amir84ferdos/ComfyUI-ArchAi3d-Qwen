@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"E:\\Comfy\\Qwen\\ComfyUI-Easy-Install\\ComfyUI\\custom_nodes\\ComfyUI-ArchAi3d-Qwen\" remote -v)",
+      "Bash(git -C \"E:\\Comfy\\Qwen\\ComfyUI-Easy-Install\\ComfyUI\\custom_nodes\\ComfyUI-ArchAi3d-Qwen\" tag -l)",
+      "Bash(git -C \"E:\\Comfy\\Qwen\\ComfyUI-Easy-Install\\ComfyUI\\custom_nodes\\ComfyUI-ArchAi3d-Qwen\" log --oneline -10)",
+      "Bash(gh pr view:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

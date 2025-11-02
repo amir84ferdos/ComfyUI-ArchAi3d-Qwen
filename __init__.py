@@ -6,8 +6,8 @@ Author: Amir Ferdos (ArchAi3d)
 Email: Amir84ferdos@gmail.com
 LinkedIn: https://www.linkedin.com/in/archai3d/
 GitHub: https://github.com/amir84ferdos
-Version: 5.0.0-alpha (Week 1-4: Exterior, Interior, Object, Person)
-License: MIT
+Version: 2.1.0
+License: Dual License (Free for personal use, Commercial license required for business use)
 """
 
 # ============================================================================
@@ -220,7 +220,7 @@ WEB_DIRECTORY = os.path.join(os.path.dirname(__file__), "web")
 # ============================================================================
 
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
-__version__ = "5.0.0-alpha"
+__version__ = "2.1.0"
 __author__ = "Amir Ferdos (ArchAi3d)"
 
 # ============================================================================
@@ -229,22 +229,14 @@ __author__ = "Amir Ferdos (ArchAi3d)"
 
 print("=" * 70)
 print(f"[ArchAi3d-Qwen v{__version__}] Loading nodes...")
-print(f"  🎨 Core Encoding: 5 nodes (V3 with Preset Balance + CFG!) ⭐")
+print(f"  🎨 Core Encoding: 5 nodes (V3 with Preset Balance + CFG!)")
 print(f"  📏 Core Utils: 1 node")
-print(f"  💬 Prompt Builders: 3 nodes (Position Guide + Simple Position)")
-print(f"  📸 Camera Control (Legacy): 5 nodes")
-print(f"  🏢 Camera Control (v5.0 NEW): 13 nodes ⭐⭐⭐⭐")
+print(f"  💬 Prompt Builders: 3 nodes (Clean Room + Position Guide)")
+print(f"  📸 Camera Control: 18 nodes")
 print(f"  🎨 Image Editing: 4 nodes")
-print(f"  🎯 Utils: 7 nodes (Mask Crop/Rotate + Color Tools + Solid Color)")
+print(f"  🎯 Utils: 7 nodes (Mask Crop/Rotate + Color Tools)")
 print(f"  ✅ Total: {len(NODE_CLASS_MAPPINGS)} nodes loaded!")
 print(f"")
-print(f"  🎉 v5.0.0 WEEK 1-4 COMPLETE! 🎉")
-print(f"  🏢 Exterior (ArchAi3d/Camera/Exterior): 3 nodes, 39 presets")
-print(f"  🏠 Interior (ArchAi3d/Camera/Interior): 3 nodes, 39 presets")
-print(f"  📦 Object (ArchAi3d/Camera/Object): 3 nodes, 36 presets")
-print(f"  👤 Person (ArchAi3d/Camera/Person): 4 nodes, 43 presets (+ Cinematographer!)")
-print(f"  ⭐ V3 Encoder: 5 presets + manual override (0.0-3.0 range!)")
-print(f"  🎯 Utils (ArchAi3d/Utils): 7 nodes - Crop/Rotate + Color + Position!")
-print(f"  📊 Total: 13 camera nodes (157 presets) + 7 util nodes!")
 print(f"  📚 Documentation: ./docs/")
+print(f"  ⚖️  License: Dual (Free personal, Commercial available)")
 print("=" * 70)
