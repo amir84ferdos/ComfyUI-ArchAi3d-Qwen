@@ -7,7 +7,10 @@
       "Bash(gh pr view:*)",
       "Bash(git fetch:*)",
       "Bash(git merge:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nv2.1.0: Setup automated publishing and fix Clean Room Prompt path bug\n\n## What''s Changed\n\n### Bug Fixes\n- **Fixed Clean Room Prompt material loading**: Corrected config path to properly load materials.yaml from root config directory\n- **Version synchronization**: Rolled back from 5.0.0-alpha to 2.1.0 to match git tag history\n\n### New Features\n- **Automated Publishing**: GitHub Actions workflow for Comfy Registry (merged PR #1)\n- **PyPI Support**: Complete pyproject.toml for PyPI distribution\n- **Dependencies**: Added requirements.txt (PyYAML>=6.0)\n\n### Documentation\n- **CHANGELOG.md**: Comprehensive version history and changes documentation\n- **README.md**: Updated with multiple installation methods (ComfyUI Manager, Comfy Registry, Git, PyPI)\n- **License Clarification**: Clear dual license documentation (Free personal, Commercial paid)\n\n### Package Management\n- Full Python packaging setup with build system configuration\n- 38 custom nodes fully documented in pyproject.toml\n- Support for both Comfy Registry and PyPI distribution channels\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git tag:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
