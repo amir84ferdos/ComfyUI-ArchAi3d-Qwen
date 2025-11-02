@@ -31,8 +31,9 @@ Perfect for architects, interior designers, real estate professionals, and AI en
 
 **Method 2: Comfy Registry**
 ```bash
-# Coming soon - Automated publishing to Comfy Registry
-# Will be available after v2.1.0 release
+# Published to Comfy Registry - Install via ComfyUI Manager
+# Search for "ArchAi3d Qwen" or "comfyui-archai3d-qwen"
+# Automatic updates when new versions are released
 ```
 
 **Method 3: Git Clone (Manual)**
