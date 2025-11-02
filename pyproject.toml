@@ -91,7 +91,7 @@ exclude = '''
 
 # Comfy Registry specific metadata
 [tool.comfy]
-PublisherId = "archai3d"
+PublisherId = "amir84ferdos"
 DisplayName = "ArchAi3D Qwen - Professional Interior Design Toolkit"
 Icon = ""
 Repository = "https://github.com/amir84ferdos/ComfyUI-ArchAi3d-Qwen"
