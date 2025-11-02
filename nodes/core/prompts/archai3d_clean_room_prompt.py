@@ -38,7 +38,10 @@ def load_materials_config():
     Returns:
         dict: Parsed YAML configuration with floors, walls, ceilings, and style_filters
     """
-    config_path = os.path.join(os.path.dirname(__file__), "config", "materials.yaml")
+    # Navigate from nodes/core/prompts/ up to the root custom_nodes directory
+    current_dir = os.path.dirname(__file__)  # nodes/core/prompts/
+    root_dir = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))  # Go up 3 levels
+    config_path = os.path.join(root_dir, "config", "materials.yaml")
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             config = yaml.safe_load(f)
