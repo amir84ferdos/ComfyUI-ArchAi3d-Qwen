@@ -4,7 +4,7 @@ version = "2.1.0"
 description = "Professional AI Interior Design Toolkit - Advanced Qwen-VL nodes for ComfyUI with 38+ custom nodes for architectural visualization and interior design workflows"
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "Dual License: Free for personal/non-commercial use, Commercial license required for business use"}
+license = {file = "license_file.txt"}
 authors = [
     {name = "Amir Ferdos", email = "Amir84ferdos@gmail.com"}
 ]
@@ -94,6 +94,7 @@ exclude = '''
 PublisherId = "archai3d"
 DisplayName = "ArchAi3D Qwen - Professional Interior Design Toolkit"
 Icon = ""
+Repository = "https://github.com/amir84ferdos/ComfyUI-ArchAi3d-Qwen"
 
 [[tool.comfy.NodeList]]
 id = "ArchAi3D_Qwen_Encoder"
