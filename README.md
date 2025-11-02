@@ -45,12 +45,6 @@ pip install -r requirements.txt  # Installs PyYAML
 # Restart ComfyUI
 ```
 
-**Method 4: PyPI (Coming Soon)**
-```bash
-# After v2.1.0 release
-pip install comfyui-archai3d-qwen
-```
-
 ### What You Get
 
 **17 Custom Nodes** (all under `ArchAi3d/Qwen` category):
