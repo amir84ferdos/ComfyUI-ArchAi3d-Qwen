@@ -105,7 +105,7 @@ WORKFLOW_MODES = [
 # System prompt presets for room transformation workflows
 SYSTEM_PROMPTS_ROOM_TRANSFORM = {
     "None": "",
-    "Room Transform Specialist": "You are a room transformation specialist. Your task: 1) Remove ALL specified objects completely (tools, debris, furniture, materials) - leave no trace. 2) Apply specified surface materials (floor/walls/ceiling) with photorealistic detail, proper lighting, and realistic reflections. 3) PRESERVE: architectural structure, windows, doors, lighting conditions, camera perspective, and POV. 4) ENSURE: clean edges, no halos, seamless material transitions, consistent lighting. 5) Generate photorealistic results that look like professional interior photography.",
+    "Room Transform Specialist": "You are a room transformation specialist. Your task: 1) Remove ALL specified objects completely (tools, debris, furniture, materials, watermarks, text overlays, logos) - leave no trace. Intelligently inpaint removed areas to blend seamlessly. 2) Apply specified surface materials (floor/walls/ceiling) with photorealistic detail, proper lighting, and realistic reflections. 3) PRESERVE (CRITICAL): architectural structure, windows (maintain window positions, size, and natural light), doors, lighting conditions, camera perspective, and POV. 4) ENSURE: clean edges, no halos, seamless material transitions, consistent lighting. 5) Generate photorealistic results that look like professional interior photography.",
     "Object Remover & Designer": "You are an expert at cleaning and redesigning interior spaces. Follow these rules strictly: Remove specified objects entirely (no remnants, shadows, or artifacts). Apply materials exactly as described with photorealistic accuracy. Never alter: camera angle, perspective, lighting direction, architectural elements. Maintain: natural shadows, reflections, material textures, depth perception. Deliver: clean professional result with sharp edges and seamless integration.",
     "Photorealistic Room Editor": "You are a photorealistic image editor specializing in interior spaces. Execute transformations following these principles: REMOVE: All specified objects, debris, and materials - complete erasure with proper background reconstruction. APPLY: Surface materials with accurate physical properties (reflections, texture, color accuracy). PRESERVE: Original perspective, lighting setup, architectural features, spatial relationships. QUALITY: Photorealistic rendering, clean edges, no visual artifacts, seamless material boundaries. OUTPUT: Professional interior photography standard with natural lighting and realistic materials.",
     "Interior Designer": "You are an expert interior designer. Analyze spaces and create detailed, photorealistic design transformations while preserving architectural structure, lighting, and perspective.",
@@ -114,23 +114,73 @@ SYSTEM_PROMPTS_ROOM_TRANSFORM = {
 }
 
 
+def build_watermark_removal_phrase(watermark_type, location):
+    """Build watermark removal phrase following Qwen WanX API patterns.
+
+    Based on research from existing Watermark Removal node and official Qwen documentation.
+    Uses proven "Remove [TYPE] from [LOCATION]" pattern.
+
+    Args:
+        watermark_type: Type of element to remove (watermark, logo, text, etc.)
+        location: Where to remove from (anywhere, bottom right, etc.)
+
+    Returns:
+        str: Removal phrase (e.g., "the watermark from the bottom right corner")
+
+    Examples:
+        >>> build_watermark_removal_phrase("watermark", "bottom right")
+        'the watermark from the bottom right corner'
+        >>> build_watermark_removal_phrase("logo", "anywhere")
+        'the logo'
+    """
+    # Map watermark types to phrases
+    type_map = {
+        "watermark": "the watermark",
+        "logo": "the logo",
+        "text": "the text",
+        "English text": "the English text",
+        "Chinese text": "the Chinese text"
+    }
+
+    # Map locations to phrases
+    location_map = {
+        "anywhere": "",
+        "bottom right": "from the bottom right corner",
+        "bottom left": "from the bottom left corner",
+        "top right": "from the top right corner",
+        "top left": "from the top left corner",
+        "center": "from the center"
+    }
+
+    phrase = type_map.get(watermark_type, "the watermark")
+    location_phrase = location_map.get(location, "")
+
+    if location_phrase:
+        return f"{phrase} {location_phrase}"
+    return phrase
+
+
 class ArchAi3D_Clean_Room_Prompt:
     """Visual prompt builder for room cleaning and interior redesign workflows.
 
     Features:
     - 3 workflow modes (remove only, full redesign, selective redesign)
+    - Scene context field for room type description (NEW v2.1.0)
+    - Watermark/logo removal option (NEW v2.1.0)
     - Material preset dropdowns for floor/walls/ceiling (loaded from YAML)
     - 103+ material presets (32 floors, 36 walls, 35 ceilings)
     - 8 photography style presets (realism, sharpness, quality)
     - 15 lighting presets (daylight, golden hour, studio, etc.)
     - User-customizable material library via config/materials.yaml
     - Custom material text override
-    - System prompt presets (Option A, B, C + existing presets)
+    - System prompt presets with enhanced window preservation
     - Quality control options
-    - Generates optimized prompts using proven patterns
+    - Generates optimized prompts using research-validated Qwen patterns
 
     Use this to quickly build consistent prompts for empty room creation
-    and interior transformation workflows.
+    and interior transformation workflows with comprehensive cleanup options.
+
+    Version: 2.1.0
     """
 
     @classmethod
@@ -145,6 +195,27 @@ class ArchAi3D_Clean_Room_Prompt:
                 }),
             },
             "optional": {
+                # Scene context (NEW in v2.1.0)
+                "scene_context": ("STRING", {
+                    "multiline": True,
+                    "default": "",
+                    "tooltip": "Optional: Describe the room/space context (e.g., 'modern office with large windows'). Helps preserve windows, architectural features, and overall character."
+                }),
+
+                # Watermark removal options (NEW in v2.1.0)
+                "remove_watermark": ("BOOLEAN", {
+                    "default": False,
+                    "tooltip": "Add watermark/logo/text removal to the cleaning process"
+                }),
+                "watermark_type": (["watermark", "logo", "text", "English text", "Chinese text"], {
+                    "default": "watermark",
+                    "tooltip": "Type of element to remove"
+                }),
+                "watermark_location": (["anywhere", "bottom right", "bottom left", "top right", "top left", "center"], {
+                    "default": "anywhere",
+                    "tooltip": "Location of watermark/logo"
+                }),
+
                 # Floor options
                 "floor_material": (list(FLOOR_MATERIALS.keys()), {"default": "Polished Black Marble"}),
                 "floor_custom": ("STRING", {"multiline": False, "default": ""}),
@@ -180,6 +251,10 @@ class ArchAi3D_Clean_Room_Prompt:
     CATEGORY = "ArchAi3d/Qwen"
 
     def build_prompt(self, mode, image_reference, objects_to_remove,
+                     scene_context="",  # NEW in v2.1.0
+                     remove_watermark=False,  # NEW in v2.1.0
+                     watermark_type="watermark",  # NEW in v2.1.0
+                     watermark_location="anywhere",  # NEW in v2.1.0
                      floor_material="Polished Black Marble", floor_custom="",
                      wall_material="Flat White", wall_custom="",
                      ceiling_material="Flat White", ceiling_custom="",
@@ -193,6 +268,10 @@ class ArchAi3D_Clean_Room_Prompt:
             mode: Workflow mode (Remove Only, Remove + Paint All, Remove + Paint Selective)
             image_reference: Image identifier (e.g., "image1")
             objects_to_remove: Semicolon/slash-separated list of objects to remove
+            scene_context: Optional scene description (e.g., "modern office with large windows") [v2.1.0]
+            remove_watermark: Enable watermark/logo removal [v2.1.0]
+            watermark_type: Type of element to remove (watermark, logo, text, etc.) [v2.1.0]
+            watermark_location: Location of watermark (anywhere, bottom right, etc.) [v2.1.0]
             floor_material: Preset or "Custom" or "Keep Original"
             floor_custom: Custom floor material description (if Custom selected)
             wall_material: Preset or "Custom" or "Keep Original"
@@ -213,14 +292,27 @@ class ArchAi3D_Clean_Room_Prompt:
             Tuple of (user_prompt, system_prompt)
         """
 
-        # Start building the prompt
-        if mode == "Remove Only":
-            base_prompt = f"Transform {image_reference}: clean empty room."
-        else:
-            base_prompt = f"Transform {image_reference}: clean finished interior."
+        # NEW v2.1.0: Build scene description with context (Qwen best practice: context first)
+        scene_parts = []
+        if scene_context.strip():
+            scene_parts.append(scene_context.strip())
 
-        # Add removal instruction
-        remove_instruction = f" Remove {objects_to_remove}."
+        # Add transformation goal
+        if mode == "Remove Only":
+            scene_parts.append("clean empty room")
+        else:
+            scene_parts.append("clean finished interior")
+
+        base_prompt = f"Transform {image_reference}: {', '.join(scene_parts)}."
+
+        # NEW v2.1.0: Enhanced removal instruction with optional watermark removal
+        removal_items = [objects_to_remove]
+
+        if remove_watermark:
+            watermark_phrase = build_watermark_removal_phrase(watermark_type, watermark_location)
+            removal_items.append(watermark_phrase)
+
+        remove_instruction = f" Remove {'/'.join(removal_items)}."
 
         # Build surface specifications
         surface_specs = []
@@ -275,12 +367,27 @@ class ArchAi3D_Clean_Room_Prompt:
         # Build preservation/quality constraints
         constraints = []
 
+        # NEW v2.1.0: Add window preservation if mentioned in scene context
+        window_mentioned = scene_context.strip() and "window" in scene_context.lower()
+
         if preserve_lighting and preserve_perspective:
-            constraints.append("Preserve lighting/perspective")
+            if window_mentioned:
+                constraints.append("Preserve windows and natural light; preserve lighting/perspective")
+            else:
+                constraints.append("Preserve lighting/perspective")
         elif preserve_lighting:
-            constraints.append("Preserve lighting")
+            if window_mentioned:
+                constraints.append("Preserve windows and natural light; preserve lighting")
+            else:
+                constraints.append("Preserve lighting")
         elif preserve_perspective:
-            constraints.append("Preserve perspective")
+            if window_mentioned:
+                constraints.append("Preserve windows; preserve perspective")
+            else:
+                constraints.append("Preserve perspective")
+        elif window_mentioned:
+            # Window mentioned but no other preservation - add window-only clause
+            constraints.append("Preserve windows and natural light")
 
         if preserve_pov:
             if len(constraints) == 0:

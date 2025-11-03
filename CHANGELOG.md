@@ -5,13 +5,41 @@ All notable changes to the ArchAi3D Qwen ComfyUI Custom Nodes project will be do
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.1.0] - 2025-01-XX
+## [2.1.0] - 2025-11-03
+
+### Enhanced Features
+
+#### Clean Room Prompt Node v2.1.0 - Major Enhancement ⭐
+- **Scene Context Field** (NEW):
+  - Optional multiline text field for describing room context
+  - Examples: "modern office with large windows", "bedroom with floor-to-ceiling windows"
+  - Helps preserve architectural features and overall room character
+  - Integrated at the start of prompts following Qwen best practices (context-first approach)
+  - Auto-detects windows in context and adds explicit window preservation clause
+
+- **Watermark/Logo Removal** (NEW):
+  - Checkbox toggle to enable watermark removal during room cleaning
+  - 5 watermark types: watermark, logo, text, English text, Chinese text
+  - 6 location options: anywhere, bottom right, bottom left, top right, top left, center
+  - Uses research-validated "Remove [TYPE] from [LOCATION]" pattern from Qwen WanX API
+  - Eliminates need for separate Watermark Removal node in room cleaning workflows
+
+- **Enhanced System Prompt**:
+  - Updated "Room Transform Specialist" to emphasize window preservation (CRITICAL)
+  - Added watermark/logo/text removal to supported cleanup operations
+  - Improved inpainting instructions for seamless blending
+
+- **Perfect Qwen Prompt Structure**:
+  - Implements research-based pattern: [SCENE_CONTEXT] + [TRANSFORMATION] + [REMOVAL] + [SURFACES] + [PRESERVATION] + [STYLE]
+  - Window preservation automatically added when windows mentioned in context
+  - Example: "Transform image1: modern office with large windows, clean finished interior. Remove scaffolding/the watermark from the bottom right corner."
 
 ### Added
 - **Automated Publishing**: Added GitHub Actions workflow for automatic publishing to Comfy Registry
 - **PyPI Support**: Created `pyproject.toml` for PyPI package distribution
 - **CHANGELOG**: Added comprehensive changelog for tracking version history
 - **Package Metadata**: Complete project metadata including 38 custom nodes documentation
+- **Helper Function**: `build_watermark_removal_phrase()` for watermark removal phrase generation
 
 ### Fixed
 - **Clean Room Prompt Node**: Fixed material library loading path issue
@@ -29,6 +57,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated version in `__init__.py` (lines 9 and 223)
 - **Startup Message**: Simplified console output to be cleaner and more professional
 - **License Documentation**: Updated license references to be consistent with `license_file.txt`
+
+### Technical Details
+- **Backward Compatible**: All new features are optional with safe defaults
+- **Research-Based**: Enhancements follow proven Qwen prompting patterns
+- **Tested**: Comprehensive testing confirms backward compatibility and new feature functionality
 
 ### Infrastructure
 - GitHub Actions workflow for Comfy Registry publishing
