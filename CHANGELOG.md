@@ -5,6 +5,13 @@ All notable changes to the ArchAi3D Qwen ComfyUI Custom Nodes project will be do
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2025-11-03
+
+### Changed
+- Updated version number to 2.1.1 for proper release tracking
+
+---
+
 ## [2.1.0] - 2025-11-03
 
 ### Enhanced Features

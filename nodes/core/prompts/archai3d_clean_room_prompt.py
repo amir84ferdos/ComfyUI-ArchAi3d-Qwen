@@ -180,7 +180,7 @@ class ArchAi3D_Clean_Room_Prompt:
     Use this to quickly build consistent prompts for empty room creation
     and interior transformation workflows with comprehensive cleanup options.
 
-    Version: 2.1.0
+    Version: 2.1.1
     """
 
     @classmethod
