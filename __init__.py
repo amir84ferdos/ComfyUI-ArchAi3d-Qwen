@@ -19,11 +19,19 @@ from .nodes.core.encoders.archai3d_qwen_encoder_v2 import ArchAi3D_Qwen_Encoder_
 from .nodes.core.encoders.archai3d_qwen_encoder_simple import ArchAi3D_Qwen_Encoder_Simple
 from .nodes.core.encoders.archai3d_qwen_encoder_simple_v2 import ArchAi3dQwenEncoderSimpleV2
 from .nodes.core.encoders.archai3d_qwen_encoder_v3 import ArchAi3D_Qwen_Encoder_V3
+from .nodes.core.encoders.archai3d_qwen_grag_encoder import ArchAi3D_Qwen_GRAG_Encoder
 
 from .nodes.core.utils.archai3d_qwen_image_scale import ArchAi3D_Qwen_Image_Scale
+from .nodes.core.utils.archai3d_grag_modifier import ArchAi3D_GRAG_Modifier
 
 from .nodes.core.prompts.archai3d_clean_room_prompt import ArchAi3D_Clean_Room_Prompt
 from .nodes.core.prompts.archai3d_qwen_system_prompt import ArchAi3D_Qwen_System_Prompt
+
+# ============================================================================
+# SAMPLING NODES
+# ============================================================================
+
+from .nodes.sampling.archai3d_grag_sampler import ArchAi3D_GRAG_Sampler
 
 # ============================================================================
 # CAMERA CONTROL NODES
@@ -90,13 +98,18 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_Qwen_Encoder_Simple": ArchAi3D_Qwen_Encoder_Simple,
     "ArchAi3dQwenEncoderSimpleV2": ArchAi3dQwenEncoderSimpleV2,
     "ArchAi3D_Qwen_Encoder_V3": ArchAi3D_Qwen_Encoder_V3,
+    "ArchAi3D_Qwen_GRAG_Encoder": ArchAi3D_Qwen_GRAG_Encoder,
 
     # Core - Utils
     "ArchAi3D_Qwen_Image_Scale": ArchAi3D_Qwen_Image_Scale,
+    "ArchAi3D_GRAG_Modifier": ArchAi3D_GRAG_Modifier,
     "ArchAi3D_Qwen_System_Prompt": ArchAi3D_Qwen_System_Prompt,
 
     # Core - Prompts
     "ArchAi3D_Clean_Room_Prompt": ArchAi3D_Clean_Room_Prompt,
+
+    # Sampling
+    "ArchAi3D_GRAG_Sampler": ArchAi3D_GRAG_Sampler,
 
     # Camera Control (Legacy)
     "ArchAi3D_Qwen_Camera_View_Selector": ArchAi3D_Qwen_Camera_View_Selector,
@@ -155,13 +168,18 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Qwen_Encoder_Simple": "🎨 Qwen Encoder Simple",
     "ArchAi3dQwenEncoderSimpleV2": "🎨 Qwen Encoder Simple V2",
     "ArchAi3D_Qwen_Encoder_V3": "⭐ Qwen Encoder V3 (Preset Balance + CFG)",
+    "ArchAi3D_Qwen_GRAG_Encoder": "⭐ Qwen GRAG Encoder (Fine-Grained Control)",
 
     # Core - Utils
     "ArchAi3D_Qwen_Image_Scale": "📏 Qwen Image Scale",
+    "ArchAi3D_GRAG_Modifier": "🎚️ GRAG Modifier (Fine-Grained Control)",
     "ArchAi3D_Qwen_System_Prompt": "💬 Qwen System Prompt",
 
     # Core - Prompts
     "ArchAi3D_Clean_Room_Prompt": "🏗️ Clean Room Prompt",
+
+    # Sampling
+    "ArchAi3D_GRAG_Sampler": "🎚️ GRAG Sampler (Fine-Grained Control)",
 
     # Camera Control (Legacy)
     "ArchAi3D_Qwen_Camera_View_Selector": "🎬 Camera View Selector",
@@ -229,14 +247,17 @@ __author__ = "Amir Ferdos (ArchAi3d)"
 
 print("=" * 70)
 print(f"[ArchAi3d-Qwen v{__version__}] Loading nodes...")
-print(f"  🎨 Core Encoding: 5 nodes (V3 with Preset Balance + CFG!)")
-print(f"  📏 Core Utils: 1 node")
+print(f"  🎨 Core Encoding: 6 nodes (V3 + GRAG Encoder)")
+print(f"  📏 Core Utils: 2 nodes (Image Scale + GRAG Modifier)")
 print(f"  💬 Prompt Builders: 3 nodes (Clean Room + Position Guide)")
+print(f"  🎚️ Sampling: 1 node (GRAG Sampler)")
 print(f"  📸 Camera Control: 18 nodes")
 print(f"  🎨 Image Editing: 4 nodes")
 print(f"  🎯 Utils: 7 nodes (Mask Crop/Rotate + Color Tools)")
 print(f"  ✅ Total: {len(NODE_CLASS_MAPPINGS)} nodes loaded!")
 print(f"")
+print(f"  ⭐ NEW: GRAG Sampler - Functional fine-grained control!")
+print(f"  🎯 Use: Encoder → GRAG Modifier → GRAG Sampler → Output")
 print(f"  📚 Documentation: ./docs/")
 print(f"  ⚖️  License: Dual (Free personal, Commercial available)")
 print("=" * 70)
