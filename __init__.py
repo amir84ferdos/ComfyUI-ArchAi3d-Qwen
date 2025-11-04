@@ -64,6 +64,12 @@ from .nodes.camera.archai3d_qwen_person_position_control import ArchAi3D_Qwen_Pe
 from .nodes.camera.archai3d_qwen_person_perspective_control import ArchAi3D_Qwen_Person_Perspective_Control
 from .nodes.camera.archai3d_qwen_person_cinematographer import ArchAi3D_Qwen_Person_Cinematographer
 
+# v5.1.0 SIMPLE CAMERA CONTROL (Unified)
+from .nodes.camera.simple_camera_control import ArchAi3D_Qwen_Simple_Camera_Control
+
+# v5.1.0 DX8152 LORA SUPPORT
+from .nodes.camera.dx8152_camera_lora import ArchAi3D_Qwen_DX8152_Camera_LoRA
+
 # ============================================================================
 # IMAGE EDITING NODES
 # ============================================================================
@@ -139,6 +145,12 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_Qwen_Person_Perspective_Control": ArchAi3D_Qwen_Person_Perspective_Control,
     "ArchAi3D_Qwen_Person_Cinematographer": ArchAi3D_Qwen_Person_Cinematographer,
 
+    # v5.1.0 Simple Camera Control
+    "ArchAi3D_Qwen_Simple_Camera_Control": ArchAi3D_Qwen_Simple_Camera_Control,
+
+    # v5.1.0 dx8152 LoRA Support
+    "ArchAi3D_Qwen_DX8152_Camera_LoRA": ArchAi3D_Qwen_DX8152_Camera_LoRA,
+
     # Image Editing
     "ArchAi3D_Qwen_Material_Changer": ArchAi3D_Qwen_Material_Changer,
     "ArchAi3D_Qwen_Watermark_Removal": ArchAi3D_Qwen_Watermark_Removal,
@@ -209,6 +221,12 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Qwen_Person_Perspective_Control": "👤 Person Perspective Control",
     "ArchAi3D_Qwen_Person_Cinematographer": "🎬 Person Cinematographer",
 
+    # v5.1.0 Simple Camera Control
+    "ArchAi3D_Qwen_Simple_Camera_Control": "🎥 Simple Camera Control",
+
+    # v5.1.0 dx8152 LoRA Support
+    "ArchAi3D_Qwen_DX8152_Camera_LoRA": "📹 dx8152 Camera LoRA",
+
     # Image Editing
     "ArchAi3D_Qwen_Material_Changer": "🎨 Material Changer",
     "ArchAi3D_Qwen_Watermark_Removal": "🧹 Watermark Removal",
@@ -251,7 +269,7 @@ print(f"  🎨 Core Encoding: 6 nodes (V3 + GRAG Encoder)")
 print(f"  📏 Core Utils: 2 nodes (Image Scale + GRAG Modifier)")
 print(f"  💬 Prompt Builders: 3 nodes (Clean Room + Position Guide)")
 print(f"  🎚️ Sampling: 1 node (GRAG Sampler)")
-print(f"  📸 Camera Control: 18 nodes")
+print(f"  📸 Camera Control: 20 nodes (includes Simple + dx8152 LoRA)")
 print(f"  🎨 Image Editing: 4 nodes")
 print(f"  🎯 Utils: 7 nodes (Mask Crop/Rotate + Color Tools)")
 print(f"  ✅ Total: {len(NODE_CLASS_MAPPINGS)} nodes loaded!")
