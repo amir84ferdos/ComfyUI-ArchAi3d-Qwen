@@ -167,7 +167,7 @@ class ArchAi3D_Object_Focus_Camera:
             return (
                 "You are a precision camera operator for object photography. "
                 "Execute camera positioning exactly as instructed while keeping "
-                "the object and scene completely unchanged. Preserve all details, "
+                "scene completely unchanged. Preserve all details, "
                 "textures, colors, materials, and lighting exactly as they are. "
                 "Your only job is to change the camera viewpoint - do not modify, "
                 "redesign, or reimagine anything in the scene."
@@ -177,8 +177,8 @@ class ArchAi3D_Object_Focus_Camera:
             return (
                 "You are creating a new scene view while maintaining visual consistency. "
                 "Focus on the specified object with the requested camera angle. "
-                "Preserve the object's appearance, style, and quality. Generate a "
-                "natural, intentional composition that highlights the object as instructed."
+                "Preserve appearance, style, and quality. Generate a "
+                "natural, intentional composition that highlights the subject as instructed."
             )
 
 

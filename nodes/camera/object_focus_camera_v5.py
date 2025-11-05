@@ -722,9 +722,9 @@ class ArchAi3D_Object_Focus_Camera_V5:
             return (
                 "You are a precision camera operator specializing in dynamic scene-to-object transitions. "
                 "Execute the requested camera repositioning to move from a wide environmental view to a "
-                "focused, centered view of the target object. Reposition the camera to stand directly in "
-                "front of the object, aligned with its surface. Apply the specified lens characteristics "
-                "including depth of field, distortion, and perspective. Maintain the object's appearance, "
+                "focused, centered view of the target subject. Reposition the camera to stand directly in "
+                "front, aligned with its surface. Apply the specified lens characteristics "
+                "including depth of field, distortion, and perspective. Maintain appearance, "
                 "materials, and details while executing the transition from environmental context to "
                 "focused object composition."
             )
@@ -732,8 +732,8 @@ class ArchAi3D_Object_Focus_Camera_V5:
             return (
                 "You are a precision camera operator and lens specialist for professional object photography. "
                 "Execute camera positioning and lens characteristics exactly as instructed while keeping "
-                "the object and scene composition appropriately preserved based on viewing distance. "
-                "For close-up views, precise object centering is expected. For medium and far views, "
+                "scene composition appropriately preserved based on viewing distance. "
+                "For close-up views, precise subject centering is expected. For medium and far views, "
                 "preserve spatial relationships and surrounding context. Maintain all details, textures, "
                 "colors, materials, and lighting. Pay special attention to lens-specific characteristics "
                 "such as depth of field, distortion, and perspective compression. Your job is to change "
@@ -770,15 +770,15 @@ class ArchAi3D_Object_Focus_Camera_V5:
             "Back View (180°)": "creating a rear perspective showing the back side",
             "Top-Down View (Bird's Eye)": "creating a bird's eye view perspective from above",
             "Low Angle View (Worm's Eye)": "creating a worm's eye view perspective from ground level that emphasizes vertical height",
-            "Orbit Left 30°": "circling 30 degrees left around the object to reveal a different angle",
-            "Orbit Left 45°": "circling 45 degrees left around the object for side-angled view",
+            "Orbit Left 30°": "circling 30 degrees left around the subject to reveal a different angle",
+            "Orbit Left 45°": "circling 45 degrees left around the subject for side-angled view",
             "Orbit Left 90°": "circling 90 degrees left to complete side profile",
-            "Orbit Right 30°": "circling 30 degrees right around the object to reveal a different angle",
-            "Orbit Right 45°": "circling 45 degrees right around the object for side-angled view",
+            "Orbit Right 30°": "circling 30 degrees right around the subject to reveal a different angle",
+            "Orbit Right 45°": "circling 45 degrees right around the subject for side-angled view",
             "Orbit Right 90°": "circling 90 degrees right to complete side profile",
-            "Orbit Up 30°": "circling 30 degrees upward around the object for elevated perspective",
+            "Orbit Up 30°": "circling 30 degrees upward around the subject for elevated perspective",
             "Orbit Up 45°": "circling 45 degrees upward for top-angled perspective",
-            "Orbit Down 30°": "circling 30 degrees downward around the object for lower perspective",
+            "Orbit Down 30°": "circling 30 degrees downward around the subject for lower perspective",
             "Orbit Down 45°": "circling 45 degrees downward for low-angle perspective",
         }
         return explanations.get(camera_position, "")
@@ -789,8 +789,8 @@ class ArchAi3D_Object_Focus_Camera_V5:
         # For brevity, showing key example only (full implementation would include all 19)
         explanations = {
             "Front View": {
-                "CLOSE": "camera positioned directly in front of the object at eye level, creating a neutral, balanced view that shows the primary face of the object clearly with natural proportions and no distortion",
-                "MEDIUM": "camera oriented towards the front of the object, maintaining the object's position in its surrounding context while showing the primary face clearly with natural proportions",
+                "CLOSE": "camera positioned directly in front at eye level, creating a neutral, balanced view that shows the primary face clearly with natural proportions and no distortion",
+                "MEDIUM": "camera oriented towards the front, maintaining position in its surrounding context while showing the primary face clearly with natural proportions",
                 "FAR": "camera viewing the scene from the front direction, keeping all objects and spatial relationships exactly as they are without reframing, showing the environment with the object visible in its natural context"
             },
             # ... (full database from v4 would be here)
@@ -803,11 +803,11 @@ class ArchAi3D_Object_Focus_Camera_V5:
         explanations = {
             "Dolly In (Zoom Closer)": {
                 "Basic": "gradually moving closer to emphasize details",
-                "Detailed": "camera moves smoothly forward towards the object on a straight path, gradually filling more of the frame to emphasize intricate details, textures, and fine craftsmanship as the object grows larger in the frame"
+                "Detailed": "camera moves smoothly forward on a straight path, gradually filling more of the frame to emphasize intricate details, textures, and fine craftsmanship as the subject grows larger in the frame"
             },
             "Dolly Out (Zoom Away)": {
                 "Basic": "gradually moving away to show more context",
-                "Detailed": "camera moves smoothly backward away from the object on a straight path, gradually revealing more surrounding context and environmental setting as the object becomes smaller in the frame, providing spatial awareness"
+                "Detailed": "camera moves smoothly backward on a straight path, gradually revealing more surrounding context and environmental setting as the subject becomes smaller in the frame, providing spatial awareness"
             },
             # ... (other movements would be here)
         }

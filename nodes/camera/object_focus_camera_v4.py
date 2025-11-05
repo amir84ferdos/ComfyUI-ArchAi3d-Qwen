@@ -541,19 +541,19 @@ class ArchAi3D_Object_Focus_Camera_V4:
             return (
                 "You are a precision camera operator specializing in dynamic scene-to-object transitions. "
                 "Execute the requested camera repositioning to move from a wide environmental view to a "
-                "focused, centered view of the target object. Reposition the camera to stand directly in "
-                "front of the object, aligned with its surface. Apply the specified lens characteristics "
-                "including depth of field, distortion, and perspective. Maintain the object's appearance, "
+                "focused, centered view of the target subject. Reposition the camera to stand directly in "
+                "front, aligned with the surface. Apply the specified lens characteristics "
+                "including depth of field, distortion, and perspective. Maintain appearance, "
                 "materials, and details while executing the transition from environmental context to "
-                "focused object composition."
+                "focused composition."
             )
         else:
             # Standard mode (preserve composition, distance-aware)
             return (
                 "You are a precision camera operator and lens specialist for professional object photography. "
                 "Execute camera positioning and lens characteristics exactly as instructed while keeping "
-                "the object and scene composition appropriately preserved based on viewing distance. "
-                "For close-up views, precise object centering is expected. For medium and far views, "
+                "scene composition appropriately preserved based on viewing distance. "
+                "For close-up views, precise subject centering is expected. For medium and far views, "
                 "preserve spatial relationships and surrounding context. Maintain all details, textures, "
                 "colors, materials, and lighting. Pay special attention to lens-specific characteristics "
                 "such as depth of field, distortion, and perspective compression. Your job is to change "
@@ -604,15 +604,15 @@ class ArchAi3D_Object_Focus_Camera_V4:
             "Back View (180°)": "creating a rear perspective showing the back side",
             "Top-Down View (Bird's Eye)": "creating a bird's eye view perspective from above",
             "Low Angle View (Worm's Eye)": "creating a worm's eye view perspective from ground level that emphasizes vertical height",
-            "Orbit Left 30°": "circling 30 degrees left around the object to reveal a different angle",
-            "Orbit Left 45°": "circling 45 degrees left around the object for side-angled view",
+            "Orbit Left 30°": "circling 30 degrees left around the subject to reveal a different angle",
+            "Orbit Left 45°": "circling 45 degrees left around the subject for side-angled view",
             "Orbit Left 90°": "circling 90 degrees left to complete side profile",
-            "Orbit Right 30°": "circling 30 degrees right around the object to reveal a different angle",
-            "Orbit Right 45°": "circling 45 degrees right around the object for side-angled view",
+            "Orbit Right 30°": "circling 30 degrees right around the subject to reveal a different angle",
+            "Orbit Right 45°": "circling 45 degrees right around the subject for side-angled view",
             "Orbit Right 90°": "circling 90 degrees right to complete side profile",
-            "Orbit Up 30°": "circling 30 degrees upward around the object for elevated perspective",
+            "Orbit Up 30°": "circling 30 degrees upward around the subject for elevated perspective",
             "Orbit Up 45°": "circling 45 degrees upward for top-angled perspective",
-            "Orbit Down 30°": "circling 30 degrees downward around the object for lower perspective",
+            "Orbit Down 30°": "circling 30 degrees downward around the subject for lower perspective",
             "Orbit Down 45°": "circling 45 degrees downward for low-angle perspective",
         }
 
@@ -630,22 +630,22 @@ class ArchAi3D_Object_Focus_Camera_V4:
         # Create 3-tier explanation database (19 positions × 3 distances)
         explanations = {
             "Front View": {
-                "CLOSE": "camera positioned directly in front of the object at eye level, creating a neutral, balanced view that shows the primary face of the object clearly with natural proportions and no distortion",
-                "MEDIUM": "camera oriented towards the front of the object, maintaining the object's position in its surrounding context while showing the primary face clearly with natural proportions",
-                "FAR": "camera viewing the scene from the front direction, keeping all objects and spatial relationships exactly as they are without reframing, showing the environment with the object visible in its natural context"
+                "CLOSE": "camera positioned directly in front at eye level, creating a neutral, balanced view that shows the primary face clearly with natural proportions and no distortion",
+                "MEDIUM": "camera oriented towards the front, maintaining position in surrounding context while showing the primary face clearly with natural proportions",
+                "FAR": "camera viewing the scene from the front direction, keeping all spatial relationships exactly as they are without reframing, showing the environment in its natural context"
             },
             "Angled View (15°)": {
-                "CLOSE": "camera positioned at a 15-degree angle from the front, creating a gentle three-dimensional view that reveals a hint of the object's side profile while maintaining focus on the front face",
-                "MEDIUM": "camera angled slightly to show both front and side of the object at 15 degrees, maintaining the object within its spatial context while revealing subtle dimensional depth",
+                "CLOSE": "camera positioned at a 15-degree angle from the front, creating a gentle three-dimensional view that reveals a hint's side profile while maintaining focus on the front face",
+                "MEDIUM": "camera angled slightly to show both front and side at 15 degrees, maintaining the object within its spatial context while revealing subtle dimensional depth",
                 "FAR": "camera viewing from a subtle 15-degree angle without repositioning elements, preserving the environmental composition while showing a hint of dimensional perspective"
             },
             "Angled View (30°)": {
-                "CLOSE": "camera positioned at a 30-degree angle from the front, creating a balanced three-dimensional view that equally reveals both the front face and side profile of the object with natural depth perception",
-                "MEDIUM": "camera angled at 30 degrees to show front and side profiles, preserving the object's placement within the surrounding space while revealing dimensional form",
+                "CLOSE": "camera positioned at a 30-degree angle from the front, creating a balanced three-dimensional view that equally reveals both the front face and side profile with natural depth perception",
+                "MEDIUM": "camera angled at 30 degrees to show front and side profiles, preserving placement within the surrounding space while revealing dimensional form",
                 "FAR": "camera viewing from a 30-degree angle maintaining all spatial relationships, showing the scene composition with dimensional perspective without reframing any elements"
             },
             "Angled View (45°)": {
-                "CLOSE": "camera positioned at a 45-degree angle from the front, creating a strong three-dimensional view that prominently shows both the front and side faces of the object with dynamic depth and form revelation",
+                "CLOSE": "camera positioned at a 45-degree angle from the front, creating a strong three-dimensional view that prominently shows both the front and side faces with dynamic depth and form revelation",
                 "MEDIUM": "camera angled at 45 degrees revealing both primary faces, keeping the object within its spatial context while emphasizing dimensional characteristics",
                 "FAR": "camera viewing from a 45-degree perspective without repositioning scene elements, maintaining environmental composition while showing angular dimensional depth"
             },
@@ -655,8 +655,8 @@ class ArchAi3D_Object_Focus_Camera_V4:
                 "FAR": "camera viewing from a steep 60-degree angle maintaining scene composition, showing the environment with pronounced angular perspective without reframing"
             },
             "Side View (90°)": {
-                "CLOSE": "camera positioned at a 90-degree side angle perpendicular to the object, creating a pure profile view that shows the complete side silhouette with no front or back elements visible, revealing the object's thickness and side contours",
-                "MEDIUM": "camera perpendicular to the object at 90 degrees showing complete side profile, maintaining the object's position within surrounding context while revealing lateral dimensions",
+                "CLOSE": "camera positioned at a 90-degree side angle perpendicular to the object, creating a pure profile view that shows the complete side silhouette with no front or back elements visible, revealing thickness and side contours",
+                "MEDIUM": "camera perpendicular to the object at 90 degrees showing complete side profile, maintaining position within surrounding context while revealing lateral dimensions",
                 "FAR": "camera viewing from a perpendicular 90-degree side angle without reframing, showing the scene's lateral relationships and environmental context with pure profile perspective"
             },
             "Back View (180°)": {
@@ -666,7 +666,7 @@ class ArchAi3D_Object_Focus_Camera_V4:
             },
             "Top-Down View (Bird's Eye)": {
                 "CLOSE": "camera positioned far above looking directly down at the object, creating a bird's eye view perspective that diminishes vertical height and emphasizes the top surface with clear detail of upper features",
-                "MEDIUM": "camera elevated above looking down, showing the object's top surface within its surrounding spatial context while maintaining environmental relationships",
+                "MEDIUM": "camera elevated above looking down, showing top surface within its surrounding spatial context while maintaining environmental relationships",
                 "FAR": "camera viewing from high above without reframing, showing the entire scene layout and spatial organization from bird's eye perspective with all elements preserved"
             },
             "Low Angle View (Worm's Eye)": {
@@ -675,52 +675,52 @@ class ArchAi3D_Object_Focus_Camera_V4:
                 "FAR": "camera viewing from ground level looking upward without repositioning scene elements, showing the environment with dramatic upward perspective and vertical emphasis"
             },
             "Orbit Left 30°": {
-                "CLOSE": "camera orbits in a smooth circular path 30 degrees to the left around the object, maintaining consistent distance and height while revealing the left side profile, creating a dynamic perspective shift",
+                "CLOSE": "camera orbits in a smooth circular path 30 degrees to the left around the subject, maintaining consistent distance and height while revealing the left side profile, creating a dynamic perspective shift",
                 "MEDIUM": "camera circles 30 degrees left maintaining distance, showing the object from a new angle while preserving its relationship to surrounding space",
                 "FAR": "camera arcs 30 degrees to the left maintaining all scene relationships, revealing a new perspective without repositioning environmental elements"
             },
             "Orbit Left 45°": {
-                "CLOSE": "camera orbits in a smooth circular path 45 degrees to the left around the object, maintaining consistent distance while transitioning from front to side-front view with dimensional depth",
+                "CLOSE": "camera orbits in a smooth circular path 45 degrees to the left around the subject, maintaining consistent distance while transitioning from front to side-front view with dimensional depth",
                 "MEDIUM": "camera circles 45 degrees left revealing side-front view, maintaining the object within its spatial context while showing dimensional characteristics",
                 "FAR": "camera arcs 45 degrees to the left without reframing scene composition, showing angular perspective while preserving environmental relationships"
             },
             "Orbit Left 90°": {
-                "CLOSE": "camera orbits in a smooth circular path 90 degrees to the left around the object, completing a quarter circle to reveal the full left side profile perpendicular to the starting position",
+                "CLOSE": "camera orbits in a smooth circular path 90 degrees to the left around the subject, completing a quarter circle to reveal the full left side profile perpendicular to the starting position",
                 "MEDIUM": "camera circles 90 degrees left to perpendicular side view, maintaining surrounding spatial context while revealing complete lateral profile",
                 "FAR": "camera arcs 90 degrees to the left maintaining scene composition, showing side perspective without repositioning environmental elements"
             },
             "Orbit Right 30°": {
-                "CLOSE": "camera orbits in a smooth circular path 30 degrees to the right around the object, maintaining consistent distance and height while revealing the right side profile with dynamic perspective shift",
+                "CLOSE": "camera orbits in a smooth circular path 30 degrees to the right around the subject, maintaining consistent distance and height while revealing the right side profile with dynamic perspective shift",
                 "MEDIUM": "camera circles 30 degrees right maintaining distance, showing the object from a new angle while preserving spatial relationships",
                 "FAR": "camera arcs 30 degrees to the right without reframing, revealing a new perspective while maintaining all environmental relationships"
             },
             "Orbit Right 45°": {
-                "CLOSE": "camera orbits in a smooth circular path 45 degrees to the right around the object, transitioning from front to side-front view with dimensional depth revelation",
+                "CLOSE": "camera orbits in a smooth circular path 45 degrees to the right around the subject, transitioning from front to side-front view with dimensional depth revelation",
                 "MEDIUM": "camera circles 45 degrees right showing side-front angle, maintaining the object within its spatial context while revealing dimensional form",
                 "FAR": "camera arcs 45 degrees to the right maintaining scene composition, showing angular perspective without repositioning scene elements"
             },
             "Orbit Right 90°": {
-                "CLOSE": "camera orbits in a smooth circular path 90 degrees to the right around the object, completing a quarter circle to reveal the full right side profile perpendicular to the starting position",
+                "CLOSE": "camera orbits in a smooth circular path 90 degrees to the right around the subject, completing a quarter circle to reveal the full right side profile perpendicular to the starting position",
                 "MEDIUM": "camera circles 90 degrees right to perpendicular view, maintaining surrounding context while showing complete right lateral profile",
                 "FAR": "camera arcs 90 degrees to the right without reframing environmental composition, showing side perspective with preserved spatial relationships"
             },
             "Orbit Up 30°": {
-                "CLOSE": "camera orbits in a smooth arc 30 degrees upward around the object, elevating to a higher vantage point creating a gentle downward-looking angle that reveals more of the top surface",
-                "MEDIUM": "camera arcs 30 degrees upward maintaining distance, showing elevated perspective while preserving the object's position within surrounding space",
+                "CLOSE": "camera orbits in a smooth arc 30 degrees upward around the subject, elevating to a higher vantage point creating a gentle downward-looking angle that reveals more of the top surface",
+                "MEDIUM": "camera arcs 30 degrees upward maintaining distance, showing elevated perspective while preserving position within surrounding space",
                 "FAR": "camera elevates 30 degrees upward without reframing scene composition, showing gentle downward angle while maintaining all environmental relationships"
             },
             "Orbit Up 45°": {
-                "CLOSE": "camera orbits in a smooth arc 45 degrees upward around the object, elevating significantly to create a strong downward-looking angle that emphasizes the top surface and aerial perspective",
+                "CLOSE": "camera orbits in a smooth arc 45 degrees upward around the subject, elevating significantly to create a strong downward-looking angle that emphasizes the top surface and aerial perspective",
                 "MEDIUM": "camera arcs 45 degrees upward showing strong elevated perspective, maintaining spatial context while revealing top-down dimensional characteristics",
                 "FAR": "camera elevates 45 degrees upward maintaining scene relationships, showing pronounced downward perspective without repositioning environmental elements"
             },
             "Orbit Down 30°": {
-                "CLOSE": "camera orbits in a smooth arc 30 degrees downward around the object, descending to a lower vantage point creating a gentle upward-looking angle that reveals more of the bottom or base",
-                "MEDIUM": "camera arcs 30 degrees downward maintaining distance, showing lowered perspective while preserving the object's position within surrounding context",
+                "CLOSE": "camera orbits in a smooth arc 30 degrees downward around the subject, descending to a lower vantage point creating a gentle upward-looking angle that reveals more of the bottom or base",
+                "MEDIUM": "camera arcs 30 degrees downward maintaining distance, showing lowered perspective while preserving position within surrounding context",
                 "FAR": "camera descends 30 degrees downward without reframing scene composition, showing gentle upward angle while maintaining all spatial relationships"
             },
             "Orbit Down 45°": {
-                "CLOSE": "camera orbits in a smooth arc 45 degrees downward around the object, descending significantly to create a strong upward-looking angle that emphasizes vertical height and monumentality",
+                "CLOSE": "camera orbits in a smooth arc 45 degrees downward around the subject, descending significantly to create a strong upward-looking angle that emphasizes vertical height and monumentality",
                 "MEDIUM": "camera arcs 45 degrees downward showing strong low-angle perspective, maintaining spatial context while emphasizing upward vertical characteristics",
                 "FAR": "camera descends 45 degrees downward maintaining scene relationships, showing pronounced upward perspective without repositioning environmental elements"
             },
@@ -737,27 +737,27 @@ class ArchAi3D_Object_Focus_Camera_V4:
         explanations = {
             "Dolly In (Zoom Closer)": {
                 "Basic": "gradually moving closer to emphasize details",
-                "Detailed": "camera moves smoothly forward towards the object on a straight path, gradually filling more of the frame to emphasize intricate details, textures, and fine craftsmanship as the object grows larger in the frame"
+                "Detailed": "camera moves smoothly forward on a straight path, gradually filling more of the frame to emphasize intricate details, textures, and fine craftsmanship as the subject grows larger in the frame"
             },
             "Dolly Out (Zoom Away)": {
                 "Basic": "gradually moving away to show more context",
-                "Detailed": "camera moves smoothly backward away from the object on a straight path, gradually revealing more surrounding context and environmental setting as the object becomes smaller in the frame, providing spatial awareness"
+                "Detailed": "camera moves smoothly backward on a straight path, gradually revealing more surrounding context and environmental setting as the subject becomes smaller in the frame, providing spatial awareness"
             },
             "Tilt Up Slightly": {
                 "Basic": "tilting upward to reveal upper portions",
-                "Detailed": "camera tilts slightly upward on its axis while position remains fixed, shifting the view from the middle or lower portions towards the upper sections of the object, creating a gentle upward scanning motion"
+                "Detailed": "camera tilts slightly upward on its axis while position remains fixed, shifting the view from the middle or lower portions towards the upper sections, creating a gentle upward scanning motion"
             },
             "Tilt Down Slightly": {
                 "Basic": "tilting downward to reveal lower portions",
-                "Detailed": "camera tilts slightly downward on its axis while position remains fixed, shifting the view from the middle or upper portions towards the lower sections of the object, creating a gentle downward scanning motion"
+                "Detailed": "camera tilts slightly downward on its axis while position remains fixed, shifting the view from the middle or upper portions towards the lower sections, creating a gentle downward scanning motion"
             },
             "Pan Left": {
                 "Basic": "panning left to reveal adjacent areas",
-                "Detailed": "camera pans horizontally to the left while position remains fixed, rotating on its vertical axis to sweep the view leftward across the scene, revealing adjacent areas and context to the left side of the object"
+                "Detailed": "camera pans horizontally to the left while position remains fixed, rotating on its vertical axis to sweep the view leftward across the scene, revealing adjacent areas and context to the left side"
             },
             "Pan Right": {
                 "Basic": "panning right to reveal adjacent areas",
-                "Detailed": "camera pans horizontally to the right while position remains fixed, rotating on its vertical axis to sweep the view rightward across the scene, revealing adjacent areas and context to the right side of the object"
+                "Detailed": "camera pans horizontally to the right while position remains fixed, rotating on its vertical axis to sweep the view rightward across the scene, revealing adjacent areas and context to the right side"
             },
         }
 
