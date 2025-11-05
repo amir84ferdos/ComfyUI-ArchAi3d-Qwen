@@ -65,7 +65,7 @@ class ArchAi3D_Object_Focus_Camera_V6:
         return {
             "required": {
                 "target_object": ("STRING", {
-                    "default": "the object",
+                    "default": "dishwasher",
                     "multiline": False,
                     "tooltip": "What to focus on: 'chandelier crystal', 'brass handle', 'silk fabric'"
                 }),
@@ -123,7 +123,7 @@ class ArchAi3D_Object_Focus_Camera_V6:
                     "elevated",
                     "high"
                 ], {
-                    "default": "face_level",
+                    "default": "slightly_above",
                     "tooltip": "Camera height (used for 'Vantage: Custom' position)"
                 }),
                 "direction": ([
@@ -153,7 +153,7 @@ class ArchAi3D_Object_Focus_Camera_V6:
                     "Far",
                     "Very Far"
                 ], {
-                    "default": "Close",
+                    "default": "Medium",
                     "tooltip": "Distance from object (used in Preset mode) - affects prompt strength in Orbit mode"
                 }),
                 "distance_meters": ("FLOAT", {
@@ -179,7 +179,7 @@ class ArchAi3D_Object_Focus_Camera_V6:
                     "Tilt-Shift",
                     "Panoramic"
                 ], {
-                    "default": "Close-Up Lens",
+                    "default": "Normal Lens (50mm)",
                     "tooltip": "Lens type with technical details"
                 }),
                 "prompt_language": ([
@@ -194,7 +194,7 @@ class ArchAi3D_Object_Focus_Camera_V6:
                     "Standard (Maintain Position)",
                     "Focus Transition (Reposition to Object)"
                 ], {
-                    "default": "Standard (Maintain Position)",
+                    "default": "Focus Transition (Reposition to Object)",
                     "tooltip": "Standard: Distance-aware. Focus Transition: Intentional repositioning (e.g., corner → refrigerator)"
                 }),
                 "add_detailed_explanation": ([
@@ -202,7 +202,7 @@ class ArchAi3D_Object_Focus_Camera_V6:
                     "Basic (Short description)",
                     "Detailed (Full perspective explanation)"
                 ], {
-                    "default": "Basic (Short description)",
+                    "default": "Detailed (Full perspective explanation)",
                     "tooltip": "Add camera perspective explanation after base prompt"
                 }),
                 "material_detail_preset": ([
