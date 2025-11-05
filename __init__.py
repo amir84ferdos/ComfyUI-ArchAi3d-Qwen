@@ -70,6 +70,18 @@ from .nodes.camera.simple_camera_control import ArchAi3D_Qwen_Simple_Camera_Cont
 # v5.1.0 DX8152 LORA SUPPORT
 from .nodes.camera.dx8152_camera_lora import ArchAi3D_Qwen_DX8152_Camera_LoRA
 
+# v5.1.0 OBJECT FOCUS CAMERA (v1 - Chinese prompts with LoRA mode)
+from .nodes.camera.object_focus_camera import ArchAi3D_Object_Focus_Camera
+
+# v5.1.0 OBJECT FOCUS CAMERA V2 (Reddit-validated English prompts)
+from .nodes.camera.object_focus_camera_v2 import ArchAi3D_Object_Focus_Camera_V2
+
+# v5.1.0 OBJECT FOCUS CAMERA V3 (Ultimate merged - Chinese/English/Hybrid)
+from .nodes.camera.object_focus_camera_v3 import ArchAi3D_Object_Focus_Camera_V3
+
+# v5.1.0 OBJECT FOCUS CAMERA V4 (Enhanced - Distance-aware + Environmental Focus)
+from .nodes.camera.object_focus_camera_v4 import ArchAi3D_Object_Focus_Camera_V4
+
 # ============================================================================
 # IMAGE EDITING NODES
 # ============================================================================
@@ -151,6 +163,18 @@ NODE_CLASS_MAPPINGS = {
     # v5.1.0 dx8152 LoRA Support
     "ArchAi3D_Qwen_DX8152_Camera_LoRA": ArchAi3D_Qwen_DX8152_Camera_LoRA,
 
+    # v5.1.0 Object Focus Camera (v1 - Chinese prompts)
+    "ArchAi3D_Object_Focus_Camera": ArchAi3D_Object_Focus_Camera,
+
+    # v5.1.0 Object Focus Camera v2 (Reddit-validated English prompts)
+    "ArchAi3D_Object_Focus_Camera_V2": ArchAi3D_Object_Focus_Camera_V2,
+
+    # v5.1.0 Object Focus Camera v3 (Ultimate merged)
+    "ArchAi3D_Object_Focus_Camera_V3": ArchAi3D_Object_Focus_Camera_V3,
+
+    # v5.1.0 Object Focus Camera v4 (Enhanced - Distance-aware + Environmental Focus)
+    "ArchAi3D_Object_Focus_Camera_V4": ArchAi3D_Object_Focus_Camera_V4,
+
     # Image Editing
     "ArchAi3D_Qwen_Material_Changer": ArchAi3D_Qwen_Material_Changer,
     "ArchAi3D_Qwen_Watermark_Removal": ArchAi3D_Qwen_Watermark_Removal,
@@ -221,11 +245,23 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Qwen_Person_Perspective_Control": "👤 Person Perspective Control",
     "ArchAi3D_Qwen_Person_Cinematographer": "🎬 Person Cinematographer",
 
-    # v5.1.0 Simple Camera Control
-    "ArchAi3D_Qwen_Simple_Camera_Control": "🎥 Simple Camera Control",
+    # v5.1.0 Simple Camera Control (v3.0 - Context-Aware)
+    "ArchAi3D_Qwen_Simple_Camera_Control": "🎥 Simple Camera Control v3",
 
     # v5.1.0 dx8152 LoRA Support
     "ArchAi3D_Qwen_DX8152_Camera_LoRA": "📹 dx8152 Camera LoRA",
+
+    # v5.1.0 Object Focus Camera (v1 - Chinese prompts)
+    "ArchAi3D_Object_Focus_Camera": "📦 Object Focus Camera",
+
+    # v5.1.0 Object Focus Camera v2 (Reddit-validated prompts)
+    "ArchAi3D_Object_Focus_Camera_V2": "📦 Object Focus Camera v2 (Reddit)",
+
+    # v5.1.0 Object Focus Camera v3 (Ultimate merged)
+    "ArchAi3D_Object_Focus_Camera_V3": "📦 Object Focus Camera v3 (Ultimate)",
+
+    # v5.1.0 Object Focus Camera v4 (Enhanced)
+    "ArchAi3D_Object_Focus_Camera_V4": "📦 Object Focus Camera v4 (Enhanced)",
 
     # Image Editing
     "ArchAi3D_Qwen_Material_Changer": "🎨 Material Changer",
