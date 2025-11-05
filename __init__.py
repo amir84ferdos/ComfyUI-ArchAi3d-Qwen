@@ -82,6 +82,12 @@ from .nodes.camera.object_focus_camera_v3 import ArchAi3D_Object_Focus_Camera_V3
 # v5.1.0 OBJECT FOCUS CAMERA V4 (Enhanced - Distance-aware + Environmental Focus)
 from .nodes.camera.object_focus_camera_v4 import ArchAi3D_Object_Focus_Camera_V4
 
+# v5.1.0 OBJECT FOCUS CAMERA V5 (Professional Presets - Material + Quality)
+from .nodes.camera.object_focus_camera_v5 import ArchAi3D_Object_Focus_Camera_V5
+
+# v5.1.0 OBJECT FOCUS CAMERA V6 (Ultimate - Vantage Point + Presets)
+from .nodes.camera.object_focus_camera_v6 import ArchAi3D_Object_Focus_Camera_V6
+
 # ============================================================================
 # IMAGE EDITING NODES
 # ============================================================================
@@ -175,6 +181,12 @@ NODE_CLASS_MAPPINGS = {
     # v5.1.0 Object Focus Camera v4 (Enhanced - Distance-aware + Environmental Focus)
     "ArchAi3D_Object_Focus_Camera_V4": ArchAi3D_Object_Focus_Camera_V4,
 
+    # v5.1.0 Object Focus Camera v5 (Professional Presets - Material + Quality)
+    "ArchAi3D_Object_Focus_Camera_V5": ArchAi3D_Object_Focus_Camera_V5,
+
+    # v5.1.0 Object Focus Camera v6 (Ultimate - Vantage Point + Presets)
+    "ArchAi3D_Object_Focus_Camera_V6": ArchAi3D_Object_Focus_Camera_V6,
+
     # Image Editing
     "ArchAi3D_Qwen_Material_Changer": ArchAi3D_Qwen_Material_Changer,
     "ArchAi3D_Qwen_Watermark_Removal": ArchAi3D_Qwen_Watermark_Removal,
@@ -262,6 +274,12 @@ NODE_DISPLAY_NAME_MAPPINGS = {
 
     # v5.1.0 Object Focus Camera v4 (Enhanced)
     "ArchAi3D_Object_Focus_Camera_V4": "📦 Object Focus Camera v4 (Enhanced)",
+
+    # v5.1.0 Object Focus Camera v5 (Professional Presets)
+    "ArchAi3D_Object_Focus_Camera_V5": "📦 Object Focus Camera v5 (Professional Presets)",
+
+    # v5.1.0 Object Focus Camera v6 (Ultimate)
+    "ArchAi3D_Object_Focus_Camera_V6": "📦 Object Focus Camera v6 (Ultimate)",
 
     # Image Editing
     "ArchAi3D_Qwen_Material_Changer": "🎨 Material Changer",
