@@ -1,11 +1,11 @@
 """
-Object Focus Camera v6 - Ultimate Edition
+Object Focus Camera v6 - Ultimate Unified Edition
 
-Combines v5 features with Interior Focus vantage point system.
+Combines ALL features into ONE unified prompt structure.
 
 New in v6:
-1. Positioning Style Toggle: Choose between Orbit Pattern (v5) or Vantage Point (Interior Focus)
-2. Vantage Point Features: height, direction, auto_facing, numeric distance with word conversion
+1. Unified Prompt: Chinese base + Vantage point details + All presets (NO toggle, everything combined)
+2. Vantage Point Features: height, direction, auto_facing, numeric distance with word conversion (ALWAYS included)
 3. Distance Mode Toggle: Preset dropdown OR custom numeric meters
 4. number_to_words() converter: Prevents numbers appearing in images
 
@@ -19,13 +19,13 @@ From v5:
 Perfect for: Product photography, architectural details, interior photography, macro capture
 
 Author: ArchAi3d
-Version: 6.0.0 - Ultimate merged system
+Version: 6.0.0 - Ultimate unified system
 """
 
 class ArchAi3D_Object_Focus_Camera_V6:
-    """Ultimate Object Focus Camera with dual positioning systems and professional presets.
+    """Ultimate Object Focus Camera with unified prompt combining all features.
 
-    Purpose: Professional object photography with choice of orbit or vantage point positioning.
+    Purpose: Professional object photography with orbit + vantage point + presets in ONE prompt.
     Optimized for: Product photography, macro shots, architectural details, interior photography.
     """
 
@@ -69,13 +69,6 @@ class ArchAi3D_Object_Focus_Camera_V6:
                     "multiline": False,
                     "tooltip": "What to focus on: 'chandelier crystal', 'brass handle', 'silk fabric'"
                 }),
-                "positioning_style": ([
-                    "Orbit Pattern (v5 style)",
-                    "Vantage Point (Interior Focus style)"
-                ], {
-                    "default": "Orbit Pattern (v5 style)",
-                    "tooltip": "Choose camera positioning style: Orbit uses camera_position parameter, Vantage uses height+direction"
-                }),
                 "camera_position": ([
                     "Front View",
                     "Angled View (15°)",
@@ -96,9 +89,19 @@ class ArchAi3D_Object_Focus_Camera_V6:
                     "Orbit Up 45°",
                     "Orbit Down 30°",
                     "Orbit Down 45°",
+                    "--- Vantage Point ---",
+                    "Vantage: Face Level @ Front",
+                    "Vantage: Face Level @ Front-Left",
+                    "Vantage: Face Level @ Front-Right",
+                    "Vantage: Face Level @ Left",
+                    "Vantage: Face Level @ Right",
+                    "Vantage: Slightly Above @ Front",
+                    "Vantage: Elevated @ Front",
+                    "Vantage: Ground Level @ Front",
+                    "Vantage: Custom"
                 ], {
                     "default": "Front View",
-                    "tooltip": "Camera position relative to object (used in Orbit Pattern mode)"
+                    "tooltip": "Camera position: orbit patterns (Chinese base) OR vantage point (Interior Focus style)"
                 }),
                 "camera_movement": ([
                     "None (Static)",
@@ -121,7 +124,7 @@ class ArchAi3D_Object_Focus_Camera_V6:
                     "high"
                 ], {
                     "default": "face_level",
-                    "tooltip": "Camera height (used in Vantage Point mode)"
+                    "tooltip": "Camera height (used for 'Vantage: Custom' position)"
                 }),
                 "direction": ([
                     "front",
@@ -134,7 +137,7 @@ class ArchAi3D_Object_Focus_Camera_V6:
                     "back_right"
                 ], {
                     "default": "front",
-                    "tooltip": "Camera direction relative to target (used in Vantage Point mode)"
+                    "tooltip": "Camera direction relative to target (used for 'Vantage: Custom' position)"
                 }),
                 "distance_mode": ([
                     "Preset (Very Close/Close/Medium/Far/Very Far)",
@@ -162,7 +165,7 @@ class ArchAi3D_Object_Focus_Camera_V6:
                 }),
                 "auto_facing": ("BOOLEAN", {
                     "default": True,
-                    "tooltip": "Automatically face camera toward target (adds 'facing [TARGET]' in Vantage Point mode)"
+                    "tooltip": "Automatically face camera toward target (adds 'facing [TARGET]' when using Vantage positions)"
                 }),
                 "lens_type": ([
                     "Normal Lens (50mm)",
@@ -290,7 +293,7 @@ class ArchAi3D_Object_Focus_Camera_V6:
     FUNCTION = "generate_object_focus_prompt"
     CATEGORY = "ArchAi3d/Qwen/Camera"
 
-    def generate_object_focus_prompt(self, target_object, positioning_style,
+    def generate_object_focus_prompt(self, target_object,
                                      camera_position, camera_movement,
                                      height, direction,
                                      distance_mode, camera_distance, distance_meters, auto_facing,
@@ -299,47 +302,69 @@ class ArchAi3D_Object_Focus_Camera_V6:
                                      material_detail_preset, photography_quality_preset,
                                      show_details=""):
         """
-        Generate professional object focus prompt with dual positioning systems.
+        Generate professional object focus prompt with optional vantage point feature.
 
         Prompt Assembly Order:
-        1. Base structure (orbit OR vantage point pattern)
-        2. Material Detail Preset (if selected)
-        3. Photography Quality Preset (if selected)
-        4. Manual show_details (if provided)
-        5. Distance-aware explanation (if enabled)
+        1. Chinese base structure (lens + position + distance) OR Vantage point
+        2. Camera movement (if not None, only for orbit mode)
+        3. Material Detail Preset (if selected)
+        4. Photography Quality Preset (if selected)
+        5. Manual show_details (if provided)
+        6. Distance-aware explanation (if enabled, only for orbit mode)
         """
+
+        # Detect if vantage position selected
+        is_vantage = "Vantage:" in camera_position
+
+        # Parse vantage height and direction
+        if is_vantage and "Custom" in camera_position:
+            # Use height/direction parameters for Custom vantage
+            vantage_height = height
+            vantage_direction = direction
+        elif is_vantage:
+            # Parse preset: "Vantage: Face Level @ Front" → "face_level", "front"
+            parts = camera_position.replace("Vantage: ", "").split(" @ ")
+            vantage_height = parts[0].lower().replace(" ", "_")
+            vantage_direction = parts[1].lower().replace("-", "_")
+        else:
+            # Not vantage mode, set to None
+            vantage_height = None
+            vantage_direction = None
 
         # Get lens technical details
         lens_details = self._get_lens_details(lens_type)
 
-        # Build prompt based on selected language and positioning style
+        # Build prompt based on selected language
         if "Chinese" in prompt_language:
             prompt = self._build_chinese_prompt(
-                target_object, positioning_style, camera_position, camera_movement,
-                height, direction, distance_mode, camera_distance, distance_meters, auto_facing,
+                target_object, is_vantage, vantage_height, vantage_direction,
+                camera_position, camera_movement,
+                distance_mode, camera_distance, distance_meters, auto_facing,
                 lens_type, lens_details, show_details,
                 add_detailed_explanation, focus_transition_mode,
                 material_detail_preset, photography_quality_preset
             )
         elif "English" in prompt_language:
             prompt = self._build_english_prompt(
-                target_object, positioning_style, camera_position, camera_movement,
-                height, direction, distance_mode, camera_distance, distance_meters, auto_facing,
+                target_object, is_vantage, vantage_height, vantage_direction,
+                camera_position, camera_movement,
+                distance_mode, camera_distance, distance_meters, auto_facing,
                 lens_type, lens_details, show_details,
                 add_detailed_explanation, focus_transition_mode,
                 material_detail_preset, photography_quality_preset
             )
         else:  # Hybrid
             prompt = self._build_hybrid_prompt(
-                target_object, positioning_style, camera_position, camera_movement,
-                height, direction, distance_mode, camera_distance, distance_meters, auto_facing,
+                target_object, is_vantage, vantage_height, vantage_direction,
+                camera_position, camera_movement,
+                distance_mode, camera_distance, distance_meters, auto_facing,
                 lens_type, lens_details, show_details,
                 add_detailed_explanation, focus_transition_mode,
                 material_detail_preset, photography_quality_preset
             )
 
         # Generate English description for user
-        style_indicator = "🔄" if "Vantage" in positioning_style else "🎯" if "Focus Transition" in focus_transition_mode else "📍"
+        style_indicator = "🔄" if is_vantage else "🎯" if "Focus Transition" in focus_transition_mode else "📍"
         movement_str = "" if camera_movement == "None (Static)" else f" + {camera_movement}"
 
         # Distance display
@@ -354,14 +379,14 @@ class ArchAi3D_Object_Focus_Camera_V6:
         if photography_quality_preset != "None (No quality enhancement)" and "---" not in photography_quality_preset:
             preset_indicator += f" | Qual: {photography_quality_preset}"
 
-        if "Vantage" in positioning_style:
+        if is_vantage:
             facing_str = f" facing {target_object}" if auto_facing else ""
-            description = f"{style_indicator} {lens_type} | Vantage: {height} @ {direction} {distance_str}{facing_str}{preset_indicator}"
+            description = f"{style_indicator} {lens_type} | Vantage: {vantage_height} @ {vantage_direction} {distance_str}{facing_str}{preset_indicator}"
         else:
             description = f"{style_indicator} {lens_type} | {camera_position}{movement_str} | {distance_str}{preset_indicator} | {target_object}"
 
         # System prompt
-        system_prompt = self._get_enhanced_system_prompt(focus_transition_mode, positioning_style)
+        system_prompt = self._get_enhanced_system_prompt(focus_transition_mode, is_vantage)
 
         return (prompt, system_prompt, description)
 
@@ -527,34 +552,49 @@ class ArchAi3D_Object_Focus_Camera_V6:
         }
         return quality_presets.get(preset, "")
 
-    def _build_chinese_prompt(self, target_object, positioning_style, camera_position, camera_movement,
-                              height, direction, distance_mode, camera_distance, distance_meters, auto_facing,
+    def _build_chinese_prompt(self, target_object, is_vantage, vantage_height, vantage_direction,
+                              camera_position, camera_movement,
+                              distance_mode, camera_distance, distance_meters, auto_facing,
                               lens_type, lens_details, show_details,
                               add_detailed_explanation, focus_transition_mode,
                               material_detail_preset, photography_quality_preset):
-        """Build Chinese prompt with dual positioning systems."""
+        """Build Chinese prompt with optional vantage point."""
 
         parts = []
 
-        # Choose positioning style
-        if "Vantage" in positioning_style:
-            # VANTAGE POINT MODE - Interior Focus style
-            # Determine distance in meters
+        # Choose positioning mode
+        if is_vantage:
+            # VANTAGE POINT MODE - Combines Chinese base + vantage point addition
+            # 1. Build Chinese base structure (same as orbit mode)
+            lens_cn = lens_details["chinese"]
+            lens_tech = lens_details["characteristics"]
+            parts.append(f"将镜头转为{lens_cn}（{lens_tech}）")
+
+            # 2. Position + object (always use front view for vantage)
+            parts.append(f"正面查看{target_object}")
+
+            # 3. Distance
+            distance_cn = self._get_distance_chinese(camera_distance)
+            parts.append(f"距离{distance_cn}")
+
+            # 4. Build vantage point addition
             if "Custom" in distance_mode:
                 distance_m = distance_meters
             else:
                 distance_m = self.PRESET_TO_METERS[camera_distance]
 
             distance_words = self.number_to_words(distance_m)
-            height_phrase = self.HEIGHT_MAP.get(height, height)
-            direction_phrase = self.DIRECTION_MAP.get(direction, direction)
+            height_phrase = self.HEIGHT_MAP.get(vantage_height, vantage_height)
+            direction_phrase = self.DIRECTION_MAP.get(vantage_direction, vantage_direction)
 
             vantage = f"change the view to a vantage point at {height_phrase} {distance_words} meters to the {direction_phrase}"
 
             if auto_facing and target_object:
                 vantage += f" facing {target_object}"
 
-            base_prompt = vantage
+            # 5. Combine: Chinese base + vantage addition
+            prompt_chinese = "，".join(parts)
+            base_prompt = f"Next Scene: {prompt_chinese}，{vantage}"
 
         else:
             # ORBIT PATTERN MODE - v5 style
@@ -594,8 +634,8 @@ class ArchAi3D_Object_Focus_Camera_V6:
         if show_details and show_details.strip():
             base_prompt += f"，{show_details.strip()}"
 
-        # 8. Add detailed explanation if requested (only for Orbit mode)
-        if "None" not in add_detailed_explanation and "Orbit" in positioning_style:
+        # 8. Add detailed explanation if requested (only for Orbit mode, not vantage)
+        if "None" not in add_detailed_explanation and not is_vantage:
             position_explain = self._get_position_explanation(
                 camera_position, add_detailed_explanation, camera_distance, focus_transition_mode
             )
@@ -612,34 +652,46 @@ class ArchAi3D_Object_Focus_Camera_V6:
 
         return base_prompt
 
-    def _build_english_prompt(self, target_object, positioning_style, camera_position, camera_movement,
-                              height, direction, distance_mode, camera_distance, distance_meters, auto_facing,
+    def _build_english_prompt(self, target_object, is_vantage, vantage_height, vantage_direction,
+                              camera_position, camera_movement,
+                              distance_mode, camera_distance, distance_meters, auto_facing,
                               lens_type, lens_details, show_details,
                               add_detailed_explanation, focus_transition_mode,
                               material_detail_preset, photography_quality_preset):
-        """Build English prompt with dual positioning systems."""
+        """Build English prompt with optional vantage point."""
 
         parts = []
 
-        # Choose positioning style
-        if "Vantage" in positioning_style:
-            # VANTAGE POINT MODE - Interior Focus style
-            # Determine distance in meters
+        # Choose positioning mode
+        if is_vantage:
+            # VANTAGE POINT MODE - Combines English base + vantage point addition
+            # 1. Build English base structure (same as orbit mode)
+            parts.append(f"Change to {lens_details['technical']}")
+
+            # 2. Position + object (always use front view for vantage)
+            parts.append(f"camera positioned at front view of {target_object}")
+
+            # 3. Distance
+            distance_en = self._get_distance_english(camera_distance)
+            parts.append(f"distance {distance_en}")
+
+            # 4. Build vantage point addition
             if "Custom" in distance_mode:
                 distance_m = distance_meters
             else:
                 distance_m = self.PRESET_TO_METERS[camera_distance]
 
             distance_words = self.number_to_words(distance_m)
-            height_phrase = self.HEIGHT_MAP.get(height, height)
-            direction_phrase = self.DIRECTION_MAP.get(direction, direction)
+            height_phrase = self.HEIGHT_MAP.get(vantage_height, vantage_height)
+            direction_phrase = self.DIRECTION_MAP.get(vantage_direction, vantage_direction)
 
             vantage = f"change the view to a vantage point at {height_phrase} {distance_words} meters to the {direction_phrase}"
 
             if auto_facing and target_object:
                 vantage += f" facing {target_object}"
 
-            base_prompt = vantage
+            # 5. Combine: English base + vantage addition
+            base_prompt = ", ".join(parts) + f", {vantage}"
 
         else:
             # ORBIT PATTERN MODE - v5 style
@@ -694,8 +746,8 @@ class ArchAi3D_Object_Focus_Camera_V6:
         if show_details and show_details.strip():
             base_prompt += f", {show_details.strip()}"
 
-        # 8. Add detailed explanation if requested (only for Orbit mode)
-        if "None" not in add_detailed_explanation and "Orbit" in positioning_style:
+        # 8. Add detailed explanation if requested (only for Orbit mode, not vantage)
+        if "None" not in add_detailed_explanation and not is_vantage:
             position_explain = self._get_position_explanation(
                 camera_position, add_detailed_explanation, camera_distance, focus_transition_mode
             )
@@ -712,34 +764,49 @@ class ArchAi3D_Object_Focus_Camera_V6:
 
         return base_prompt
 
-    def _build_hybrid_prompt(self, target_object, positioning_style, camera_position, camera_movement,
-                             height, direction, distance_mode, camera_distance, distance_meters, auto_facing,
+    def _build_hybrid_prompt(self, target_object, is_vantage, vantage_height, vantage_direction,
+                             camera_position, camera_movement,
+                             distance_mode, camera_distance, distance_meters, auto_facing,
                              lens_type, lens_details, show_details,
                              add_detailed_explanation, focus_transition_mode,
                              material_detail_preset, photography_quality_preset):
-        """Build hybrid prompt with dual positioning systems."""
+        """Build hybrid prompt with optional vantage point."""
 
         parts = []
 
-        # Choose positioning style
-        if "Vantage" in positioning_style:
-            # VANTAGE POINT MODE - Interior Focus style (English)
-            # Determine distance in meters
+        # Choose positioning mode
+        if is_vantage:
+            # VANTAGE POINT MODE - Combines hybrid base + vantage point addition
+            # 1. Build hybrid base structure (Chinese + English lens)
+            lens_cn = lens_details["chinese"]
+            lens_tech_en = lens_type
+            parts.append(f"将镜头转为{lens_cn} ({lens_tech_en})")
+
+            # 2. Position in Chinese (always front view for vantage)
+            parts.append(f"正面查看{target_object}")
+
+            # 3. Distance in Chinese
+            distance_cn = self._get_distance_chinese(camera_distance)
+            parts.append(f"距离{distance_cn}")
+
+            # 4. Build vantage point addition (English)
             if "Custom" in distance_mode:
                 distance_m = distance_meters
             else:
                 distance_m = self.PRESET_TO_METERS[camera_distance]
 
             distance_words = self.number_to_words(distance_m)
-            height_phrase = self.HEIGHT_MAP.get(height, height)
-            direction_phrase = self.DIRECTION_MAP.get(direction, direction)
+            height_phrase = self.HEIGHT_MAP.get(vantage_height, vantage_height)
+            direction_phrase = self.DIRECTION_MAP.get(vantage_direction, vantage_direction)
 
             vantage = f"change the view to a vantage point at {height_phrase} {distance_words} meters to the {direction_phrase}"
 
             if auto_facing and target_object:
                 vantage += f" facing {target_object}"
 
-            base_prompt = f"Next Scene: {vantage}"
+            # 5. Combine: Hybrid base + vantage addition
+            prompt_chinese = "，".join(parts)
+            base_prompt = f"Next Scene: {prompt_chinese}，{vantage}"
 
         else:
             # ORBIT PATTERN MODE - v5 hybrid style
@@ -791,8 +858,8 @@ class ArchAi3D_Object_Focus_Camera_V6:
         if show_details and show_details.strip():
             base_prompt += f"，{show_details.strip()}"
 
-        # 8. Add detailed explanation if requested (only for Orbit mode)
-        if "None" not in add_detailed_explanation and "Orbit" in positioning_style:
+        # 8. Add detailed explanation if requested (only for Orbit mode, not vantage)
+        if "None" not in add_detailed_explanation and not is_vantage:
             position_explain = self._get_position_explanation(
                 camera_position, add_detailed_explanation, camera_distance, focus_transition_mode
             )
@@ -901,9 +968,9 @@ class ArchAi3D_Object_Focus_Camera_V6:
         }
         return movement_map.get(movement, "")
 
-    def _get_enhanced_system_prompt(self, focus_transition_mode, positioning_style):
-        """Get enhanced system prompt based on focus transition mode and positioning style."""
-        if "Vantage" in positioning_style:
+    def _get_enhanced_system_prompt(self, focus_transition_mode, is_vantage):
+        """Get enhanced system prompt based on focus transition mode and vantage mode."""
+        if is_vantage:
             return (
                 "You are an interior photographer. Position camera to focus on specific furniture, "
                 "appliance, fixture, or decor element within room. Frame subject prominently in foreground "
