@@ -117,7 +117,7 @@ class ArchAi3D_Object_Focus_Camera_V7:
                     "Extreme Wide Shot (EWS)"
                 ], {
                     "default": "Medium Shot (MS)",
-                    "tooltip": "Professional shot size classification (replaces distance system)"
+                    "tooltip": "Cinematography shot size classification. Each size maps to approximate distance: ECU=0.3m, CU=0.8m, MCU=1.2m, MS=2.0m, MLS=3.0m, FS=4.0m, WS=6.0m, EWS=10.0m"
                 }),
                 "camera_angle": ([
                     "Eye Level",
@@ -210,12 +210,12 @@ class ArchAi3D_Object_Focus_Camera_V7:
                     "default": "front",
                     "tooltip": "Camera direction (for 'Vantage: Custom' position)"
                 }),
-                "distance_mode": ([
-                    "Shot Size (Professional)",
-                    "Custom (Numeric meters)"
+                "framing_mode": ([
+                    "Shot Size Presets",
+                    "Custom Meters"
                 ], {
-                    "default": "Shot Size (Professional)",
-                    "tooltip": "Use professional shot sizes OR custom numeric distance"
+                    "default": "Shot Size Presets",
+                    "tooltip": "Use cinematic shot size presets OR specify exact distance in meters"
                 }),
                 "distance_meters": ("FLOAT", {
                     "default": 2.0,
@@ -359,7 +359,7 @@ class ArchAi3D_Object_Focus_Camera_V7:
     def generate_cinematography_prompt(self, target_object,
                                        shot_size, camera_angle, camera_movement,
                                        height, direction,
-                                       distance_mode, distance_meters, auto_facing,
+                                       framing_mode, distance_meters, auto_facing,
                                        lens_type, prompt_language,
                                        focus_transition_mode, add_detailed_explanation,
                                        material_detail_preset, photography_quality_preset,
@@ -400,7 +400,7 @@ class ArchAi3D_Object_Focus_Camera_V7:
             prompt = self._build_chinese_prompt(
                 target_object, is_vantage, vantage_height, vantage_direction,
                 shot_size, camera_angle, camera_movement,
-                distance_mode, distance_meters, auto_facing,
+                framing_mode, distance_meters, auto_facing,
                 lens_type, lens_details, show_details,
                 add_detailed_explanation, focus_transition_mode,
                 material_detail_preset, photography_quality_preset
@@ -409,7 +409,7 @@ class ArchAi3D_Object_Focus_Camera_V7:
             prompt = self._build_english_prompt(
                 target_object, is_vantage, vantage_height, vantage_direction,
                 shot_size, camera_angle, camera_movement,
-                distance_mode, distance_meters, auto_facing,
+                framing_mode, distance_meters, auto_facing,
                 lens_type, lens_details, show_details,
                 add_detailed_explanation, focus_transition_mode,
                 material_detail_preset, photography_quality_preset
@@ -418,7 +418,7 @@ class ArchAi3D_Object_Focus_Camera_V7:
             prompt = self._build_hybrid_prompt(
                 target_object, is_vantage, vantage_height, vantage_direction,
                 shot_size, camera_angle, camera_movement,
-                distance_mode, distance_meters, auto_facing,
+                framing_mode, distance_meters, auto_facing,
                 lens_type, lens_details, show_details,
                 add_detailed_explanation, focus_transition_mode,
                 material_detail_preset, photography_quality_preset
@@ -429,7 +429,7 @@ class ArchAi3D_Object_Focus_Camera_V7:
         movement_str = "" if camera_movement == "Static (No Movement)" else f" + {camera_movement}"
 
         # Shot size display
-        if "Custom" in distance_mode:
+        if "Custom" in framing_mode:
             size_str = f"{distance_meters}m"
         else:
             size_str = shot_size.split(" (")[1].replace(")", "") if "(" in shot_size else shot_size
@@ -617,7 +617,7 @@ class ArchAi3D_Object_Focus_Camera_V7:
 
     def _build_chinese_prompt(self, target_object, is_vantage, vantage_height, vantage_direction,
                               shot_size, camera_angle, camera_movement,
-                              distance_mode, distance_meters, auto_facing,
+                              framing_mode, distance_meters, auto_facing,
                               lens_type, lens_details, show_details,
                               add_detailed_explanation, focus_transition_mode,
                               material_detail_preset, photography_quality_preset):
@@ -637,7 +637,7 @@ class ArchAi3D_Object_Focus_Camera_V7:
             parts.append(f"{shot_cn}构图查看{target_object}")
 
             # Build vantage point addition
-            if "Custom" in distance_mode:
+            if "Custom" in framing_mode:
                 distance_m = distance_meters
             else:
                 distance_m = self.SHOT_SIZE_TO_METERS[shot_size]
@@ -713,7 +713,7 @@ class ArchAi3D_Object_Focus_Camera_V7:
 
     def _build_english_prompt(self, target_object, is_vantage, vantage_height, vantage_direction,
                               shot_size, camera_angle, camera_movement,
-                              distance_mode, distance_meters, auto_facing,
+                              framing_mode, distance_meters, auto_facing,
                               lens_type, lens_details, show_details,
                               add_detailed_explanation, focus_transition_mode,
                               material_detail_preset, photography_quality_preset):
@@ -731,7 +731,7 @@ class ArchAi3D_Object_Focus_Camera_V7:
             parts.append(f"{shot_desc} framing of {target_object}")
 
             # Build vantage point addition
-            if "Custom" in distance_mode:
+            if "Custom" in framing_mode:
                 distance_m = distance_meters
             else:
                 distance_m = self.SHOT_SIZE_TO_METERS[shot_size]
@@ -803,7 +803,7 @@ class ArchAi3D_Object_Focus_Camera_V7:
 
     def _build_hybrid_prompt(self, target_object, is_vantage, vantage_height, vantage_direction,
                              shot_size, camera_angle, camera_movement,
-                             distance_mode, distance_meters, auto_facing,
+                             framing_mode, distance_meters, auto_facing,
                              lens_type, lens_details, show_details,
                              add_detailed_explanation, focus_transition_mode,
                              material_detail_preset, photography_quality_preset):
@@ -821,7 +821,7 @@ class ArchAi3D_Object_Focus_Camera_V7:
             parts.append(f"{shot_cn}构图查看{target_object}")
 
             # Build vantage point addition (English)
-            if "Custom" in distance_mode:
+            if "Custom" in framing_mode:
                 distance_m = distance_meters
             else:
                 distance_m = self.SHOT_SIZE_TO_METERS[shot_size]
