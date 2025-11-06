@@ -6,7 +6,7 @@ Author: Amir Ferdos (ArchAi3d)
 Email: Amir84ferdos@gmail.com
 LinkedIn: https://www.linkedin.com/in/archai3d/
 GitHub: https://github.com/amir84ferdos
-Version: 2.3.0
+Version: 2.4.0
 License: Dual License (Free for personal use, Commercial license required for business use)
 """
 
@@ -90,6 +90,9 @@ from .nodes.camera.object_focus_camera_v6 import ArchAi3D_Object_Focus_Camera_V6
 
 # v7.0.0 OBJECT FOCUS CAMERA V7 (Professional Cinematography Edition)
 from .nodes.camera.object_focus_camera_v7 import ArchAi3D_Object_Focus_Camera_V7
+
+# CINEMATOGRAPHY PROMPT BUILDER (Nanobanan's 5-Ingredient Formula)
+from .nodes.camera.cinematography_prompt_builder import ArchAi3D_Cinematography_Prompt_Builder
 
 # ============================================================================
 # IMAGE EDITING NODES
@@ -193,6 +196,9 @@ NODE_CLASS_MAPPINGS = {
     # v7.0.0 Object Focus Camera v7 (Professional Cinematography Edition)
     "ArchAi3D_Object_Focus_Camera_V7": ArchAi3D_Object_Focus_Camera_V7,
 
+    # Cinematography Prompt Builder (Nanobanan's 5-Ingredient Formula)
+    "ArchAi3D_Cinematography_Prompt_Builder": ArchAi3D_Cinematography_Prompt_Builder,
+
     # Image Editing
     "ArchAi3D_Qwen_Material_Changer": ArchAi3D_Qwen_Material_Changer,
     "ArchAi3D_Qwen_Watermark_Removal": ArchAi3D_Qwen_Watermark_Removal,
@@ -289,6 +295,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
 
     # v7.0.0 Object Focus Camera v7 (Professional Cinematography)
     "ArchAi3D_Object_Focus_Camera_V7": "🎬 Object Focus Camera v7 (Pro Cinema)",
+
+    # v8.0.0 Cinematography Prompt Builder (Nanobanan's 5 Ingredients)
+    "ArchAi3D_Cinematography_Prompt_Builder": "📸 Cinematography Prompt Builder",
 
     # Image Editing
     "ArchAi3D_Qwen_Material_Changer": "🎨 Material Changer",

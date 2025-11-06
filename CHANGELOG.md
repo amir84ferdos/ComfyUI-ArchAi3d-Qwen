@@ -5,6 +5,109 @@ All notable changes to the ArchAi3D Qwen ComfyUI Custom Nodes project will be do
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2025-01-07
+
+### Added - Cinematography Prompt Builder Enhancements ⭐
+
+#### New Parameters for Professional Architectural Photography
+
+- **Horizontal Angle Control** - Camera position around object:
+  - 10 position options: Front (0°), Angled Left/Right (15°, 30°, 45°), Side (90°), Back (180°)
+  - Natural language descriptions: "from thirty degrees to the left for a corner perspective"
+  - Full Chinese translation support for all angles
+  - Enables precise 3D camera positioning combined with existing vertical angles
+
+- **Perspective Correction System** - Keep vertical lines straight:
+  - **Natural (Standard Lens)** - Default mode with natural perspective convergence
+  - **Architectural (Keep Verticals Straight)** - Professional architectural photography mode
+  - **Tilt-Shift (Full Perspective Control)** - Advanced mode with selective focus plane
+  - Automatic tilt-shift lens selection when Full Perspective Control enabled
+  - System prompt guidance for maintaining parallel vertical lines
+  - Validation warnings for incompatible camera angle combinations
+
+#### Enhanced Prompt Generation
+
+- **Simple Prompt Updates**:
+  - Horizontal angle positioning integrated into natural language flow
+  - Perspective correction guidance added for architectural mode
+  - Example: "positioned from thirty degrees to the left for a corner perspective, with careful framing to keep all vertical lines parallel"
+
+- **Professional Prompt Updates**:
+  - Chinese translations for horizontal angles (从左侧30度拍摄,呈现转角视角)
+  - Chinese translations for perspective correction (保持所有垂直线平行,防止透视畸变)
+  - Integrated into dx8152 LoRA-optimized prompt structure
+
+- **System Prompt Enhancements**:
+  - Architectural guidance automatically appended when perspective correction enabled
+  - "IMPORTANT: Maintain parallel vertical lines in architectural photography. Keep the camera level..."
+  - Applied to all 3 system prompt modes (Professional, Research-Validated, Simple/Beginner)
+
+#### New Helper Methods
+
+- `_get_horizontal_angle_description()` - Converts angle selections to natural language (English + Chinese)
+- `_get_perspective_correction_prompting()` - Generates perspective guidance text (English + Chinese)
+
+#### Enhanced Validation
+
+- **Perspective Correction Compatibility Check**:
+  - Warns if perspective correction enabled with non-level camera angles
+  - "⚠️ Perspective correction requires eye-level camera angle. Vertical lines will converge with tilted camera positions."
+  - Prevents common architectural photography mistakes
+
+### Changed
+
+- **Cinematography Prompt Builder**:
+  - Function signature updated with `horizontal_angle` and `perspective_correction` parameters
+  - Lens auto-selection logic enhanced for tilt-shift mode
+  - All prompts now support full 3D positioning with horizontal + vertical angles
+
+### Documentation
+
+- **HORIZONTAL_ANGLE_PERSPECTIVE_CORRECTION.md**: Complete implementation guide
+  - 3 perspective correction modes explained in detail
+  - 10 horizontal angle options with use cases
+  - Usage examples with expected outputs
+  - Technical implementation details
+
+- **CAMERA_PROMPTING_GUIDE.md**: Comprehensive 15,000+ word guide
+  - Based on Nanobanan's 5-ingredient camera prompting formula
+  - 15 annotated working examples covering all shot types
+  - Quick reference charts for shot sizes, angles, DOF, styles
+  - Integration guide for Cinematography Prompt Builder node
+
+- **Additional Documentation**:
+  - CINEMATOGRAPHY_PROMPT_BUILDER_COMPLETE.md - Full v2.4.0 feature summary
+  - CUSTOM_DETAILS_TOOLTIP_ENHANCEMENT.md - Enhanced tooltip guidance
+  - PROMPT_FORMAT_FIXES.md - Natural language improvements
+  - SYSTEM_PROMPT_UPDATE.md - Dynamic system prompt implementation
+
+### Technical Notes
+
+- **Research-Validated Approach**:
+  - Horizontal angles use natural language ("from thirty degrees to the left") instead of degree-based rotation commands
+  - Aligns with vision-language research showing distance-based positioning more reliable than degree-based
+  - Perspective correction uses explicit natural language guidance for architectural straight verticals
+
+- **Backwards Compatibility**:
+  - All new parameters have sensible defaults (Front View, Natural perspective)
+  - Existing workflows continue working without modification
+  - Progressive enhancement approach for advanced users
+
+- **Language Support**:
+  - Full Chinese translations for all new features
+  - Optimized for dx8152 LoRAs requiring Chinese cinematography terms
+  - Hybrid mode combines Chinese technical terms with English details
+
+### Benefits
+
+- **Precise Camera Control**: Full 3D positioning with horizontal + vertical angles + distance
+- **Professional Architectural Photography**: Straight vertical lines, no keystoning distortion
+- **Interior Design Workflows**: Perfect for architectural visualization and real estate photography
+- **User-Friendly**: Clear tooltips, validation warnings, auto-selection features
+- **Research-Backed**: Implements findings from vision-language camera control research
+
+---
+
 ## [2.3.0] - 2025-01-06
 
 ### Added - Object Focus Camera System ⭐

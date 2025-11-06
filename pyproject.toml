@@ -1,6 +1,6 @@
 [project]
 name = "comfyui-archai3d-qwen"
-version = "2.3.0"
+version = "2.4.0"
 description = "Professional AI Interior Design Toolkit - Advanced Qwen-VL nodes for ComfyUI with 48+ custom nodes for architectural visualization and interior design workflows"
 readme = "README.md"
 requires-python = ">=3.8"
