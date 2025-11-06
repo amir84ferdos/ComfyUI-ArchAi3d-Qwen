@@ -5,6 +5,99 @@ All notable changes to the ArchAi3D Qwen ComfyUI Custom Nodes project will be do
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2025-01-06
+
+### Added - Object Focus Camera System ⭐
+
+#### New Camera Control Nodes (v1-v7)
+- **Object Focus Camera v1-v3**: Foundation camera control nodes
+  - Basic object focusing with distance and height control
+  - Direction and lens type selection
+  - Chinese/English/Hybrid prompt support
+
+- **Object Focus Camera v4**: Enhanced with quality presets
+  - Added professional photography quality presets
+  - Improved prompt generation structure
+
+- **Object Focus Camera v5**: Material detail system
+  - 37 material detail presets for better object visualization
+  - Enhanced vantage point mode
+
+- **Object Focus Camera v6**: Unified prompt structure
+  - Complete redesign with unified English/Chinese prompts
+  - Enhanced vantage point features (Interior Focus style)
+  - 15 photography quality presets
+  - Improved plural-safe grammar for multiple objects
+
+- **🎬 Object Focus Camera v7 (Pro Cinema)** (NEW - RECOMMENDED):
+  - Professional cinematography edition with industry-standard terminology
+  - **8 Shot Sizes**: ECU, CU, MCU, MS, MLS, FS, WS, EWS (replaces distance presets)
+  - **7 Camera Angles**: Eye Level, High Angle, Low Angle, Bird's Eye, Worm's Eye, Dutch Angle, Over-the-Shoulder
+  - **8 Camera Movements**: Static, Pan, Tilt, Dolly, Truck, Pedestal, Arc, Zoom
+  - **Enhanced Lens Types**: Ultra Wide (14-24mm), Wide (24-35mm), Standard (35-50mm), Portrait (85mm), Telephoto (70-200mm), Super Telephoto (200mm+)
+  - **Framing Mode**: Toggle between Shot Size Presets or Custom Meters
+  - Complete cinematography reference documentation included
+  - Maintains all v6 features (vantage point, presets, plural-safe grammar)
+
+#### Supporting Nodes
+- **Simple Camera Control**: Basic camera positioning and control
+- **dx8152 LoRA Support Nodes**: Enhanced compatibility with dx8152's Multiple-angles LoRA
+
+### Enhanced Features
+
+- **Professional Cinematography Terminology**:
+  - Shot sizes replace numeric distance system in v7
+  - Industry-standard camera angles and movements
+  - Professional lens focal length classifications
+  - Comprehensive documentation from StudioBinder, MasterClass, B&H Photo
+
+- **Plural-Safe Grammar System**:
+  - Automatic singular/plural detection across all camera versions
+  - 200+ grammar fixes applied to v1-v6
+  - Correctly handles "chair" vs "chairs", "bottle" vs "bottles", etc.
+  - Works with comma-separated object lists
+
+- **Multi-Language Support**:
+  - Chinese/English/Hybrid prompt modes
+  - Optimized for dx8152 LoRAs requiring Chinese prompts
+  - Seamless language switching
+
+### Changed
+
+- **Object Focus Camera v6**: Updated default settings
+  - Target object: "chair" → more universal default
+  - Height: 1.5m → better viewing angle
+  - Distance: 2.5m → Medium Shot equivalent
+  - Lens: "Normal (50mm)" → standard photography lens
+  - Prompt mode: "Hybrid (Chinese + English)" → dx8152 LoRA compatibility
+
+- **Object Focus Camera v7**: Parameter clarity improvements
+  - Renamed `distance_mode` → `framing_mode` for clearer understanding
+  - Enhanced tooltips explaining shot size to distance mapping
+  - Simplified parameter structure (removed redundant camera_distance)
+
+### Documentation
+
+- **cinematography_reference_v7.md**: Comprehensive cinematography guide
+  - 11 shot sizes with definitions and distances
+  - 8 camera angles with psychological effects
+  - 8 camera movements with technical details
+  - Chinese translations for all terms
+  - Sources from professional cinematography resources
+
+### Technical Notes
+
+- **v7 Design Philosophy**: Clean professional design over backward compatibility
+  - v6 remains available for numeric distance workflows
+  - v7 targets professional cinematographers and visualization artists
+  - Shot sizes provide intuitive framing vs arbitrary meters
+
+- **Node Count**: Now **48 custom nodes** (up from 41)
+  - 8 new Object Focus Camera variants (v1-v7 + Simple Camera)
+  - 1 dx8152 LoRA support node
+
+---
+
 ## [2.2.0] - 2025-11-03
 
 ### Added - Phase 2A: Functional GRAG Implementation ⭐
@@ -256,7 +349,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History Summary
 
-- **v2.1.0** (Current): Bug fixes, automated publishing setup, improved documentation
+- **v2.3.0** (Current): Object Focus Camera v1-v7 with professional cinematography features
+- **v2.2.0**: Functional GRAG implementation with sampler and attention utilities
+- **v2.1.1**: GRAG Modifier and Encoder nodes
+- **v2.1.0**: Bug fixes, automated publishing setup, improved documentation
 - **v2.0.0** (Initial): First public release with 38 custom nodes for professional AI interior design
 
 ---

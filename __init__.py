@@ -6,7 +6,7 @@ Author: Amir Ferdos (ArchAi3d)
 Email: Amir84ferdos@gmail.com
 LinkedIn: https://www.linkedin.com/in/archai3d/
 GitHub: https://github.com/amir84ferdos
-Version: 2.1.1
+Version: 2.3.0
 License: Dual License (Free for personal use, Commercial license required for business use)
 """
 
@@ -319,7 +319,7 @@ WEB_DIRECTORY = os.path.join(os.path.dirname(__file__), "web")
 # ============================================================================
 
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
-__version__ = "2.1.1"
+__version__ = "2.3.0"
 __author__ = "Amir Ferdos (ArchAi3d)"
 
 # ============================================================================
@@ -332,13 +332,13 @@ print(f"  🎨 Core Encoding: 6 nodes (V3 + GRAG Encoder)")
 print(f"  📏 Core Utils: 2 nodes (Image Scale + GRAG Modifier)")
 print(f"  💬 Prompt Builders: 3 nodes (Clean Room + Position Guide)")
 print(f"  🎚️ Sampling: 1 node (GRAG Sampler)")
-print(f"  📸 Camera Control: 20 nodes (includes Simple + dx8152 LoRA)")
+print(f"  📸 Camera Control: 28 nodes (Object Focus v1-v7 + Simple + dx8152)")
 print(f"  🎨 Image Editing: 4 nodes")
 print(f"  🎯 Utils: 7 nodes (Mask Crop/Rotate + Color Tools)")
 print(f"  ✅ Total: {len(NODE_CLASS_MAPPINGS)} nodes loaded!")
 print(f"")
-print(f"  ⭐ NEW: GRAG Sampler - Functional fine-grained control!")
-print(f"  🎯 Use: Encoder → GRAG Modifier → GRAG Sampler → Output")
+print(f"  ⭐ NEW: Object Focus Camera v7 - Professional Cinematography!")
+print(f"  🎬 Features: Shot sizes, camera angles, movements, enhanced lenses")
 print(f"  📚 Documentation: ./docs/")
 print(f"  ⚖️  License: Dual (Free personal, Commercial available)")
 print("=" * 70)
