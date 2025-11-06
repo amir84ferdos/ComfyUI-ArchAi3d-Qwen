@@ -156,6 +156,14 @@ class ArchAi3D_Cinematography_Prompt_Builder:
                                "• Back (180°) = Rear view"
                 }),
 
+                # 3C. AUTO-FACING - Automatically point camera at subject
+                "auto_facing": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "Automatically face camera toward target subject (recommended for object photography).\n"
+                               "• True = Camera points directly at subject from chosen angle\n"
+                               "• False = Camera positioned at angle but may not face subject directly"
+                }),
+
                 # 4. FOCUS/DOF - What's sharp and what's blurred
                 "depth_of_field": ([
                     "Auto (based on shot size)",
@@ -581,8 +589,8 @@ class ArchAi3D_Cinematography_Prompt_Builder:
             )
 
     def generate_cinematography_prompt(self, target_subject, shot_type, camera_angle,
+                                      horizontal_angle, auto_facing,
                                       depth_of_field, style_mood, prompt_language,
-                                      horizontal_angle="Front View (0°)",
                                       lens_type_override="Auto (from shot size)",
                                       perspective_correction="Natural (Standard Lens)",
                                       camera_movement="Static (No Movement)",
@@ -613,18 +621,18 @@ class ArchAi3D_Cinematography_Prompt_Builder:
         # Validate parameters (including perspective correction compatibility)
         warnings = self.validate_parameters(shot_type, dof, lens_type, camera_angle, perspective_correction)
 
-        # Generate SIMPLE prompt (Nanobanan style with horizontal angle + perspective correction)
+        # Generate SIMPLE prompt (Nanobanan style with horizontal angle + perspective correction + auto_facing)
         simple_prompt = self._generate_simple_prompt(
             target_subject, shot_type, camera_angle, dof, style_mood,
-            distance, lighting_style, custom_details, horizontal_angle, perspective_correction, prompt_language
+            distance, lighting_style, custom_details, horizontal_angle, auto_facing, perspective_correction, prompt_language
         )
 
-        # Generate PROFESSIONAL prompt (v7 style with Chinese + horizontal angle + perspective)
+        # Generate PROFESSIONAL prompt (v7 style with Chinese + horizontal angle + perspective + auto_facing)
         professional_prompt = self._generate_professional_prompt(
             target_subject, shot_type, camera_angle, lens_type, camera_movement,
             distance, dof, lighting_style, style_mood, material_detail_preset,
             photography_quality_preset, custom_details, prompt_language,
-            horizontal_angle, perspective_correction
+            horizontal_angle, auto_facing, perspective_correction
         )
 
         # Generate SYSTEM PROMPT (dynamic based on configuration + perspective correction)
@@ -644,13 +652,16 @@ class ArchAi3D_Cinematography_Prompt_Builder:
     def _generate_simple_prompt(self, subject, shot_type, angle, dof, style,
                                 distance, lighting, custom_details,
                                 horizontal_angle="Front View (0°)",
+                                auto_facing=True,
                                 perspective_correction="Natural (Standard Lens)",
                                 prompt_language="English (Simple & Clear)"):
         """
         Generate Simple English prompt (Nanobanan style)
 
-        Pattern: "A [angle] [shot_type] of [subject], taken from [distance], [horizontal_angle],
+        Pattern: "[facing subject], A [angle] [shot_type] of [subject], taken from [distance], [horizontal_angle],
                  [perspective_correction], with [dof] and [style], [lighting], [custom_details]"
+
+        Note: auto_facing is placed FIRST for maximum attention weight (user's experience-based observation)
         """
         # Clean up angle description
         angle_clean = angle.replace(" (looking down)", "").replace(" (looking up)", "").replace(" (overhead)", "").replace(" (ground up)", "").replace(" (tilted)", "")
@@ -669,6 +680,11 @@ class ArchAi3D_Cinematography_Prompt_Builder:
 
         # Build prompt parts
         parts = []
+
+        # AUTO-FACING: Add at the VERY BEGINNING for maximum attention weight
+        # Only add if enabled AND not front view (front view already implies facing)
+        if auto_facing and horizontal_angle != "Front View (0°)":
+            parts.append(f"Facing {subject} directly")
 
         # Opening: "An [angle] [shot] of [subject]"
         if angle_clean.lower() == "eye level":
@@ -726,15 +742,26 @@ class ArchAi3D_Cinematography_Prompt_Builder:
                                      distance, dof, lighting, style, material_preset,
                                      quality_preset, custom_details, language,
                                      horizontal_angle="Front View (0°)",
+                                     auto_facing=True,
                                      perspective_correction="Natural (Standard Lens)"):
         """
-        Generate Professional prompt (v7 style with Chinese cinematography terms + horizontal angle + perspective)
+        Generate Professional prompt (v7 style with Chinese cinematography terms + horizontal angle + perspective + auto_facing)
 
-        Pattern: "Next Scene: 将镜头转为[LENS], [SHOT]构图, [ANGLE]查看[SUBJECT], [HORIZONTAL], [PERSPECTIVE], [DETAILS]"
+        Pattern: "[facing], Next Scene: 将镜头转为[LENS], [SHOT]构图, [ANGLE]查看[SUBJECT], [HORIZONTAL], [PERSPECTIVE], [DETAILS]"
+
+        Note: auto_facing placed at START for maximum attention weight
         """
         prompt_parts = []
 
-        # Always start with "Next Scene:" for dx8152 LoRAs
+        # AUTO-FACING: Add at BEGINNING for maximum attention (before "Next Scene:")
+        # Only add if enabled AND not front view
+        if auto_facing and horizontal_angle != "Front View (0°)":
+            if language in ["Chinese (Best for dx8152 LoRAs)", "Hybrid (Chinese + English)"]:
+                prompt_parts.append(f"面对{subject}")  # "Facing {subject}"
+            else:
+                prompt_parts.append(f"Facing {subject} directly")
+
+        # Always add "Next Scene:" for dx8152 LoRAs
         prompt_parts.append("Next Scene:")
 
         # Get horizontal angle and perspective correction descriptions
@@ -808,14 +835,27 @@ class ArchAi3D_Cinematography_Prompt_Builder:
         # Join all parts
         if language == "English (Simple & Clear)":
             # Pure English mode - simplified with horizontal angle + perspective
-            base = f"Next Scene: Change to {lens}, {self.get_shot_abbreviation(shot_type)} framing, {angle} viewing {subject}"
+            # Build base without auto_facing (already in prompt_parts[0] if enabled)
+            base_parts = []
+
+            # Check if auto_facing was added
+            if len(prompt_parts) > 1 and "Facing" in prompt_parts[0]:
+                base_parts.append(prompt_parts[0])  # Add facing directive
+                base_parts.append(prompt_parts[1])  # Add "Next Scene:"
+            else:
+                base_parts.append(prompt_parts[0])  # Just "Next Scene:"
+
+            # Add main prompt
+            base_parts.append(f"Change to {lens}, {self.get_shot_abbreviation(shot_type)} framing, {angle} viewing {subject}")
+
             if horizontal_desc_en:
-                base += f", positioned {horizontal_desc_en}"
+                base_parts.append(f"positioned {horizontal_desc_en}")
             if perspective_desc_en:
-                base += f", {perspective_desc_en}"
+                base_parts.append(perspective_desc_en)
             if english_parts:
-                base += ", " + ", ".join(english_parts)
-            return base
+                base_parts.extend(english_parts)
+
+            return ", ".join(base_parts)
         else:
             return " ".join(prompt_parts)
 
@@ -860,19 +900,46 @@ class ArchAi3D_Cinematography_Prompt_Builder:
         return angle_map.get(angle, "")
 
     def _get_distance_chinese(self, distance):
-        """Get Chinese description for distance"""
-        if distance < 0.5:
-            return "极近距离"
-        elif distance < 1.0:
-            return "近距离"
-        elif distance < 2.0:
-            return "中近距离"
-        elif distance < 4.0:
-            return "中等距离"
-        elif distance < 7.0:
-            return "远距离"
+        """
+        Convert distance to Chinese words with specific meter values
+
+        Returns exact distance in Chinese characters (e.g., "四米" for 4.0)
+        instead of generic descriptions like "远距离" (far distance)
+        """
+        # Chinese number words
+        chinese_numbers = {
+            0: "零", 1: "一", 2: "两", 3: "三", 4: "四",
+            5: "五", 6: "六", 7: "七", 8: "八", 9: "九",
+            10: "十", 15: "十五", 20: "二十"
+        }
+
+        # Handle decimals (e.g., 2.5 = "两米半", 0.8 = "零点八米")
+        if distance == int(distance):
+            # Whole number
+            dist_int = int(distance)
+            if dist_int in chinese_numbers:
+                return f"{chinese_numbers[dist_int]}米"
+            else:
+                return f"{dist_int}米"  # Fallback to Arabic numerals
+        elif distance % 1 == 0.5:
+            # Half meter (e.g., 2.5 = "两米半")
+            whole = int(distance)
+            if whole == 0:
+                return "半米"
+            elif whole in chinese_numbers:
+                return f"{chinese_numbers[whole]}米半"
+            else:
+                return f"{whole}米半"
         else:
-            return "极远距离"
+            # Other decimals (e.g., 0.8 = "零点八米")
+            whole = int(distance)
+            decimal = int((distance - whole) * 10)
+            if whole == 0:
+                return f"零点{chinese_numbers.get(decimal, str(decimal))}米"
+            else:
+                whole_cn = chinese_numbers.get(whole, str(whole))
+                decimal_cn = chinese_numbers.get(decimal, str(decimal))
+                return f"{whole_cn}点{decimal_cn}米"
 
     def _get_movement_chinese(self, movement):
         """Get Chinese translation for camera movement"""
