@@ -6,7 +6,7 @@ Author: Amir Ferdos (ArchAi3d)
 Email: Amir84ferdos@gmail.com
 LinkedIn: https://www.linkedin.com/in/archai3d/
 GitHub: https://github.com/amir84ferdos
-Version: 2.4.0
+Version: 2.4.1
 License: Dual License (Free for personal use, Commercial license required for business use)
 """
 
@@ -26,12 +26,6 @@ from .nodes.core.utils.archai3d_grag_modifier import ArchAi3D_GRAG_Modifier
 
 from .nodes.core.prompts.archai3d_clean_room_prompt import ArchAi3D_Clean_Room_Prompt
 from .nodes.core.prompts.archai3d_qwen_system_prompt import ArchAi3D_Qwen_System_Prompt
-
-# ============================================================================
-# SAMPLING NODES
-# ============================================================================
-
-from .nodes.sampling.archai3d_grag_sampler import ArchAi3D_GRAG_Sampler
 
 # ============================================================================
 # CAMERA CONTROL NODES
@@ -138,9 +132,6 @@ NODE_CLASS_MAPPINGS = {
     # Core - Prompts
     "ArchAi3D_Clean_Room_Prompt": ArchAi3D_Clean_Room_Prompt,
 
-    # Sampling
-    "ArchAi3D_GRAG_Sampler": ArchAi3D_GRAG_Sampler,
-
     # Camera Control (Legacy)
     "ArchAi3D_Qwen_Camera_View_Selector": ArchAi3D_Qwen_Camera_View_Selector,
     "ArchAi3D_Qwen_Object_Rotation_V2": ArchAi3D_Qwen_Object_Rotation_V2,
@@ -238,9 +229,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # Core - Prompts
     "ArchAi3D_Clean_Room_Prompt": "🏗️ Clean Room Prompt",
 
-    # Sampling
-    "ArchAi3D_GRAG_Sampler": "🎚️ GRAG Sampler (Fine-Grained Control)",
-
     # Camera Control (Legacy)
     "ArchAi3D_Qwen_Camera_View_Selector": "🎬 Camera View Selector",
     "ArchAi3D_Qwen_Object_Rotation_V2": "🔄 Object Rotation V2",
@@ -328,7 +316,7 @@ WEB_DIRECTORY = os.path.join(os.path.dirname(__file__), "web")
 # ============================================================================
 
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
-__version__ = "2.3.0"
+__version__ = "2.4.1"
 __author__ = "Amir Ferdos (ArchAi3d)"
 
 # ============================================================================
@@ -340,11 +328,12 @@ print(f"[ArchAi3d-Qwen v{__version__}] Loading nodes...")
 print(f"  🎨 Core Encoding: 6 nodes (V3 + GRAG Encoder)")
 print(f"  📏 Core Utils: 2 nodes (Image Scale + GRAG Modifier)")
 print(f"  💬 Prompt Builders: 3 nodes (Clean Room + Position Guide)")
-print(f"  🎚️ Sampling: 1 node (GRAG Sampler)")
 print(f"  📸 Camera Control: 28 nodes (Object Focus v1-v7 + Simple + dx8152)")
 print(f"  🎨 Image Editing: 4 nodes")
 print(f"  🎯 Utils: 7 nodes (Mask Crop/Rotate + Color Tools)")
 print(f"  ✅ Total: {len(NODE_CLASS_MAPPINGS)} nodes loaded!")
+print(f"")
+print(f"  ℹ️  Note: For full GRAG sampling support, install ComfyUI-GRAG-ArchAi3D separately")
 print(f"")
 print(f"  ⭐ NEW: Object Focus Camera v7 - Professional Cinematography!")
 print(f"  🎬 Features: Shot sizes, camera angles, movements, enhanced lenses")
