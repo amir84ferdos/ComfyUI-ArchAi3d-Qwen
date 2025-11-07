@@ -159,9 +159,10 @@ class ArchAi3D_Cinematography_Prompt_Builder:
                 # 3C. AUTO-FACING - Automatically point camera at subject
                 "auto_facing": ("BOOLEAN", {
                     "default": True,
-                    "tooltip": "Automatically face camera toward target subject (recommended for object photography).\n"
-                               "• True = Camera points directly at subject from chosen angle\n"
-                               "• False = Camera positioned at angle but may not face subject directly"
+                    "tooltip": "Add 'Facing [subject] directly' at the beginning of prompt for maximum attention.\n"
+                               "• True = Explicitly states camera is facing the subject\n"
+                               "• False = Standard prompt without facing directive\n"
+                               "• Recommended: True for better subject focus and composition"
                 }),
 
                 # 4. FOCUS/DOF - What's sharp and what's blurred
@@ -682,8 +683,7 @@ class ArchAi3D_Cinematography_Prompt_Builder:
         parts = []
 
         # AUTO-FACING: Add at the VERY BEGINNING for maximum attention weight
-        # Only add if enabled AND not front view (front view already implies facing)
-        if auto_facing and horizontal_angle != "Front View (0°)":
+        if auto_facing:
             parts.append(f"Facing {subject} directly")
 
         # Opening: "An [angle] [shot] of [subject]"
@@ -754,8 +754,7 @@ class ArchAi3D_Cinematography_Prompt_Builder:
         prompt_parts = []
 
         # AUTO-FACING: Add at BEGINNING for maximum attention (before "Next Scene:")
-        # Only add if enabled AND not front view
-        if auto_facing and horizontal_angle != "Front View (0°)":
+        if auto_facing:
             if language in ["Chinese (Best for dx8152 LoRAs)", "Hybrid (Chinese + English)"]:
                 prompt_parts.append(f"面对{subject}")  # "Facing {subject}"
             else:
