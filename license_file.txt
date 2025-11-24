@@ -1,0 +1,111 @@
+ArchAi3D Qwen Custom Nodes - LICENSE
+=====================================
+
+Copyright (c) 2024-2025 Amir Ferdos (ArchAi3d)
+
+DUAL LICENSE AGREEMENT
+
+This software is available under two different licenses:
+
+---
+
+1. PERSONAL & NON-COMMERCIAL LICENSE (FREE)
+-------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to use
+the Software for PERSONAL and NON-COMMERCIAL purposes only, subject to the
+following conditions:
+
+PERMITTED USES (FREE):
+- Personal projects and learning
+- Educational purposes  
+- Research and development
+- Portfolio work (non-paid)
+- Open-source contributions
+- Academic projects
+
+RESTRICTIONS:
+- You MAY NOT use this Software for any commercial purposes
+- You MAY NOT sell, sublicense, or distribute this Software commercially
+- You MAY NOT use this Software to provide paid services to clients
+- You MAY NOT incorporate this Software into commercial products
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+---
+
+2. COMMERCIAL LICENSE (REQUIRES PAYMENT)
+-----------------------------------------
+
+If you wish to use this Software for COMMERCIAL purposes, you must obtain
+a commercial license from the copyright holder.
+
+COMMERCIAL USE includes, but is not limited to:
+- Providing interior design services for payment
+- Client work and paid projects
+- Business applications and operations
+- Reselling or redistributing this Software
+- Incorporating into commercial products or services
+- Using in revenue-generating activities
+
+To obtain a commercial license:
+- Contact: Amir Ferdos (ArchAi3d)
+- Email: Amir84ferdos@gmail.com
+- LinkedIn: https://www.linkedin.com/in/archai3d/
+
+Commercial licenses are reasonably priced and support continued development.
+
+---
+
+VIOLATION OF LICENSE TERMS
+---------------------------
+
+Using this Software for commercial purposes without a valid commercial license
+constitutes copyright infringement and breach of this license agreement.
+
+Violators may be subject to:
+- Legal action for copyright infringement
+- Demand for retroactive license fees
+- Cease and desist orders
+- Damages and legal costs
+
+---
+
+SUPPORT & CONTRIBUTIONS
+------------------------
+
+Personal users are encouraged to:
+- Support development via Patreon: https://patreon.com/archai3d
+- Contribute bug fixes and improvements
+- Share feedback and suggestions
+- Star the repository on GitHub
+
+Your support helps maintain and improve this software!
+
+---
+
+CONTACT INFORMATION
+-------------------
+
+Author: Amir Ferdos (ArchAi3d)
+Email: Amir84ferdos@gmail.com
+LinkedIn: https://www.linkedin.com/in/archai3d/
+GitHub: https://github.com/amir84ferdos
+Patreon: https://patreon.com/archai3d
+
+For commercial licensing inquiries, please contact via email with:
+- Your company/organization name
+- Intended use case
+- Expected scale of usage
+
+Commercial licenses are typically granted within 1-2 business days.
+
+---
+
+Last Updated: January 2025

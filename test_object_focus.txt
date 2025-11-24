@@ -1,0 +1,87 @@
+================================================================================
+OBJECT FOCUS CAMERA - PROMPT GENERATION TESTS
+================================================================================
+
+Test 1: Product Photography - Watch
+--------------------------------------------------------------------------------
+INPUT:
+  Object: the watch
+  Position: Front View
+  Distance: Close
+  Lens: Close-Up Lens
+  Details: showing dial and hands
+
+OUTPUT (for dx8152 LoRA):
+  Next Scene: 将镜头转为特写镜头，正面查看the watch，距离近距离，showing dial and hands
+
+DESCRIPTION (for user):
+  Close-Up | Front View | Close | Object: the watch | showing dial and hands
+
+
+Test 2: Macro Photography - Ring
+--------------------------------------------------------------------------------
+INPUT:
+  Object: the diamond ring
+  Position: Angled View (30°)
+  Distance: Very Close (Macro)
+  Lens: Macro Lens
+  Details: revealing gemstone and setting details
+
+OUTPUT (for dx8152 LoRA):
+  Next Scene: 将镜头转为微距镜头，从30度角查看the diamond ring，距离很近，revealing gemstone and setting details
+
+DESCRIPTION (for user):
+  Macro | Angled View (30°) | Very Close (Macro) | Object: the diamond ring | revealing gemstone and setting details
+
+
+Test 3: Architectural Detail
+--------------------------------------------------------------------------------
+INPUT:
+  Object: the door handle
+  Position: Side View (90°)
+  Distance: Medium
+  Lens: Normal Lens
+
+OUTPUT (for dx8152 LoRA):
+  Next Scene: 将镜头转为标准镜头，从侧面查看the door handle，距离中等距离
+
+DESCRIPTION (for user):
+  Normal | Side View (90°) | Medium | Object: the door handle
+
+
+Test 4: Top-Down Product Shot
+--------------------------------------------------------------------------------
+INPUT:
+  Object: the perfume bottle
+  Position: Top-Down View
+  Distance: Close
+  Lens: Close-Up Lens
+  Details: showing label and cap design
+
+OUTPUT (for dx8152 LoRA):
+  Next Scene: 将镜头转为特写镜头，从俯视角度查看the perfume bottle，距离近距离，showing label and cap design
+
+DESCRIPTION (for user):
+  Close-Up | Top-Down View | Close | Object: the perfume bottle | showing label and cap design
+
+
+================================================================================
+SUMMARY
+================================================================================
+
+✅ Simple and Direct: Only 6 parameters needed
+✅ Clear Purpose: Object close-ups and detail shots
+✅ dx8152 Compatible: Uses "Next Scene:" prefix + Chinese structure
+✅ Flexible: Works with both Multiple Angles and Next Scene LoRAs
+✅ User-Friendly: Plain English inputs, optimized Chinese outputs
+
+Node Features:
+- 5 camera positions (covers all common angles)
+- 3 lens types (Normal, Close-Up, Macro - all dx8152 optimized)
+- 4 distance presets (Very Close to Far)
+- Optional detail descriptions
+- Automatic Chinese prompt generation
+- System prompts optimized for object preservation
+
+Total Lines of Code: ~180 (vs 598 in Simple Camera Control v3)
+Complexity: LOW - single purpose, no modes, straightforward logic

@@ -1,0 +1,5 @@
+# ArchAi3D Qwen ComfyUI Custom Nodes - Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core dependency for material library loading
+PyYAML>=6.0
