@@ -100,6 +100,17 @@ from .nodes.editing.archai3d_qwen_style_transfer import ArchAi3D_Qwen_Style_Tran
 # ============================================================================
 
 from .nodes.utils.archai3d_mask_to_position_guide import ArchAi3D_Mask_To_Position_Guide
+
+# ============================================================================
+# INPUT NODES (Web Interface Integration)
+# ============================================================================
+
+from .nodes.inputs.archai3d_string_input import ArchAi3D_String_Input
+from .nodes.inputs.archai3d_int_input import ArchAi3D_Int_Input
+from .nodes.inputs.archai3d_float_input import ArchAi3D_Float_Input
+from .nodes.inputs.archai3d_boolean_input import ArchAi3D_Boolean_Input
+from .nodes.inputs.archai3d_load_image_url import ArchAi3D_Load_Image_URL
+from .nodes.inputs.archai3d_save_image import ArchAi3D_Save_Image
 from .nodes.utils.archai3d_position_guide_prompt_builder import ArchAi3D_Position_Guide_Prompt_Builder
 from .nodes.utils.archai3d_simple_position_prompt import ArchAi3D_Simple_Position_Prompt
 from .nodes.utils.archai3d_color_correction_bt709 import ArchAi3D_Color_Correction_BT709
@@ -201,6 +212,14 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_Average_Color": ArchAi3D_Average_Color,
     "ArchAi3D_Solid_Color_Image": ArchAi3D_Solid_Color_Image,
     "ArchAi3D_Mask_Crop_Rotate": ArchAi3D_Mask_Crop_Rotate,
+
+    # Input Nodes (Web Interface Integration)
+    "ArchAi3D_String_Input": ArchAi3D_String_Input,
+    "ArchAi3D_Int_Input": ArchAi3D_Int_Input,
+    "ArchAi3D_Float_Input": ArchAi3D_Float_Input,
+    "ArchAi3D_Boolean_Input": ArchAi3D_Boolean_Input,
+    "ArchAi3D_Load_Image_URL": ArchAi3D_Load_Image_URL,
+    "ArchAi3D_Save_Image": ArchAi3D_Save_Image,
 }
 
 # ============================================================================
@@ -296,6 +315,14 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Average_Color": "🎨 Average Color",
     "ArchAi3D_Solid_Color_Image": "🎨 Solid Color Image",
     "ArchAi3D_Mask_Crop_Rotate": "✂️ Mask Crop & Rotate",
+
+    # Input Nodes (Web Interface Integration)
+    "ArchAi3D_String_Input": "📝 String Input",
+    "ArchAi3D_Int_Input": "🔢 Integer Input",
+    "ArchAi3D_Float_Input": "🔢 Float Input",
+    "ArchAi3D_Boolean_Input": "✅ Boolean Input",
+    "ArchAi3D_Load_Image_URL": "🌐 Load Image From URL",
+    "ArchAi3D_Save_Image": "💾 Save Image",
 }
 
 # ============================================================================
@@ -325,10 +352,10 @@ print(f"  💬 Prompt Builders: 3 nodes (Clean Room + Position Guide)")
 print(f"  📸 Camera Control: 28 nodes (Object Focus v1-v7 + Simple + dx8152)")
 print(f"  🎨 Image Editing: 4 nodes")
 print(f"  🎯 Utils: 7 nodes (Mask Crop/Rotate + Color Tools)")
+print(f"  🌐 Input Nodes: 6 nodes (String, Int, Float, Boolean, Load URL, Save)")
 print(f"  ✅ Total: {len(NODE_CLASS_MAPPINGS)} nodes loaded!")
 print(f"")
-print(f"  ⭐ NEW: Object Focus Camera v7 - Professional Cinematography!")
-print(f"  🎬 Features: Shot sizes, camera angles, movements, enhanced lenses")
+print(f"  ⭐ NEW: Web Interface Input Nodes for dynamic form generation!")
 print(f"  📚 Documentation: ./docs/")
 print(f"  ⚖️  License: Dual (Free personal, Commercial available)")
 print("=" * 70)
