@@ -1,6 +1,6 @@
 """
 ArchAi3D Load Image From URL Node
-Loads an image from a URL with a name field for web interface integration.
+Loads an image from a URL or local file path with a name field for web interface integration.
 Includes preview functionality like the default Load Image node.
 """
 
@@ -16,7 +16,7 @@ import folder_paths
 
 class ArchAi3D_Load_Image_URL:
     """
-    Load an image from a URL with a configurable name for web interface integration.
+    Load an image from a URL or local file path with a configurable name for web interface integration.
 
     The 'name' field identifies this input in web interfaces, allowing
     dynamic HTML form generation based on workflow inputs.
@@ -43,7 +43,7 @@ class ArchAi3D_Load_Image_URL:
                 "url": ("STRING", {
                     "default": "",
                     "multiline": False,
-                    "tooltip": "URL of the image to load"
+                    "tooltip": "URL or local file path of the image to load"
                 }),
                 "return_image_mode": (["RGB", "RGBA", "L"], {
                     "default": "RGB",
@@ -58,6 +58,39 @@ class ArchAi3D_Load_Image_URL:
     CATEGORY = "ArchAi3d/Inputs"
     OUTPUT_NODE = True
 
+    def _is_local_path(self, path):
+        """Check if the path is a local file path."""
+        # Check for common local path patterns
+        if path.startswith('/') or path.startswith('\\'):
+            return True
+        if len(path) > 1 and path[1] == ':':  # Windows path like C:\
+            return True
+        if path.startswith('file://'):
+            return True
+        if os.path.exists(path):
+            return True
+        return False
+
+    def _load_image(self, url):
+        """Load image from URL or local file path."""
+        url = url.strip()
+
+        # Handle file:// protocol
+        if url.startswith('file://'):
+            url = url[7:]  # Remove file:// prefix
+
+        # Check if it's a local file path
+        if self._is_local_path(url):
+            if os.path.exists(url):
+                return Image.open(url)
+            else:
+                raise FileNotFoundError(f"Local file not found: {url}")
+        else:
+            # It's a URL, fetch it
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+            return Image.open(BytesIO(response.content))
+
     def execute(self, name, url, return_image_mode):
         if not url or url.strip() == "":
             # Return empty tensors if no URL provided
@@ -66,12 +99,8 @@ class ArchAi3D_Load_Image_URL:
             return {"ui": {"images": []}, "result": (empty_image, empty_mask)}
 
         try:
-            # Fetch image from URL
-            response = requests.get(url, timeout=30)
-            response.raise_for_status()
-
-            # Open image with PIL
-            image = Image.open(BytesIO(response.content))
+            # Load image from URL or local path
+            image = self._load_image(url)
             original_image = image.copy()
 
             # Extract alpha channel for mask before conversion
@@ -115,7 +144,7 @@ class ArchAi3D_Load_Image_URL:
             return {"ui": {"images": preview_results}, "result": (image_tensor, mask_tensor)}
 
         except Exception as e:
-            print(f"[ArchAi3D_Load_Image_URL] Error loading image from URL: {e}")
+            print(f"[ArchAi3D_Load_Image_URL] Error loading image: {e}")
             # Return empty tensors on error
             empty_image = torch.zeros((1, 64, 64, 3), dtype=torch.float32)
             empty_mask = torch.zeros((1, 64, 64), dtype=torch.float32)
@@ -126,7 +155,7 @@ class ArchAi3D_Load_Image_URL:
         results = []
 
         try:
-            # Create a unique filename based on URL hash
+            # Create a unique filename based on URL/path hash
             url_hash = hashlib.md5(url.encode()).hexdigest()[:12]
             filename = f"preview_{url_hash}.png"
 
@@ -159,7 +188,14 @@ class ArchAi3D_Load_Image_URL:
 
     @classmethod
     def IS_CHANGED(cls, name, url, return_image_mode):
-        """Return a hash that changes when the URL changes, forcing re-execution."""
+        """Return a hash that changes when the URL/path changes, forcing re-execution."""
         if not url or url.strip() == "":
             return ""
+        # For local files, also check modification time
+        url = url.strip()
+        if url.startswith('file://'):
+            url = url[7:]
+        if os.path.exists(url):
+            mtime = os.path.getmtime(url)
+            return hashlib.md5(f"{url}_{mtime}".encode()).hexdigest()
         return hashlib.md5(url.encode()).hexdigest()
