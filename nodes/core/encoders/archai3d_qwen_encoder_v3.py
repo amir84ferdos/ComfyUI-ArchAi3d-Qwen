@@ -316,6 +316,10 @@ class ArchAi3D_Qwen_Encoder_V3(io.ComfyNode):
                             options=list(CONDITIONING_PRESETS.keys()),
                             tooltip="V3 PRESET: Choose conditioning balance (Image-Dominant → Text-Dominant). Works great with ConditioningAverage!"),
 
+                # === Optional: External Conditioning Balance Override ===
+                io.String.Input("conditioning_balance_override", default="",
+                              tooltip="OPTIONAL: Connect ⚖️ Conditioning Balance node here to override the preset above. Leave empty to use the dropdown."),
+
                 # === Manual Override (Hidden by Default) ===
                 io.Float.Input("manual_context_strength", default=1.0, min=0.0, max=3.0, step=0.01,
                              tooltip="CUSTOM ONLY: Manual context strength (only used when preset = Custom). Extended range: 0.0-3.0 for extreme conditioning control"),
@@ -360,6 +364,7 @@ class ArchAi3D_Qwen_Encoder_V3(io.ComfyNode):
                 image1_latent=None, image2_latent=None, image3_latent=None,
                 system_prompt="",
                 conditioning_balance="Balanced",
+                conditioning_balance_override="",
                 manual_context_strength=1.0,
                 manual_user_strength=1.0,
                 image1_label="Image 1",
@@ -374,6 +379,15 @@ class ArchAi3D_Qwen_Encoder_V3(io.ComfyNode):
         # ============================================================
         # SECTION 1: Determine Strength Values and CFG from Preset
         # ============================================================
+
+        # Check if override is provided and valid
+        if conditioning_balance_override and conditioning_balance_override.strip():
+            override_value = conditioning_balance_override.strip()
+            if override_value in CONDITIONING_PRESETS:
+                conditioning_balance = override_value
+                if debug_mode:
+                    print(f"[V3] Using override conditioning_balance: {conditioning_balance}")
+
         if conditioning_balance == "Custom":
             # Use manual values
             context_strength = manual_context_strength
