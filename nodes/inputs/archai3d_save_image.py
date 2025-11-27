@@ -57,6 +57,16 @@ class ArchAi3D_Save_Image:
     OUTPUT_NODE = True
     CATEGORY = "ArchAi3d/Inputs"
 
+    def _get_next_counter(self, folder, filename_prefix):
+        """Find the next available counter to avoid overwriting files."""
+        counter = 1
+        while True:
+            # Check if file with this counter exists
+            test_file = os.path.join(folder, f"{filename_prefix}_{counter:05d}.png")
+            if not os.path.exists(test_file):
+                return counter
+            counter += 1
+
     def execute(self, images, save=True, filename_prefix="ComfyUI", output_name="output_image", prompt=None, extra_pnginfo=None):
         # If save is False, return empty results (no saving)
         if not save:
@@ -67,6 +77,9 @@ class ArchAi3D_Save_Image:
         full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
             filename_prefix, self.output_dir, images[0].shape[1], images[0].shape[0]
         )
+
+        # Ensure we don't overwrite existing files
+        counter = self._get_next_counter(full_output_folder, filename)
 
         results = []
 
@@ -87,13 +100,22 @@ class ArchAi3D_Save_Image:
             # Add output_name to metadata for web interface
             metadata.add_text("output_name", output_name)
 
-            # Generate filename
-            filename_with_batch = filename
+            # Generate filename with batch number if multiple images
             if len(images) > 1:
-                filename_with_batch = f"{filename}_{batch_number:05d}"
+                file = f"{filename}_{batch_number:05d}_{counter:05d}.png"
+            else:
+                file = f"{filename}_{counter:05d}.png"
 
-            file = f"{filename_with_batch}_{counter:05d}.png"
             filepath = os.path.join(full_output_folder, file)
+
+            # Extra safety: check if file exists and increment counter
+            while os.path.exists(filepath):
+                counter += 1
+                if len(images) > 1:
+                    file = f"{filename}_{batch_number:05d}_{counter:05d}.png"
+                else:
+                    file = f"{filename}_{counter:05d}.png"
+                filepath = os.path.join(full_output_folder, file)
 
             img.save(filepath, pnginfo=metadata, compress_level=self.compress_level)
 
