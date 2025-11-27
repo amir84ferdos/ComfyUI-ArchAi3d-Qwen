@@ -17,6 +17,8 @@ class ArchAi3D_Save_Image:
 
     The 'output_name' field identifies this output in web interfaces, allowing
     the web app to reference saved images by name.
+
+    The 'save' boolean toggle controls whether the image is actually saved to disk.
     """
 
     def __init__(self):
@@ -30,6 +32,10 @@ class ArchAi3D_Save_Image:
         return {
             "required": {
                 "images": ("IMAGE",),
+                "save": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "Enable/disable saving the image to disk"
+                }),
                 "filename_prefix": ("STRING", {
                     "default": "ComfyUI",
                     "tooltip": "Prefix for the saved filename"
@@ -51,7 +57,11 @@ class ArchAi3D_Save_Image:
     OUTPUT_NODE = True
     CATEGORY = "ArchAi3d/Inputs"
 
-    def execute(self, images, filename_prefix="ComfyUI", output_name="output_image", prompt=None, extra_pnginfo=None):
+    def execute(self, images, save=True, filename_prefix="ComfyUI", output_name="output_image", prompt=None, extra_pnginfo=None):
+        # If save is False, return empty results (no saving)
+        if not save:
+            return {"ui": {"images": []}}
+
         filename_prefix += self.prefix_append
 
         full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
@@ -66,7 +76,6 @@ class ArchAi3D_Save_Image:
             img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
 
             # Prepare metadata
-            metadata = None
             metadata = PngInfo()
 
             if prompt is not None:
