@@ -42,6 +42,18 @@ classifiers = [
 
 dependencies = [
     "PyYAML>=6.0",
+    "numpy",
+    "Pillow",
+    "einops",
+    "ftfy",
+    "typing_extensions",
+    "huggingface_hub>=0.19.0",
+    "opencv-python>=4.7.0",
+    "matplotlib",
+    "timm",
+    "scipy",
+    "addict",
+    "yapf",
 ]
 
 [project.optional-dependencies]
@@ -65,7 +77,12 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["nodes", "nodes.core", "nodes.core.encoders", "nodes.core.prompts", "nodes.core.utils", "nodes.camera", "nodes.editing", "nodes.utils", "config"]
+packages = ["nodes", "nodes.core", "nodes.core.encoders", "nodes.core.prompts", "nodes.core.utils", "nodes.camera", "nodes.editing", "nodes.utils", "nodes.utils.sam3", "nodes.utils.metric3d_lib", "nodes.utils.custom_mmpkg", "config"]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["nodes*", "config*"]
 
 [tool.setuptools.package-data]
 config = ["*.yaml"]
