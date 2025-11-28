@@ -3,3 +3,12 @@
 
 # Core dependency for material library loading
 PyYAML>=6.0
+
+# For SAM3 Segment node
+einops
+
+# For Metric3D Depth/Normal nodes
+huggingface_hub
+opencv-python
+matplotlib
+timm

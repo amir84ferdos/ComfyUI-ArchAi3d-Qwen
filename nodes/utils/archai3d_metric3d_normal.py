@@ -6,6 +6,8 @@ An optimized version of Metric3D Normal Map preprocessor with:
 - Aggressive memory cleanup (model unloaded after EVERY execution)
 - torch.cuda.empty_cache() + gc.collect() for low VRAM systems
 - name field for web interface integration
+- Standalone: Metric3D code bundled (no comfyui_controlnet_aux dependency)
+- Auto-downloads models from HuggingFace
 
 Based on: comfyui_controlnet_aux/node_wrappers/metric3d.py
 """
@@ -230,8 +232,8 @@ class ArchAi3D_Metric3D_Normal:
         model = None
 
         try:
-            # Import Metric3D detector
-            from custom_controlnet_aux.metric3d import Metric3DDetector
+            # Import Metric3D detector from local bundled library
+            from .metric3d_lib import Metric3DDetector
 
             # Load model
             model_filename = f"metric_depth_{backbone.replace('-', '_')}_800k.pth"
@@ -274,7 +276,7 @@ class ArchAi3D_Metric3D_Normal:
 
         except ImportError as e:
             print(f"[ArchAi3D Metric3D] Error: Could not import Metric3DDetector.")
-            print(f"[ArchAi3D Metric3D] Make sure comfyui_controlnet_aux is installed.")
+            print(f"[ArchAi3D Metric3D] Check metric3d_lib installation.")
             raise e
 
         finally:
@@ -438,7 +440,8 @@ class ArchAi3D_Metric3D_Depth:
         model = None
 
         try:
-            from custom_controlnet_aux.metric3d import Metric3DDetector
+            # Import Metric3D detector from local bundled library
+            from .metric3d_lib import Metric3DDetector
 
             model_filename = f"metric_depth_{backbone.replace('-', '_')}_800k.pth"
             model = Metric3DDetector.from_pretrained(filename=model_filename).to(model_management.get_torch_device())
@@ -474,7 +477,7 @@ class ArchAi3D_Metric3D_Depth:
 
         except ImportError as e:
             print(f"[ArchAi3D Metric3D Depth] Error: Could not import Metric3DDetector.")
-            print(f"[ArchAi3D Metric3D Depth] Make sure comfyui_controlnet_aux is installed.")
+            print(f"[ArchAi3D Metric3D Depth] Check metric3d_lib installation.")
             raise e
 
         finally:
