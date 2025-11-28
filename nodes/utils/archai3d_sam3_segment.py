@@ -6,6 +6,7 @@ An optimized version of SAM3 Segmentation with:
 - Aggressive memory cleanup (model unloaded after EVERY execution)
 - torch.cuda.empty_cache() + gc.collect() for low VRAM systems
 - name field for web interface integration
+- Standalone: SAM3 model code bundled (no comfyui-rmbg dependency)
 
 Based on: comfyui-rmbg/AILab_SAM3Segment.py
 """
@@ -25,9 +26,9 @@ from torch.hub import download_url_to_file
 import folder_paths
 import comfy.model_management
 
-# Get the RMBG node directory for SAM3 imports
-RMBG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "comfyui-rmbg")
-SAM3_LOCAL_DIR = os.path.join(RMBG_DIR, "sam3")
+# SAM3 is now bundled with this node - no external dependency needed
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+SAM3_LOCAL_DIR = os.path.join(CURRENT_DIR, "sam3")
 
 # Cache directory for this node
 CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cache", "sam3")
@@ -254,7 +255,7 @@ class ArchAi3D_SAM3_Segment:
             return local_path
 
         # Fall back to models directory
-        base_models_dir = getattr(folder_paths, "models_dir", os.path.join(RMBG_DIR, "models"))
+        base_models_dir = getattr(folder_paths, "models_dir", os.path.join(CURRENT_DIR, "models"))
         models_dir = os.path.join(base_models_dir, "sam3")
         os.makedirs(models_dir, exist_ok=True)
         local_path = os.path.join(models_dir, self.SAM3_FILENAME)
