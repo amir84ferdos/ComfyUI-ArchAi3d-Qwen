@@ -52,8 +52,6 @@ scratch/
 
 # Local config files
 .mcp.json
-config.json
 
-# Llama server scripts (local setup)
-start_qwenvl_server.sh
+# Llama server scripts (local only - not needed in repo)
 install_llama_cpp.sh

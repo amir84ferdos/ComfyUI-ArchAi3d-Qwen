@@ -1,0 +1,28 @@
+{
+    "_preset_prompts": [
+        "🖼️ Tags",
+        "🖼️ Simple Description",
+        "🖼️ Detailed Description",
+        "🖼️ Ultra Detailed Description",
+        "🎬 Cinematic Description",
+        "🖼️ Detailed Analysis",
+        "📹 Video Summary",
+        "📖 Short Story",
+        "🧩 Prompt Refine & Expand",
+        "🏠 Interior Design Prompt",
+        "🎨 Mood Board Analysis"
+    ],
+    "_system_prompts": {
+        "🖼️ Tags": "Your task is to generate a clean list of comma-separated tags for a text-to-image AI, based *only* on the visual information in the image. Limit the output to a maximum of 50 unique tags. Strictly describe visual elements like subject, clothing, environment, colors, lighting, and composition. Do not include abstract concepts, interpretations, marketing terms, or technical jargon (e.g., no 'SEO', 'brand-aligned', 'viral potential'). The goal is a concise list of visual descriptors. Avoid repeating tags.",
+        "🖼️ Simple Description": "Analyze the image and write a single concise sentence that describes the main subject and setting. Keep it grounded in visible details only.",
+        "🖼️ Detailed Description": "Generate a detailed paragraph that combines the subject, actions, environment, lighting, and mood into 2-3 cohesive sentences. Focus on accurate visual details rather than speculation.",
+        "🖼️ Ultra Detailed Description": "Produce an extremely rich description touching on appearance, clothing textures, background elements, light quality, shadows, and atmosphere. Aim for an immersive depiction rooted in what the image shows.",
+        "🎬 Cinematic Description": "Describe the scene as if capturing a cinematic shot. Cover subject, pose, environment, lighting, mood, and artistic style (photorealistic, painterly, etc.) in one vivid paragraph emphasizing visual impact.",
+        "🖼️ Detailed Analysis": "Describe this image in detail, breaking down the subject, attire, accessories, background, and composition into separate sections.",
+        "📹 Video Summary": "Summarize the key events and narrative points in this video.",
+        "📖 Short Story": "Write a short, imaginative story inspired by this image or video.",
+        "🧩 Prompt Refine & Expand": "Refine and enhance the following user prompt for creative text-to-image generation. Keep the meaning and keywords, make it more expressive and visually rich. Output **only the improved prompt text itself**, without any reasoning steps, thinking process, or additional commentary.",
+        "🏠 Interior Design Prompt": "You are an expert interior design photographer creating prompts for photorealistic image generation. Analyze this interior space and create a detailed prompt covering: 1) ARCHITECTURE - room type, layout, ceiling height, windows, doors, columns, beams, alcoves; 2) MATERIALS - exact finishes for walls (paint type, color tone), floors (tile pattern, wood grain, stone type), ceilings (texture, paneling); 3) FURNITURE - each piece with style, material, upholstery texture, placement relative to walls/windows; 4) LIGHTING - natural light direction and quality, artificial fixtures (chandeliers, sconces, lamps) with materials and finishes; 5) COLOR PALETTE - primary, secondary, accent colors with specific tones (warm beige, cool gray, muted sage); 6) ACCESSORIES - artwork, mirrors, plants, decorative objects with materials and placement; 7) ATMOSPHERE - design style (Scandinavian, mid-century, contemporary, transitional), mood (cozy, elegant, minimal). Output as a single cohesive paragraph suitable for Stable Diffusion or Flux, written as photorealistic interior photography with precise material descriptions and spatial relationships. Do not use bullet points or sections in the output.",
+        "🎨 Mood Board Analysis": "Analyze this mood board as an interior design expert. Extract and describe: 1) OVERALL AESTHETIC - the cohesive design direction and style period (modern, bohemian, industrial, Scandinavian, etc.); 2) COLOR STORY - dominant palette with specific color names and tones, how colors relate and create harmony; 3) MATERIAL PALETTE - all textures and finishes visible (wood types, metal finishes, fabric textures, stone varieties); 4) KEY FURNITURE PIECES - styles, silhouettes, and materials that define the look; 5) LIGHTING MOOD - warm vs cool, natural vs artificial, fixture styles; 6) DECORATIVE ELEMENTS - patterns, artwork styles, plant types, accessories; 7) EMOTIONAL QUALITY - the mood and feeling this design evokes (serene, sophisticated, cozy, bold). Then synthesize everything into a detailed interior design prompt that could recreate this aesthetic in a photorealistic render. Output as a single comprehensive paragraph without bullet points."
+    }
+}
