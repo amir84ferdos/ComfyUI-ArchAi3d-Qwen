@@ -153,7 +153,6 @@ class ArchAi3D_HF_Download:
                 repo_id=repo_id,
                 filename=filename,
                 token=token,
-                resume_download=True,
                 force_download=overwrite,
             )
 
