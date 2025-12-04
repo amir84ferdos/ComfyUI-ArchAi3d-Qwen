@@ -15,7 +15,7 @@ Usage:
     3. Run the node
     4. Wait for installation to complete
 
-Version: 1.2.0
+Version: 1.3.0
 """
 
 import os
@@ -178,11 +178,11 @@ class ArchAi3D_LlamaCpp_Installer:
         # Install dependencies
         status_lines.append("\n📦 Installing build dependencies...")
 
-        # Try different package managers (include libcurl-dev for llama.cpp)
+        # Try different package managers (include libcurl-dev and cuda libs for llama.cpp)
         dep_cmds = [
-            "apt-get update && apt-get install -y build-essential cmake git curl libcurl4-openssl-dev",
-            "apt update && apt install -y build-essential cmake git curl libcurl4-openssl-dev",
-            "sudo apt-get update && sudo apt-get install -y build-essential cmake git curl libcurl4-openssl-dev",
+            "apt-get update && apt-get install -y build-essential cmake git curl libcurl4-openssl-dev libcublas-dev libcublas-12-4 || true",
+            "apt update && apt install -y build-essential cmake git curl libcurl4-openssl-dev libcublas-dev || true",
+            "sudo apt-get update && sudo apt-get install -y build-essential cmake git curl libcurl4-openssl-dev libcublas-dev || true",
         ]
 
         success = False
@@ -241,9 +241,11 @@ class ArchAi3D_LlamaCpp_Installer:
             status_lines.extend(error_lines)
             status_lines.append("-" * 40)
 
-            # Try without CUDA as fallback
+            # Try without CUDA as fallback - must clean build dir first
             status_lines.append("\n⚠️ Trying CPU-only build as fallback...")
-            cmake_cmd_cpu = "cmake -B build -DCMAKE_BUILD_TYPE=Release -DLLAMA_CURL=OFF -DGGML_CCACHE=OFF"
+            if os.path.exists(build_dir):
+                shutil.rmtree(build_dir)
+            cmake_cmd_cpu = "cmake -B build -DCMAKE_BUILD_TYPE=Release -DLLAMA_CURL=OFF -DGGML_CCACHE=OFF -DGGML_CUDA=OFF"
             success, output = self.run_command(cmake_cmd_cpu, cwd=paths["llama_cpp_dir"], env=env)
 
             if not success:
