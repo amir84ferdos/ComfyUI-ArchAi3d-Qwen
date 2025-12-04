@@ -35,3 +35,6 @@ colour-science
 
 # For Gemini API node
 google-genai>=1.0.0
+
+# For Google Drive Download node
+gdown>=5.0.0

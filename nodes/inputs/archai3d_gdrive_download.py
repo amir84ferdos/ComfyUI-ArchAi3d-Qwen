@@ -8,6 +8,7 @@ LinkedIn: https://www.linkedin.com/in/archai3d/
 Description:
     Download models from Google Drive with custom rename option.
     Supports both public shared links and file IDs.
+    Uses gdown library for reliable large file downloads.
 
 Usage:
     1. Enter Google Drive file ID or share link
@@ -15,13 +16,11 @@ Usage:
     3. Select save directory
     4. Run the node
 
-Version: 1.0.0
+Version: 1.1.0
 """
 
 import os
-import requests
 import shutil
-from tqdm import tqdm
 import re
 import folder_paths
 
@@ -30,6 +29,13 @@ try:
     HAS_SERVER = True
 except ImportError:
     HAS_SERVER = False
+
+# Try to import gdown
+try:
+    import gdown
+    HAS_GDOWN = True
+except ImportError:
+    HAS_GDOWN = False
 
 
 def get_model_dirs():
@@ -52,7 +58,7 @@ class ArchAi3D_GDrive_Download:
     - Rename files during download
     - Progress indicator
     - Overwrite protection
-    - Handles large file confirmation automatically
+    - Handles large file confirmation automatically via gdown
     """
 
     @classmethod
@@ -81,6 +87,10 @@ class ArchAi3D_GDrive_Download:
                 "save_dir_override": ("STRING", {
                     "default": "",
                     "tooltip": "Custom save path (overrides save_dir dropdown)"
+                }),
+                "fuzzy": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "Use fuzzy matching for file extraction (recommended)"
                 }),
             },
             "hidden": {
@@ -130,15 +140,73 @@ class ArchAi3D_GDrive_Download:
         # Last resort: return as-is (might be just the ID)
         return file_id_or_link.strip()
 
-    def _get_confirm_token(self, response):
-        """Get confirmation token for large files."""
-        for key, value in response.cookies.items():
-            if key.startswith('download_warning'):
-                return value
+    def _download_with_gdown(self, file_id, output_path, fuzzy=True):
+        """Download using gdown library."""
+        url = f"https://drive.google.com/uc?id={file_id}"
+
+        print(f"[ArchAi3D GDrive Download] Using gdown to download...")
+        print(f"[ArchAi3D GDrive Download] URL: {url}")
+
+        # gdown handles large file confirmation automatically
+        result = gdown.download(url, output_path, quiet=False, fuzzy=fuzzy)
+
+        return result
+
+    def _download_with_requests(self, file_id, output_path):
+        """Fallback download using requests with multiple confirmation methods."""
+        import requests
+        from tqdm import tqdm
+
+        session = requests.Session()
+
+        # Try multiple download approaches
+        urls_to_try = [
+            f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t",
+            f"https://drive.google.com/uc?export=download&id={file_id}&confirm=yes",
+            f"https://drive.google.com/uc?export=download&id={file_id}&confirm=1",
+            f"https://drive.usercontent.google.com/download?id={file_id}&confirm=t",
+        ]
+
+        for url in urls_to_try:
+            print(f"[ArchAi3D GDrive Download] Trying: {url}")
+
+            try:
+                response = session.get(url, stream=True, allow_redirects=True)
+                response.raise_for_status()
+
+                content_type = response.headers.get('Content-Type', '')
+                content_length = int(response.headers.get('content-length', 0))
+
+                # Check if we got actual file content (not HTML error page)
+                if 'text/html' not in content_type or content_length > 100000:
+                    # This looks like the actual file
+                    temp_path = output_path + '.tmp'
+                    downloaded = 0
+
+                    with open(temp_path, 'wb') as f:
+                        with tqdm(total=content_length, unit='iB', unit_scale=True) as pbar:
+                            for chunk in response.iter_content(chunk_size=1024*1024):
+                                if chunk:
+                                    size = f.write(chunk)
+                                    downloaded += size
+                                    pbar.update(size)
+
+                                    if content_length > 0:
+                                        progress = (downloaded / content_length) * 100.0
+                                        self.set_progress(progress)
+
+                    # Move to final location
+                    shutil.move(temp_path, output_path)
+                    return output_path
+
+            except Exception as e:
+                print(f"[ArchAi3D GDrive Download] Failed with this URL: {e}")
+                continue
+
         return None
 
     def download(self, file_id_or_link, filename, save_dir, node_id=None,
-                 overwrite=False, save_dir_override=""):
+                 overwrite=False, save_dir_override="", fuzzy=True):
         """Download file from Google Drive."""
 
         self.node_id = node_id
@@ -170,81 +238,45 @@ class ArchAi3D_GDrive_Download:
         if os.path.exists(full_path) and not overwrite:
             return (f"File already exists: {filename}\nEnable 'overwrite' to replace.",)
 
-        # Google Drive download URL
-        base_url = "https://drive.google.com/uc?export=download"
-
         print(f"[ArchAi3D GDrive Download] File ID: {file_id}")
         print(f"[ArchAi3D GDrive Download] Saving as: {filename}")
 
         try:
-            session = requests.Session()
+            result = None
 
-            # Initial request
-            response = session.get(base_url, params={'id': file_id}, stream=True)
-            response.raise_for_status()
+            # Try gdown first if available
+            if HAS_GDOWN:
+                try:
+                    result = self._download_with_gdown(file_id, full_path, fuzzy)
+                except Exception as e:
+                    print(f"[ArchAi3D GDrive Download] gdown failed: {e}")
+                    print("[ArchAi3D GDrive Download] Falling back to requests...")
 
-            # Check for virus scan warning (large files)
-            token = self._get_confirm_token(response)
-            if token:
-                print("[ArchAi3D GDrive Download] Large file detected, confirming download...")
-                params = {'id': file_id, 'confirm': token}
-                response = session.get(base_url, params=params, stream=True)
-                response.raise_for_status()
+            # Fallback to requests if gdown failed or not available
+            if not result or not os.path.exists(full_path):
+                if not HAS_GDOWN:
+                    print("[ArchAi3D GDrive Download] gdown not installed, using requests...")
+                    print("[ArchAi3D GDrive Download] For better reliability, install: pip install gdown")
 
-            # Also try the newer confirmation method
-            content_type = response.headers.get('Content-Type', '')
-            if 'text/html' in content_type:
-                # This is the warning page, need to confirm
-                # Try alternative direct download URL
-                alt_url = f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t"
-                response = session.get(alt_url, stream=True)
-                response.raise_for_status()
+                result = self._download_with_requests(file_id, full_path)
 
-            # Get content length if available
-            total_size = int(response.headers.get('content-length', 0))
+            # Check if download succeeded
+            if result and os.path.exists(full_path):
+                size_mb = os.path.getsize(full_path) / (1024 * 1024)
+                size_str = f"{size_mb:.1f} MB" if size_mb < 1024 else f"{size_mb/1024:.2f} GB"
 
-            # Check if we got HTML instead of file (error page)
-            content_type = response.headers.get('Content-Type', '')
-            if 'text/html' in content_type and total_size < 100000:
-                # Likely an error page
-                return ("❌ Download failed: File may not be publicly shared or doesn't exist.\nMake sure the file is set to 'Anyone with the link can view'.",)
+                status = f"✅ Download complete!\n\nFile: {filename}\nSize: {size_str}\nPath: {full_path}"
+                print(f"[ArchAi3D GDrive Download] {status}")
+                return (status,)
+            else:
+                return ("❌ Download failed. Please check:\n"
+                        "1. File is set to 'Anyone with the link can view'\n"
+                        "2. Link/ID is correct\n"
+                        "3. Try installing gdown: pip install gdown",)
 
-            temp_path = full_path + '.tmp'
-            downloaded = 0
-
-            with open(temp_path, 'wb') as f:
-                with tqdm(total=total_size, unit='iB', unit_scale=True, desc=filename) as pbar:
-                    for chunk in response.iter_content(chunk_size=1024*1024):
-                        if chunk:
-                            size = f.write(chunk)
-                            downloaded += size
-                            pbar.update(size)
-
-                            if total_size > 0:
-                                progress = (downloaded / total_size) * 100.0
-                                self.set_progress(progress)
-
-            # Move temp file to final location
-            shutil.move(temp_path, full_path)
-
-            # Get file size
-            size_mb = os.path.getsize(full_path) / (1024 * 1024)
-            size_str = f"{size_mb:.1f} MB" if size_mb < 1024 else f"{size_mb/1024:.2f} GB"
-
-            status = f"✅ Download complete!\n\nFile: {filename}\nSize: {size_str}\nPath: {full_path}"
-            print(f"[ArchAi3D GDrive Download] {status}")
-
-            return (status,)
-
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 404:
-                return ("❌ File not found. Check the file ID or link.",)
-            if e.response.status_code == 403:
-                return ("❌ Access denied. Make sure the file is publicly shared.",)
-            return (f"❌ HTTP Error: {e}",)
         except Exception as e:
             # Clean up temp file
             temp_path = full_path + '.tmp'
             if os.path.exists(temp_path):
                 os.remove(temp_path)
-            return (f"❌ Download failed: {str(e)}",)
+            return (f"❌ Download failed: {str(e)}\n\nTip: Install gdown for better reliability:\npip install gdown",)
