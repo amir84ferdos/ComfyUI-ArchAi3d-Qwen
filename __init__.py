@@ -6,7 +6,7 @@ Author: Amir Ferdos (ArchAi3d)
 Email: Amir84ferdos@gmail.com
 LinkedIn: https://www.linkedin.com/in/archai3d/
 GitHub: https://github.com/amir84ferdos
-Version: 2.4.0
+Version: 3.0.0
 License: Dual License (Free for personal use, Commercial license required for business use)
 """
 
@@ -374,7 +374,7 @@ WEB_DIRECTORY = os.path.join(os.path.dirname(__file__), "web")
 # ============================================================================
 
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
-__version__ = "2.3.0"
+__version__ = "3.0.0"
 __author__ = "Amir Ferdos (ArchAi3d)"
 
 # ============================================================================
