@@ -15,7 +15,7 @@ Usage:
     3. Run the node
     4. Wait for installation to complete
 
-Version: 1.0.0
+Version: 1.1.0
 """
 
 import os
@@ -70,7 +70,34 @@ class ArchAi3D_LlamaCpp_Installer:
             "models_dir": os.path.join(home, ".cache", "llama-models"),
         }
 
-    def run_command(self, cmd, cwd=None):
+    def get_cuda_env(self):
+        """Get environment variables for CUDA compilation."""
+        env = os.environ.copy()
+
+        # Common CUDA paths to check
+        cuda_paths = [
+            "/usr/local/cuda",
+            "/usr/local/cuda-12",
+            "/usr/local/cuda-12.4",
+            "/usr/local/cuda-12.1",
+            "/usr/local/cuda-11.8",
+        ]
+
+        cuda_home = None
+        for path in cuda_paths:
+            if os.path.exists(path):
+                cuda_home = path
+                break
+
+        if cuda_home:
+            env["CUDA_HOME"] = cuda_home
+            env["CUDA_PATH"] = cuda_home
+            env["PATH"] = f"{cuda_home}/bin:" + env.get("PATH", "")
+            env["LD_LIBRARY_PATH"] = f"{cuda_home}/lib64:" + env.get("LD_LIBRARY_PATH", "")
+
+        return env, cuda_home
+
+    def run_command(self, cmd, cwd=None, env=None):
         """Run a shell command and return output."""
         try:
             result = subprocess.run(
@@ -79,7 +106,8 @@ class ArchAi3D_LlamaCpp_Installer:
                 cwd=cwd,
                 capture_output=True,
                 text=True,
-                timeout=1800  # 30 min timeout for builds
+                timeout=1800,  # 30 min timeout for builds
+                env=env or os.environ.copy()
             )
             return result.returncode == 0, result.stdout + result.stderr
         except subprocess.TimeoutExpired:
@@ -90,6 +118,7 @@ class ArchAi3D_LlamaCpp_Installer:
     def check_status(self):
         """Check installation status."""
         paths = self.get_paths()
+        env, cuda_home = self.get_cuda_env()
         status_lines = ["=" * 50, "🔍 LLAMA.CPP INSTALLATION STATUS", "=" * 50]
 
         # Check llama-server
@@ -99,12 +128,15 @@ class ArchAi3D_LlamaCpp_Installer:
             status_lines.append("❌ llama-server: NOT INSTALLED")
 
         # Check CUDA
-        success, output = self.run_command("nvcc --version")
+        success, output = self.run_command("nvcc --version", env=env)
         if success:
             cuda_ver = [l for l in output.split('\n') if 'release' in l.lower()]
             status_lines.append(f"✅ CUDA: {cuda_ver[0] if cuda_ver else 'Available'}")
         else:
-            status_lines.append("⚠️ CUDA: Not found (will try to build anyway)")
+            status_lines.append("⚠️ CUDA: nvcc not found")
+
+        if cuda_home:
+            status_lines.append(f"   CUDA_HOME: {cuda_home}")
 
         # Check models
         status_lines.append("\n📦 MODELS:")
@@ -133,6 +165,7 @@ class ArchAi3D_LlamaCpp_Installer:
     def install_llama_cpp(self, force_rebuild=False):
         """Install llama.cpp with CUDA support."""
         paths = self.get_paths()
+        env, cuda_home = self.get_cuda_env()
         status_lines = ["=" * 50, "🔧 INSTALLING LLAMA.CPP", "=" * 50]
 
         # Check if already installed
@@ -144,26 +177,41 @@ class ArchAi3D_LlamaCpp_Installer:
 
         # Install dependencies
         status_lines.append("\n📦 Installing build dependencies...")
-        success, output = self.run_command("apt update && apt install -y build-essential cmake git")
-        if not success:
-            # Try without sudo (RunPod usually runs as root)
-            success, output = self.run_command("sudo apt update && sudo apt install -y build-essential cmake git")
+
+        # Try different package managers
+        dep_cmds = [
+            "apt-get update && apt-get install -y build-essential cmake git curl",
+            "apt update && apt install -y build-essential cmake git curl",
+            "sudo apt-get update && sudo apt-get install -y build-essential cmake git curl",
+        ]
+
+        success = False
+        for cmd in dep_cmds:
+            success, output = self.run_command(cmd, env=env)
+            if success:
+                break
 
         if success:
             status_lines.append("✅ Dependencies installed")
         else:
-            status_lines.append(f"⚠️ Dependencies warning: {output[:200]}")
+            status_lines.append(f"⚠️ Dependencies warning (may already be installed)")
+
+        # Show CUDA info
+        if cuda_home:
+            status_lines.append(f"\n🔧 CUDA detected: {cuda_home}")
+        else:
+            status_lines.append("\n⚠️ CUDA_HOME not found, will try to detect automatically")
 
         # Clone or update llama.cpp
         if os.path.exists(paths["llama_cpp_dir"]):
             status_lines.append("\n📥 Updating llama.cpp...")
-            success, output = self.run_command("git pull", cwd=paths["llama_cpp_dir"])
+            success, output = self.run_command("git fetch && git reset --hard origin/master", cwd=paths["llama_cpp_dir"], env=env)
         else:
             status_lines.append("\n📥 Cloning llama.cpp...")
-            success, output = self.run_command(f"git clone https://github.com/ggml-org/llama.cpp {paths['llama_cpp_dir']}")
+            success, output = self.run_command(f"git clone https://github.com/ggml-org/llama.cpp {paths['llama_cpp_dir']}", env=env)
 
         if not success:
-            status_lines.append(f"❌ Git error: {output[:200]}")
+            status_lines.append(f"❌ Git error: {output[:500]}")
             return "\n".join(status_lines)
         status_lines.append("✅ Repository ready")
 
@@ -175,22 +223,47 @@ class ArchAi3D_LlamaCpp_Installer:
         if os.path.exists(build_dir):
             shutil.rmtree(build_dir)
 
-        # Configure
-        success, output = self.run_command(
-            "cmake -B build -DGGML_CUDA=ON",
-            cwd=paths["llama_cpp_dir"]
-        )
+        # Configure with explicit CUDA settings
+        cmake_cmd = "cmake -B build -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release"
+        if cuda_home:
+            cmake_cmd += f" -DCMAKE_CUDA_COMPILER={cuda_home}/bin/nvcc"
+
+        status_lines.append(f"\n🔧 Running: {cmake_cmd}")
+        success, output = self.run_command(cmake_cmd, cwd=paths["llama_cpp_dir"], env=env)
+
         if not success:
-            status_lines.append(f"❌ CMake configure error: {output[:300]}")
-            return "\n".join(status_lines)
+            # Show more of the error
+            status_lines.append(f"\n❌ CMake configure error:")
+            status_lines.append("-" * 40)
+            # Show last 30 lines of output
+            error_lines = output.strip().split('\n')[-30:]
+            status_lines.extend(error_lines)
+            status_lines.append("-" * 40)
+
+            # Try without CUDA as fallback
+            status_lines.append("\n⚠️ Trying CPU-only build as fallback...")
+            cmake_cmd_cpu = "cmake -B build -DCMAKE_BUILD_TYPE=Release"
+            success, output = self.run_command(cmake_cmd_cpu, cwd=paths["llama_cpp_dir"], env=env)
+
+            if not success:
+                status_lines.append(f"❌ CPU build also failed: {output[-500:]}")
+                return "\n".join(status_lines)
+            else:
+                status_lines.append("✅ CPU-only build configured (slower, but works)")
+        else:
+            status_lines.append("✅ CMake configure successful")
 
         # Build
-        success, output = self.run_command(
-            "cmake --build build --config Release -j$(nproc)",
-            cwd=paths["llama_cpp_dir"]
-        )
+        status_lines.append("\n🔨 Compiling (please wait)...")
+        build_cmd = "cmake --build build --config Release -j$(nproc)"
+        success, output = self.run_command(build_cmd, cwd=paths["llama_cpp_dir"], env=env)
+
         if not success:
-            status_lines.append(f"❌ Build error: {output[:300]}")
+            status_lines.append(f"\n❌ Build error:")
+            status_lines.append("-" * 40)
+            error_lines = output.strip().split('\n')[-30:]
+            status_lines.extend(error_lines)
+            status_lines.append("-" * 40)
             return "\n".join(status_lines)
         status_lines.append("✅ Build complete")
 
@@ -198,13 +271,36 @@ class ArchAi3D_LlamaCpp_Installer:
         status_lines.append("\n📦 Installing llama-server...")
         os.makedirs(os.path.dirname(paths["llama_server"]), exist_ok=True)
 
-        src_server = os.path.join(paths["llama_cpp_dir"], "build", "bin", "llama-server")
-        if os.path.exists(src_server):
+        # Check multiple possible locations for llama-server
+        possible_paths = [
+            os.path.join(paths["llama_cpp_dir"], "build", "bin", "llama-server"),
+            os.path.join(paths["llama_cpp_dir"], "build", "llama-server"),
+            os.path.join(paths["llama_cpp_dir"], "llama-server"),
+        ]
+
+        src_server = None
+        for p in possible_paths:
+            if os.path.exists(p):
+                src_server = p
+                break
+
+        if src_server:
             shutil.copy2(src_server, paths["llama_server"])
             os.chmod(paths["llama_server"], 0o755)
             status_lines.append(f"✅ Installed to: {paths['llama_server']}")
+
+            # Verify it runs
+            success, output = self.run_command(f"{paths['llama_server']} --version", env=env)
+            if success:
+                status_lines.append(f"✅ Version: {output.strip()[:100]}")
         else:
+            # List what was built
             status_lines.append(f"❌ llama-server not found in build output")
+            status_lines.append("\n📂 Build contents:")
+            for root, dirs, files in os.walk(build_dir):
+                for f in files:
+                    if 'llama' in f.lower():
+                        status_lines.append(f"   {os.path.join(root, f)}")
             return "\n".join(status_lines)
 
         status_lines.append("\n" + "=" * 50)
@@ -278,7 +374,7 @@ print("Download complete!")
             status_lines.append(f"\n✅ Model downloaded: {model_size_gb:.2f} GB")
             status_lines.append(f"✅ MMProj downloaded: {mmproj_size_gb:.2f} GB")
         else:
-            status_lines.append(f"❌ Download error: {output[:300]}")
+            status_lines.append(f"❌ Download error: {output[:500]}")
             return "\n".join(status_lines)
 
         status_lines.append("\n" + "=" * 50)
