@@ -118,6 +118,7 @@ from .nodes.inputs.archai3d_qwenvl_gguf import ArchAi3D_QwenVL_GGUF, ArchAi3D_Qw
 from .nodes.inputs.archai3d_llama_cpp_installer import ArchAi3D_LlamaCpp_Installer
 from .nodes.inputs.archai3d_hf_download import ArchAi3D_HF_Download
 from .nodes.inputs.archai3d_civitai_download import ArchAi3D_CivitAI_Download
+from .nodes.inputs.archai3d_gdrive_download import ArchAi3D_GDrive_Download
 from .nodes.utils.archai3d_position_guide_prompt_builder import ArchAi3D_Position_Guide_Prompt_Builder
 from .nodes.utils.archai3d_simple_position_prompt import ArchAi3D_Simple_Position_Prompt
 from .nodes.utils.archai3d_color_correction_bt709 import ArchAi3D_Color_Correction_BT709
@@ -246,6 +247,7 @@ NODE_CLASS_MAPPINGS = {
     # Download Nodes
     "ArchAi3D_HF_Download": ArchAi3D_HF_Download,
     "ArchAi3D_CivitAI_Download": ArchAi3D_CivitAI_Download,
+    "ArchAi3D_GDrive_Download": ArchAi3D_GDrive_Download,
 
     # Low VRAM Optimized Nodes
     "ArchAi3D_SAM3_Segment": ArchAi3D_SAM3_Segment,
@@ -365,6 +367,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # Download Nodes
     "ArchAi3D_HF_Download": "📥 HF Download (Rename)",
     "ArchAi3D_CivitAI_Download": "📥 CivitAI Download (Rename)",
+    "ArchAi3D_GDrive_Download": "📥 Google Drive Download",
 
     # Low VRAM Optimized Nodes
     "ArchAi3D_SAM3_Segment": "🎯 SAM3 Segment (Low VRAM)",
