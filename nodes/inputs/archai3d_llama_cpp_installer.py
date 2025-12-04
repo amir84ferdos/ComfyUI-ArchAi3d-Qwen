@@ -15,7 +15,7 @@ Usage:
     3. Run the node
     4. Wait for installation to complete
 
-Version: 1.1.0
+Version: 1.2.0
 """
 
 import os
@@ -178,11 +178,11 @@ class ArchAi3D_LlamaCpp_Installer:
         # Install dependencies
         status_lines.append("\n📦 Installing build dependencies...")
 
-        # Try different package managers
+        # Try different package managers (include libcurl-dev for llama.cpp)
         dep_cmds = [
-            "apt-get update && apt-get install -y build-essential cmake git curl",
-            "apt update && apt install -y build-essential cmake git curl",
-            "sudo apt-get update && sudo apt-get install -y build-essential cmake git curl",
+            "apt-get update && apt-get install -y build-essential cmake git curl libcurl4-openssl-dev",
+            "apt update && apt install -y build-essential cmake git curl libcurl4-openssl-dev",
+            "sudo apt-get update && sudo apt-get install -y build-essential cmake git curl libcurl4-openssl-dev",
         ]
 
         success = False
@@ -224,7 +224,8 @@ class ArchAi3D_LlamaCpp_Installer:
             shutil.rmtree(build_dir)
 
         # Configure with explicit CUDA settings
-        cmake_cmd = "cmake -B build -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release"
+        # Disable CURL to avoid dependency issues, disable ccache warning
+        cmake_cmd = "cmake -B build -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release -DLLAMA_CURL=OFF -DGGML_CCACHE=OFF"
         if cuda_home:
             cmake_cmd += f" -DCMAKE_CUDA_COMPILER={cuda_home}/bin/nvcc"
 
@@ -242,7 +243,7 @@ class ArchAi3D_LlamaCpp_Installer:
 
             # Try without CUDA as fallback
             status_lines.append("\n⚠️ Trying CPU-only build as fallback...")
-            cmake_cmd_cpu = "cmake -B build -DCMAKE_BUILD_TYPE=Release"
+            cmake_cmd_cpu = "cmake -B build -DCMAKE_BUILD_TYPE=Release -DLLAMA_CURL=OFF -DGGML_CCACHE=OFF"
             success, output = self.run_command(cmake_cmd_cpu, cwd=paths["llama_cpp_dir"], env=env)
 
             if not success:
