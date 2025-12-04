@@ -32,7 +32,9 @@ temp/
 tmp/
 
 # API config and cache files (contain API keys or cached responses)
-nodes/inputs/
+nodes/inputs/*_cache.json
+nodes/inputs/*.json
+!nodes/inputs/*.py
 nodes/utils/cache/
 **/cache/
 **/*_cache.json

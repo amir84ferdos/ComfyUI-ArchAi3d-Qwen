@@ -115,6 +115,7 @@ from .nodes.inputs.archai3d_conditioning_balance import ArchAi3D_Conditioning_Ba
 from .nodes.inputs.archai3d_gemini_model import ArchAi3D_Gemini_Model
 from .nodes.inputs.archai3d_gemini import ArchAi3D_Gemini
 from .nodes.inputs.archai3d_qwenvl_gguf import ArchAi3D_QwenVL_GGUF, ArchAi3D_QwenVL_Server_Control
+from .nodes.inputs.archai3d_llama_cpp_installer import ArchAi3D_LlamaCpp_Installer
 from .nodes.utils.archai3d_position_guide_prompt_builder import ArchAi3D_Position_Guide_Prompt_Builder
 from .nodes.utils.archai3d_simple_position_prompt import ArchAi3D_Simple_Position_Prompt
 from .nodes.utils.archai3d_color_correction_bt709 import ArchAi3D_Color_Correction_BT709
@@ -238,6 +239,7 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_Gemini": ArchAi3D_Gemini,
     "ArchAi3D_QwenVL_GGUF": ArchAi3D_QwenVL_GGUF,
     "ArchAi3D_QwenVL_Server_Control": ArchAi3D_QwenVL_Server_Control,
+    "ArchAi3D_LlamaCpp_Installer": ArchAi3D_LlamaCpp_Installer,
 
     # Low VRAM Optimized Nodes
     "ArchAi3D_SAM3_Segment": ArchAi3D_SAM3_Segment,
@@ -352,6 +354,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Gemini": "🤖 Gemini API",
     "ArchAi3D_QwenVL_GGUF": "🚀 QwenVL GGUF (Fast)",
     "ArchAi3D_QwenVL_Server_Control": "🎛️ QwenVL Server Control",
+    "ArchAi3D_LlamaCpp_Installer": "⚙️ Llama.cpp Installer",
 
     # Low VRAM Optimized Nodes
     "ArchAi3D_SAM3_Segment": "🎯 SAM3 Segment (Low VRAM)",
