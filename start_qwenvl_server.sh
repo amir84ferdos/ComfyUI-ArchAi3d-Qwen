@@ -95,22 +95,72 @@ else
     exit 1
 fi
 
-# Check if model exists
+# Auto-download model if missing
+if [ ! -f "$MODEL_PATH" ] || [ ! -f "$MMPROJ_PATH" ]; then
+    echo "Model files not found. Downloading automatically..."
+    echo ""
+
+    # Determine repo and files based on model size
+    if [ "$1" = "2B" ]; then
+        HF_REPO="Qwen/Qwen3-VL-2B-Instruct-GGUF"
+        MODEL_FILE="Qwen3VL-2B-Instruct-Q4_K_M.gguf"
+        MMPROJ_FILE="mmproj-Qwen3VL-2B-Instruct-F16.gguf"
+        LOCAL_DIR="$MODEL_DIR/qwen3-vl-2b"
+    elif [ "$1" = "8B" ]; then
+        HF_REPO="Qwen/Qwen3-VL-8B-Instruct-GGUF"
+        MODEL_FILE="Qwen3VL-8B-Instruct-Q4_K_M.gguf"
+        MMPROJ_FILE="mmproj-Qwen3VL-8B-Instruct-F16.gguf"
+        LOCAL_DIR="$MODEL_DIR/qwen3-vl-8b"
+    else
+        HF_REPO="Qwen/Qwen3-VL-4B-Instruct-GGUF"
+        MODEL_FILE="Qwen3VL-4B-Instruct-Q4_K_M.gguf"
+        MMPROJ_FILE="mmproj-Qwen3VL-4B-Instruct-F16.gguf"
+        LOCAL_DIR="$MODEL_DIR/qwen3-vl-4b"
+    fi
+
+    mkdir -p "$LOCAL_DIR"
+
+    echo "Downloading from: $HF_REPO"
+    echo "To: $LOCAL_DIR"
+    echo ""
+
+    # Download using huggingface-cli or Python
+    if command -v huggingface-cli &> /dev/null; then
+        huggingface-cli download "$HF_REPO" "$MODEL_FILE" "$MMPROJ_FILE" --local-dir "$LOCAL_DIR"
+    else
+        # Fallback to Python
+        python3 -c "
+from huggingface_hub import hf_hub_download
+import os
+local_dir = '$LOCAL_DIR'
+os.makedirs(local_dir, exist_ok=True)
+print('Downloading model...')
+hf_hub_download('$HF_REPO', '$MODEL_FILE', local_dir=local_dir)
+print('Downloading mmproj...')
+hf_hub_download('$HF_REPO', '$MMPROJ_FILE', local_dir=local_dir)
+print('Download complete!')
+"
+    fi
+
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to download model files."
+        echo "Please check your internet connection and try again."
+        exit 1
+    fi
+
+    echo ""
+    echo "Download complete!"
+    echo ""
+fi
+
+# Verify files exist after download
 if [ ! -f "$MODEL_PATH" ]; then
-    echo "ERROR: Model not found at $MODEL_PATH"
-    echo ""
-    echo "Download the model using Python:"
-    echo ""
-    echo "from huggingface_hub import hf_hub_download"
-    echo "hf_hub_download('Qwen/Qwen3-VL-4B-Instruct-GGUF', 'Qwen3VL-4B-Instruct-Q4_K_M.gguf', local_dir='~/.cache/llama-models/qwen3-vl-4b')"
-    echo "hf_hub_download('Qwen/Qwen3-VL-4B-Instruct-GGUF', 'mmproj-Qwen3VL-4B-Instruct-F16.gguf', local_dir='~/.cache/llama-models/qwen3-vl-4b')"
-    echo ""
+    echo "ERROR: Model not found at $MODEL_PATH after download attempt."
     exit 1
 fi
 
 if [ ! -f "$MMPROJ_PATH" ]; then
-    echo "ERROR: mmproj not found at $MMPROJ_PATH"
-    echo "Vision support requires the mmproj file."
+    echo "ERROR: mmproj not found at $MMPROJ_PATH after download attempt."
     exit 1
 fi
 
