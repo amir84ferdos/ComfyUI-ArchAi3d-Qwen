@@ -17,4 +17,10 @@ UTILITY NODES:
   - 4 template presets (standard, no_removal, minimal, custom)
   - Outputs: (rectangle 1= description), (rectangle 2= description), ...
   - User validated: Working with exact formatting
+
+- archai3d_panorama_offset.py - Offset image horizontally for seamless panorama creation
+  - Shifts image by percentage of width (default 50%)
+  - At 50% offset, seams meet in center for easy editing
+  - Direction: left or right
+  - Perfect for fixing AI panorama seams
 """

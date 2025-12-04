@@ -114,6 +114,7 @@ from .nodes.inputs.archai3d_save_image import ArchAi3D_Save_Image
 from .nodes.inputs.archai3d_conditioning_balance import ArchAi3D_Conditioning_Balance
 from .nodes.inputs.archai3d_gemini_model import ArchAi3D_Gemini_Model
 from .nodes.inputs.archai3d_gemini import ArchAi3D_Gemini
+from .nodes.inputs.archai3d_qwenvl_gguf import ArchAi3D_QwenVL_GGUF, ArchAi3D_QwenVL_Server_Control
 from .nodes.utils.archai3d_position_guide_prompt_builder import ArchAi3D_Position_Guide_Prompt_Builder
 from .nodes.utils.archai3d_simple_position_prompt import ArchAi3D_Simple_Position_Prompt
 from .nodes.utils.archai3d_color_correction_bt709 import ArchAi3D_Color_Correction_BT709
@@ -121,6 +122,7 @@ from .nodes.utils.archai3d_color_correction_advanced import ArchAi3D_Color_Corre
 from .nodes.utils.archai3d_average_color import ArchAi3D_Average_Color
 from .nodes.utils.archai3d_solid_color_image import ArchAi3D_Solid_Color_Image
 from .nodes.utils.archai3d_mask_crop_rotate import ArchAi3D_Mask_Crop_Rotate
+from .nodes.utils.archai3d_panorama_offset import ArchAi3D_Panorama_Offset
 
 # ============================================================================
 # OPTIMIZED LOW VRAM NODES
@@ -222,6 +224,7 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_Average_Color": ArchAi3D_Average_Color,
     "ArchAi3D_Solid_Color_Image": ArchAi3D_Solid_Color_Image,
     "ArchAi3D_Mask_Crop_Rotate": ArchAi3D_Mask_Crop_Rotate,
+    "ArchAi3D_Panorama_Offset": ArchAi3D_Panorama_Offset,
 
     # Input Nodes (Web Interface Integration)
     "ArchAi3D_String_Input": ArchAi3D_String_Input,
@@ -233,6 +236,8 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_Conditioning_Balance": ArchAi3D_Conditioning_Balance,
     "ArchAi3D_Gemini_Model": ArchAi3D_Gemini_Model,
     "ArchAi3D_Gemini": ArchAi3D_Gemini,
+    "ArchAi3D_QwenVL_GGUF": ArchAi3D_QwenVL_GGUF,
+    "ArchAi3D_QwenVL_Server_Control": ArchAi3D_QwenVL_Server_Control,
 
     # Low VRAM Optimized Nodes
     "ArchAi3D_SAM3_Segment": ArchAi3D_SAM3_Segment,
@@ -333,6 +338,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Average_Color": "🎨 Average Color",
     "ArchAi3D_Solid_Color_Image": "🎨 Solid Color Image",
     "ArchAi3D_Mask_Crop_Rotate": "✂️ Mask Crop & Rotate",
+    "ArchAi3D_Panorama_Offset": "🔄 Panorama Offset",
 
     # Input Nodes (Web Interface Integration)
     "ArchAi3D_String_Input": "📝 String Input",
@@ -344,6 +350,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Conditioning_Balance": "⚖️ Conditioning Balance",
     "ArchAi3D_Gemini_Model": "🤖 Gemini Model Selector",
     "ArchAi3D_Gemini": "🤖 Gemini API",
+    "ArchAi3D_QwenVL_GGUF": "🚀 QwenVL GGUF (Fast)",
+    "ArchAi3D_QwenVL_Server_Control": "🎛️ QwenVL Server Control",
 
     # Low VRAM Optimized Nodes
     "ArchAi3D_SAM3_Segment": "🎯 SAM3 Segment (Low VRAM)",

@@ -27,6 +27,7 @@ from typing import Tuple, Optional
 
 PREFERRED_ASPECT_RATIOS = {
     "1:1 (Perfect Square)": (1, 1),
+    "2:1 (Panorama 360)": (2, 1),
     "2:3 (Classic Portrait)": (2, 3),
     "3:4 (Golden Ratio)": (3, 4),
     "3:5 (Elegant Vertical)": (3, 5),
