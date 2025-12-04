@@ -122,12 +122,8 @@ class ArchAi3D_HF_Download:
         else:
             full_save_dir = os.path.join(folder_paths.models_dir, save_dir)
 
-        # Handle filename that contains subdirectories
+        # Extract just the filename (ignore any subdirectories in the HF path)
         base_filename = os.path.basename(filename)
-        filename_subdir = os.path.dirname(filename)
-
-        if filename_subdir:
-            full_save_dir = os.path.join(full_save_dir, filename_subdir)
 
         os.makedirs(full_save_dir, exist_ok=True)
 
