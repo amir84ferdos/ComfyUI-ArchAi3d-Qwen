@@ -15,7 +15,7 @@ Usage:
     3. Run the node
     4. Wait for installation to complete
 
-Version: 1.3.0
+Version: 1.4.0
 """
 
 import os
@@ -178,23 +178,59 @@ class ArchAi3D_LlamaCpp_Installer:
         # Install dependencies
         status_lines.append("\n📦 Installing build dependencies...")
 
-        # Try different package managers (include libcurl-dev and cuda libs for llama.cpp)
-        dep_cmds = [
-            "apt-get update && apt-get install -y build-essential cmake git curl libcurl4-openssl-dev libcublas-dev libcublas-12-4 || true",
-            "apt update && apt install -y build-essential cmake git curl libcurl4-openssl-dev libcublas-dev || true",
-            "sudo apt-get update && sudo apt-get install -y build-essential cmake git curl libcurl4-openssl-dev libcublas-dev || true",
-        ]
-
-        success = False
-        for cmd in dep_cmds:
-            success, output = self.run_command(cmd, env=env)
-            if success:
-                break
-
+        # First install basic build tools
+        self.run_command("apt-get update", env=env)
+        success, output = self.run_command(
+            "apt-get install -y build-essential cmake git curl libcurl4-openssl-dev",
+            env=env
+        )
         if success:
-            status_lines.append("✅ Dependencies installed")
+            status_lines.append("✅ Basic build tools installed")
         else:
-            status_lines.append(f"⚠️ Dependencies warning (may already be installed)")
+            status_lines.append("⚠️ Basic tools warning (may already exist)")
+
+        # Install CUDA libraries (cuBLAS is required for GPU acceleration)
+        status_lines.append("\n📦 Installing CUDA libraries (cuBLAS)...")
+
+        # Try multiple approaches to get cuBLAS
+        cublas_installed = False
+
+        # Method 1: Try nvidia-cuda-toolkit (has everything)
+        success, output = self.run_command(
+            "apt-get install -y cuda-toolkit-12-4 || apt-get install -y cuda-toolkit || true",
+            env=env
+        )
+        if "cublas" in output.lower() or success:
+            cublas_installed = True
+
+        # Method 2: Try libcublas specifically
+        if not cublas_installed:
+            success, output = self.run_command(
+                "apt-get install -y libcublas-12-4 libcublas-dev-12-4 || "
+                "apt-get install -y libcublas-dev || "
+                "apt-get install -y nvidia-cuda-toolkit || true",
+                env=env
+            )
+            if success:
+                cublas_installed = True
+
+        # Method 3: Check if cuBLAS exists in CUDA path
+        if cuda_home:
+            cublas_paths = [
+                f"{cuda_home}/lib64/libcublas.so",
+                f"{cuda_home}/targets/x86_64-linux/lib/libcublas.so",
+                "/usr/lib/x86_64-linux-gnu/libcublas.so",
+            ]
+            for p in cublas_paths:
+                if os.path.exists(p):
+                    cublas_installed = True
+                    status_lines.append(f"✅ Found cuBLAS at: {p}")
+                    break
+
+        if cublas_installed:
+            status_lines.append("✅ CUDA libraries ready")
+        else:
+            status_lines.append("⚠️ cuBLAS not found - will try CUDA build anyway")
 
         # Show CUDA info
         if cuda_home:
