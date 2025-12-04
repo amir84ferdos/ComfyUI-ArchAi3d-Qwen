@@ -32,3 +32,6 @@ yapf
 
 # For Color Correction BT709 node
 colour-science
+
+# For Gemini API node
+google-genai>=1.0.0
