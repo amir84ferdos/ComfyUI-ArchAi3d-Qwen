@@ -129,14 +129,23 @@ class ArchAi3D_HF_Download:
         else:
             full_save_dir = os.path.join(folder_paths.models_dir, save_dir)
 
-        # Create directory if needed
+        # Handle filename that contains subdirectories (e.g., "split_files/vae/ae.safetensors")
+        # Extract just the base filename for the final name
+        base_filename = os.path.basename(filename)
+        filename_subdir = os.path.dirname(filename)
+
+        # If filename has subdirectories, add them to the save path
+        if filename_subdir:
+            full_save_dir = os.path.join(full_save_dir, filename_subdir)
+
+        # Create directory if needed (including any subdirectories)
         os.makedirs(full_save_dir, exist_ok=True)
 
         # Determine final filename
-        final_filename = custom_name.strip() if custom_name.strip() else filename
+        final_filename = custom_name.strip() if custom_name.strip() else base_filename
 
         # Ensure extension matches
-        orig_ext = os.path.splitext(filename)[1]
+        orig_ext = os.path.splitext(base_filename)[1]
         if custom_name.strip() and not final_filename.endswith(orig_ext):
             final_filename += orig_ext
 
