@@ -16,7 +16,7 @@ Usage:
     3. Select save directory
     4. Run the node
 
-Version: 1.1.0
+Version: 2.0.0 (High Speed)
 """
 
 import os

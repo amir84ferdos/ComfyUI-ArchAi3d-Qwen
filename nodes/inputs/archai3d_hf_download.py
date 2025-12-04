@@ -1,29 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-ArchAi3D HuggingFace Download Node
+ArchAi3D HuggingFace Download Node (High Speed)
 Author: Amir Ferdos (ArchAi3d)
 Email: Amir84ferdos@gmail.com
 LinkedIn: https://www.linkedin.com/in/archai3d/
 
 Description:
-    Download models from HuggingFace with custom rename option.
-    Solves the problem of badly named files on HuggingFace.
+    Download models from HuggingFace with maximum speed using huggingface_hub.
+    Features parallel downloads, resume support, and custom rename option.
 
-Usage:
-    1. Enter repo_id (e.g., "Qwen/Qwen3-VL-4B-Instruct-GGUF")
-    2. Enter filename from repo (e.g., "Qwen3VL-4B-Instruct-Q4_K_M.gguf")
-    3. Optionally set custom_name to rename the downloaded file
-    4. Select save directory
-    5. Run the node
-
-Version: 1.0.0
+Version: 2.0.0
 """
 
 import os
-import requests
 import shutil
-from tqdm import tqdm
-import re
 import folder_paths
 
 try:
@@ -32,11 +22,17 @@ try:
 except ImportError:
     HAS_SERVER = False
 
+# Try to import huggingface_hub for fast downloads
+try:
+    from huggingface_hub import hf_hub_download, snapshot_download
+    HAS_HF_HUB = True
+except ImportError:
+    HAS_HF_HUB = False
+
 
 def get_model_dirs():
     """Get available model directories from ComfyUI."""
     try:
-        # Get ComfyUI models directory
         models_dir = folder_paths.models_dir
         if os.path.exists(models_dir):
             dirs = [d for d in os.listdir(models_dir) if os.path.isdir(os.path.join(models_dir, d))]
@@ -47,13 +43,13 @@ def get_model_dirs():
 
 
 class ArchAi3D_HF_Download:
-    """Download models from HuggingFace with custom rename option.
+    """Download models from HuggingFace with maximum speed.
 
     Features:
-    - Download any file from HuggingFace repos
-    - Rename files during download (fix bad filenames)
-    - Progress indicator
-    - Overwrite protection
+    - Uses huggingface_hub for optimized parallel downloads
+    - Resume interrupted downloads
+    - Custom rename option
+    - HF token support for gated models
     """
 
     @classmethod
@@ -62,13 +58,13 @@ class ArchAi3D_HF_Download:
             "required": {
                 "repo_id": ("STRING", {
                     "multiline": False,
-                    "default": "Qwen/Qwen3-VL-4B-Instruct-GGUF",
+                    "default": "Comfy-Org/z_image_turbo",
                     "tooltip": "HuggingFace repository ID (e.g., 'username/model-name')"
                 }),
                 "filename": ("STRING", {
                     "multiline": False,
-                    "default": "Qwen3VL-4B-Instruct-Q4_K_M.gguf",
-                    "tooltip": "Exact filename from the repository"
+                    "default": "split_files/vae/ae.safetensors",
+                    "tooltip": "Filename from the repository (can include subdirectories)"
                 }),
                 "save_dir": (get_model_dirs(), {
                     "tooltip": "Directory to save the model (relative to ComfyUI/models/)"
@@ -78,7 +74,12 @@ class ArchAi3D_HF_Download:
                 "custom_name": ("STRING", {
                     "multiline": False,
                     "default": "",
-                    "tooltip": "Custom filename for the downloaded file (leave empty to keep original name)"
+                    "tooltip": "Custom filename (leave empty to keep original name)"
+                }),
+                "hf_token": ("STRING", {
+                    "multiline": False,
+                    "default": "",
+                    "tooltip": "HuggingFace token for gated models (optional)"
                 }),
                 "overwrite": ("BOOLEAN", {
                     "default": False,
@@ -102,26 +103,18 @@ class ArchAi3D_HF_Download:
 
     def __init__(self):
         self.node_id = None
-        self.progress = 0.0
-
-    def set_progress(self, percentage):
-        """Update download progress."""
-        self.progress = percentage
-        if HAS_SERVER and self.node_id:
-            PromptServer.instance.send_sync("progress", {
-                "node": self.node_id,
-                "value": percentage,
-                "max": 100
-            })
 
     def download(self, repo_id, filename, save_dir, node_id=None,
-                 custom_name="", overwrite=False, save_dir_override=""):
-        """Download file from HuggingFace."""
+                 custom_name="", hf_token="", overwrite=False, save_dir_override=""):
+        """Download file from HuggingFace using huggingface_hub."""
 
         self.node_id = node_id
 
         if not repo_id or not filename:
             return ("ERROR: Missing repo_id or filename",)
+
+        if not HAS_HF_HUB:
+            return ("ERROR: huggingface_hub not installed.\nRun: pip install huggingface_hub",)
 
         # Determine save path
         if save_dir_override:
@@ -129,22 +122,17 @@ class ArchAi3D_HF_Download:
         else:
             full_save_dir = os.path.join(folder_paths.models_dir, save_dir)
 
-        # Handle filename that contains subdirectories (e.g., "split_files/vae/ae.safetensors")
-        # Extract just the base filename for the final name
+        # Handle filename that contains subdirectories
         base_filename = os.path.basename(filename)
         filename_subdir = os.path.dirname(filename)
 
-        # If filename has subdirectories, add them to the save path
         if filename_subdir:
             full_save_dir = os.path.join(full_save_dir, filename_subdir)
 
-        # Create directory if needed (including any subdirectories)
         os.makedirs(full_save_dir, exist_ok=True)
 
         # Determine final filename
         final_filename = custom_name.strip() if custom_name.strip() else base_filename
-
-        # Ensure extension matches
         orig_ext = os.path.splitext(base_filename)[1]
         if custom_name.strip() and not final_filename.endswith(orig_ext):
             final_filename += orig_ext
@@ -155,34 +143,30 @@ class ArchAi3D_HF_Download:
         if os.path.exists(full_path) and not overwrite:
             return (f"File already exists: {final_filename}\nEnable 'overwrite' to replace.",)
 
-        # Build URL
-        url = f"https://huggingface.co/{repo_id}/resolve/main/{filename}"
-
-        print(f"[ArchAi3D HF Download] Downloading: {url}")
+        print(f"[ArchAi3D HF Download] Repo: {repo_id}")
+        print(f"[ArchAi3D HF Download] File: {filename}")
         print(f"[ArchAi3D HF Download] Saving as: {final_filename}")
+        print(f"[ArchAi3D HF Download] Using huggingface_hub for maximum speed...")
 
         try:
-            # Download with progress
-            response = requests.get(url, stream=True)
-            response.raise_for_status()
+            # Use huggingface_hub for optimized download
+            token = hf_token.strip() if hf_token.strip() else None
 
-            total_size = int(response.headers.get('content-length', 0))
-            temp_path = full_path + '.tmp'
-            downloaded = 0
+            # Download to cache first (fast, parallel, resumable)
+            downloaded_path = hf_hub_download(
+                repo_id=repo_id,
+                filename=filename,
+                token=token,
+                resume_download=True,
+                force_download=overwrite,
+            )
 
-            with open(temp_path, 'wb') as f:
-                with tqdm(total=total_size, unit='iB', unit_scale=True, desc=final_filename) as pbar:
-                    for chunk in response.iter_content(chunk_size=1024*1024):
-                        size = f.write(chunk)
-                        downloaded += size
-                        pbar.update(size)
-
-                        if total_size > 0:
-                            progress = (downloaded / total_size) * 100.0
-                            self.set_progress(progress)
-
-            # Move temp file to final location
-            shutil.move(temp_path, full_path)
+            # Copy/move to final destination with custom name
+            if custom_name.strip():
+                shutil.copy2(downloaded_path, full_path)
+            else:
+                # If no custom name, copy to destination
+                shutil.copy2(downloaded_path, full_path)
 
             # Get file size
             size_mb = os.path.getsize(full_path) / (1024 * 1024)
@@ -193,13 +177,10 @@ class ArchAi3D_HF_Download:
 
             return (status,)
 
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 404:
-                return (f"❌ File not found: {filename}\nCheck repo_id and filename",)
-            return (f"❌ HTTP Error: {e}",)
         except Exception as e:
-            # Clean up temp file
-            temp_path = full_path + '.tmp'
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-            return (f"❌ Download failed: {str(e)}",)
+            error_msg = str(e)
+            if "401" in error_msg or "403" in error_msg:
+                return (f"❌ Access denied. This may be a gated model.\nProvide HF token or accept license at: https://huggingface.co/{repo_id}",)
+            if "404" in error_msg:
+                return (f"❌ File not found: {filename}\nCheck repo_id and filename",)
+            return (f"❌ Download failed: {error_msg}",)
