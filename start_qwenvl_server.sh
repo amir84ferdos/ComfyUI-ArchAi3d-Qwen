@@ -26,31 +26,75 @@
 # Configuration
 CTX="${CTX:-8192}"
 GPU_LAYERS="${GPU_LAYERS:-99}"  # 99 for all layers on GPU
-MODEL_DIR="$HOME/.cache/llama-models"
+
+# Get script directory for relative paths
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Multiple search paths for models (in priority order)
+# 1. Environment variable MODEL_DIR
+# 2. ComfyUI models/LLM folder (RunPod and local installs)
+# 3. Default cache location
+SEARCH_PATHS=(
+    "${MODEL_DIR:-}"
+    "/workspace/runpod-slim/ComfyUI/models/LLM"
+    "$SCRIPT_DIR/../../models/LLM"
+    "$HOME/.cache/llama-models"
+)
+
+# Function to find model file in search paths
+find_model() {
+    local filename="$1"
+    local subdir="$2"  # Optional subdirectory (e.g., qwen3-vl-8b)
+
+    for base_path in "${SEARCH_PATHS[@]}"; do
+        [ -z "$base_path" ] && continue
+
+        # Try with subdirectory first
+        if [ -n "$subdir" ] && [ -f "$base_path/$subdir/$filename" ]; then
+            echo "$base_path/$subdir/$filename"
+            return 0
+        fi
+
+        # Try flat structure (all models in same folder)
+        if [ -f "$base_path/$filename" ]; then
+            echo "$base_path/$filename"
+            return 0
+        fi
+    done
+
+    return 1
+}
 
 # Model selection with automatic port assignment
 if [ "$1" = "2B" ]; then
-    MODEL_PATH="$MODEL_DIR/qwen3-vl-2b/Qwen3VL-2B-Instruct-Q4_K_M.gguf"
-    MMPROJ_PATH="$MODEL_DIR/qwen3-vl-2b/mmproj-Qwen3VL-2B-Instruct-F16.gguf"
+    MODEL_FILE="Qwen3VL-2B-Instruct-Q4_K_M.gguf"
+    MMPROJ_FILE="mmproj-Qwen3VL-2B-Instruct-F16.gguf"
+    SUBDIR="qwen3-vl-2b"
     MODEL_NAME="Qwen3-VL-2B-Instruct"
     DEFAULT_PORT=8032
 elif [ "$1" = "8B" ]; then
-    MODEL_PATH="$MODEL_DIR/qwen3-vl-8b/Qwen3VL-8B-Instruct-Q4_K_M.gguf"
-    MMPROJ_PATH="$MODEL_DIR/qwen3-vl-8b/mmproj-Qwen3VL-8B-Instruct-F16.gguf"
+    MODEL_FILE="Qwen3VL-8B-Instruct-Q4_K_M.gguf"
+    MMPROJ_FILE="mmproj-Qwen3VL-8B-Instruct-F16.gguf"
+    SUBDIR="qwen3-vl-8b"
     MODEL_NAME="Qwen3-VL-8B-Instruct"
     DEFAULT_PORT=8034
 else
     # Default to 4B
-    MODEL_PATH="$MODEL_DIR/qwen3-vl-4b/Qwen3VL-4B-Instruct-Q4_K_M.gguf"
-    MMPROJ_PATH="$MODEL_DIR/qwen3-vl-4b/mmproj-Qwen3VL-4B-Instruct-F16.gguf"
+    MODEL_FILE="Qwen3VL-4B-Instruct-Q4_K_M.gguf"
+    MMPROJ_FILE="mmproj-Qwen3VL-4B-Instruct-F16.gguf"
+    SUBDIR="qwen3-vl-4b"
     MODEL_NAME="Qwen3-VL-4B-Instruct"
     DEFAULT_PORT=8033
 fi
 
+# Find model files in search paths
+MODEL_PATH=$(find_model "$MODEL_FILE" "$SUBDIR")
+MMPROJ_PATH=$(find_model "$MMPROJ_FILE" "$SUBDIR")
+
 # Allow port override via environment
 PORT="${PORT:-$DEFAULT_PORT}"
 
-# Allow model path override via environment
+# Allow model path override via environment (explicit override takes priority)
 MODEL_PATH="${MODEL:-$MODEL_PATH}"
 MMPROJ_PATH="${MMPROJ:-$MMPROJ_PATH}"
 
@@ -96,26 +140,31 @@ else
 fi
 
 # Auto-download model if missing
-if [ ! -f "$MODEL_PATH" ] || [ ! -f "$MMPROJ_PATH" ]; then
-    echo "Model files not found. Downloading automatically..."
+if [ -z "$MODEL_PATH" ] || [ -z "$MMPROJ_PATH" ]; then
+    echo "Model files not found in any search path. Downloading automatically..."
+    echo ""
+    echo "Searched in:"
+    for path in "${SEARCH_PATHS[@]}"; do
+        [ -n "$path" ] && echo "  - $path"
+    done
     echo ""
 
-    # Determine repo and files based on model size
+    # Determine HuggingFace repo based on model size
     if [ "$1" = "2B" ]; then
         HF_REPO="Qwen/Qwen3-VL-2B-Instruct-GGUF"
-        MODEL_FILE="Qwen3VL-2B-Instruct-Q4_K_M.gguf"
-        MMPROJ_FILE="mmproj-Qwen3VL-2B-Instruct-F16.gguf"
-        LOCAL_DIR="$MODEL_DIR/qwen3-vl-2b"
     elif [ "$1" = "8B" ]; then
         HF_REPO="Qwen/Qwen3-VL-8B-Instruct-GGUF"
-        MODEL_FILE="Qwen3VL-8B-Instruct-Q4_K_M.gguf"
-        MMPROJ_FILE="mmproj-Qwen3VL-8B-Instruct-F16.gguf"
-        LOCAL_DIR="$MODEL_DIR/qwen3-vl-8b"
     else
         HF_REPO="Qwen/Qwen3-VL-4B-Instruct-GGUF"
-        MODEL_FILE="Qwen3VL-4B-Instruct-Q4_K_M.gguf"
-        MMPROJ_FILE="mmproj-Qwen3VL-4B-Instruct-F16.gguf"
-        LOCAL_DIR="$MODEL_DIR/qwen3-vl-4b"
+    fi
+
+    # Choose download directory (prefer ComfyUI models folder, then default cache)
+    if [ -d "/workspace/runpod-slim/ComfyUI/models/LLM" ]; then
+        LOCAL_DIR="/workspace/runpod-slim/ComfyUI/models/LLM"
+    elif [ -d "$SCRIPT_DIR/../../models/LLM" ]; then
+        LOCAL_DIR="$SCRIPT_DIR/../../models/LLM"
+    else
+        LOCAL_DIR="$HOME/.cache/llama-models/$SUBDIR"
     fi
 
     mkdir -p "$LOCAL_DIR"
@@ -127,6 +176,8 @@ if [ ! -f "$MODEL_PATH" ] || [ ! -f "$MMPROJ_PATH" ]; then
     # Download using huggingface-cli or Python
     if command -v huggingface-cli &> /dev/null; then
         huggingface-cli download "$HF_REPO" "$MODEL_FILE" "$MMPROJ_FILE" --local-dir "$LOCAL_DIR"
+    elif command -v hf &> /dev/null; then
+        hf download "$HF_REPO" "$MODEL_FILE" "$MMPROJ_FILE" --local-dir "$LOCAL_DIR"
     else
         # Fallback to Python
         python3 -c "
@@ -151,16 +202,26 @@ print('Download complete!')
     echo ""
     echo "Download complete!"
     echo ""
+
+    # Re-find models after download
+    MODEL_PATH=$(find_model "$MODEL_FILE" "$SUBDIR")
+    MMPROJ_PATH=$(find_model "$MMPROJ_FILE" "$SUBDIR")
 fi
 
 # Verify files exist after download
-if [ ! -f "$MODEL_PATH" ]; then
-    echo "ERROR: Model not found at $MODEL_PATH after download attempt."
+if [ -z "$MODEL_PATH" ] || [ ! -f "$MODEL_PATH" ]; then
+    echo "ERROR: Model file '$MODEL_FILE' not found in any search path."
+    echo ""
+    echo "Manual download:"
+    echo "  huggingface-cli download Qwen/Qwen3-VL-${1:-4B}-Instruct-GGUF $MODEL_FILE --local-dir /path/to/models"
     exit 1
 fi
 
-if [ ! -f "$MMPROJ_PATH" ]; then
-    echo "ERROR: mmproj not found at $MMPROJ_PATH after download attempt."
+if [ -z "$MMPROJ_PATH" ] || [ ! -f "$MMPROJ_PATH" ]; then
+    echo "ERROR: mmproj file '$MMPROJ_FILE' not found in any search path."
+    echo ""
+    echo "Manual download:"
+    echo "  huggingface-cli download Qwen/Qwen3-VL-${1:-4B}-Instruct-GGUF $MMPROJ_FILE --local-dir /path/to/models"
     exit 1
 fi
 
