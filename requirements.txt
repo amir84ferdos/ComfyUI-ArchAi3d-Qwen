@@ -7,11 +7,19 @@ numpy
 Pillow
 torch
 torchvision
+requests
 
 # For SAM3 Segment node
 einops
 ftfy
 typing_extensions
+regex
+iopath
+pycocotools
+scikit-image
+scikit-learn
+pandas
+tqdm
 
 # For Metric3D Depth/Normal nodes
 huggingface_hub>=0.19.0
@@ -21,3 +29,6 @@ timm
 scipy
 addict
 yapf
+
+# For Color Correction BT709 node
+colour-science

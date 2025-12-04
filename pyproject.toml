@@ -41,12 +41,23 @@ classifiers = [
 ]
 
 dependencies = [
+    # Core
     "PyYAML>=6.0",
     "numpy",
     "Pillow",
+    "requests",
+    # SAM3
     "einops",
     "ftfy",
     "typing_extensions",
+    "regex",
+    "iopath",
+    "pycocotools",
+    "scikit-image",
+    "scikit-learn",
+    "pandas",
+    "tqdm",
+    # Metric3D
     "huggingface_hub>=0.19.0",
     "opencv-python>=4.7.0",
     "matplotlib",
@@ -54,6 +65,8 @@ dependencies = [
     "scipy",
     "addict",
     "yapf",
+    # Color Correction
+    "colour-science",
 ]
 
 [project.optional-dependencies]
