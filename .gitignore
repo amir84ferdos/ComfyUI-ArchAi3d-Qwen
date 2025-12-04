@@ -36,6 +36,13 @@ nodes/inputs/
 nodes/utils/cache/
 **/cache/
 **/*_cache.json
+**/cache_index.json
+**/*cache*.json
+*.cache
+*.cache.*
+cache/
+caches/
+gemini_cache.json
 
 # Personal notes (if any accidentally added)
 notes/
