@@ -101,25 +101,51 @@ MMPROJ_PATH="${MMPROJ:-$MMPROJ_PATH}"
 # ============================================================================
 # PORT CONFLICT DETECTION
 # ============================================================================
-# Check if server is already running and healthy on this port
-if curl -s "http://localhost:$PORT/health" > /dev/null 2>&1; then
+# Check if server is responding at all on this port (any HTTP response = server exists)
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT/health" 2>/dev/null || echo "000")
+
+if [ "$HTTP_CODE" = "200" ]; then
+    # Server is running and healthy
     echo "=============================================="
     echo "✅ Server already running on port $PORT"
     echo "=============================================="
     echo ""
-    echo "The llama-server is already active and healthy."
+    echo "The llama-server is active and healthy."
     echo "You can use it directly in ComfyUI."
     echo ""
     echo "To restart with different settings, first stop it:"
     echo "  killall llama-server"
     echo ""
     exit 0
+elif [ "$HTTP_CODE" = "503" ]; then
+    # Server is running but model is still loading
+    echo "=============================================="
+    echo "⏳ Server is starting on port $PORT (model loading)"
+    echo "=============================================="
+    echo ""
+    echo "The llama-server is active but still loading the model."
+    echo "Please wait for it to finish loading."
+    echo ""
+    echo "To restart with different settings, first stop it:"
+    echo "  killall llama-server"
+    echo ""
+    exit 0
+elif [ "$HTTP_CODE" != "000" ]; then
+    # Some other HTTP response - server exists
+    echo "=============================================="
+    echo "⚠️  Server responding with HTTP $HTTP_CODE on port $PORT"
+    echo "=============================================="
+    echo ""
+    echo "A server is already running. Stop it first:"
+    echo "  killall llama-server"
+    echo ""
+    exit 0
 fi
 
-# Check if port is in use but server is NOT responding (zombie/crashed process)
+# HTTP_CODE is "000" - no server responding, but check if port is occupied (zombie/crashed)
 if (lsof -i :$PORT > /dev/null 2>&1) || (netstat -tlnp 2>/dev/null | grep -q ":$PORT ") || (fuser $PORT/tcp > /dev/null 2>&1); then
     echo "=============================================="
-    echo "⚠️  Port $PORT is in use but server not responding"
+    echo "⚠️  Port $PORT is blocked by a stale process"
     echo "=============================================="
     echo ""
     echo "Killing stale process..."
