@@ -102,7 +102,9 @@ MMPROJ_PATH="${MMPROJ:-$MMPROJ_PATH}"
 # PORT CONFLICT DETECTION
 # ============================================================================
 # Check if server is responding at all on this port (any HTTP response = server exists)
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT/health" 2>/dev/null || echo "000")
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 "http://localhost:$PORT/health" 2>/dev/null)
+# Default to 000 if curl failed completely
+HTTP_CODE="${HTTP_CODE:-000}"
 
 if [ "$HTTP_CODE" = "200" ]; then
     # Server is running and healthy
@@ -130,7 +132,8 @@ elif [ "$HTTP_CODE" = "503" ]; then
     echo "  killall llama-server"
     echo ""
     exit 0
-elif [ "$HTTP_CODE" != "000" ]; then
+# Any other 2xx or 5xx code means server is there
+elif [[ "$HTTP_CODE" =~ ^[2345][0-9][0-9]$ ]]; then
     # Some other HTTP response - server exists
     echo "=============================================="
     echo "⚠️  Server responding with HTTP $HTTP_CODE on port $PORT"
@@ -142,7 +145,8 @@ elif [ "$HTTP_CODE" != "000" ]; then
     exit 0
 fi
 
-# HTTP_CODE is "000" - no server responding, but check if port is occupied (zombie/crashed)
+# HTTP_CODE is 000 or connection failed - no server responding
+# Check if port is occupied (zombie/crashed)
 if (lsof -i :$PORT > /dev/null 2>&1) || (netstat -tlnp 2>/dev/null | grep -q ":$PORT ") || (fuser $PORT/tcp > /dev/null 2>&1); then
     echo "=============================================="
     echo "⚠️  Port $PORT is blocked by a stale process"
