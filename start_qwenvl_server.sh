@@ -98,6 +98,43 @@ PORT="${PORT:-$DEFAULT_PORT}"
 MODEL_PATH="${MODEL:-$MODEL_PATH}"
 MMPROJ_PATH="${MMPROJ:-$MMPROJ_PATH}"
 
+# ============================================================================
+# PORT CONFLICT DETECTION
+# ============================================================================
+# Check if server is already running and healthy on this port
+if curl -s "http://localhost:$PORT/health" > /dev/null 2>&1; then
+    echo "=============================================="
+    echo "✅ Server already running on port $PORT"
+    echo "=============================================="
+    echo ""
+    echo "The llama-server is already active and healthy."
+    echo "You can use it directly in ComfyUI."
+    echo ""
+    echo "To restart with different settings, first stop it:"
+    echo "  killall llama-server"
+    echo ""
+    exit 0
+fi
+
+# Check if port is in use but server is NOT responding (zombie/crashed process)
+if (lsof -i :$PORT > /dev/null 2>&1) || (netstat -tlnp 2>/dev/null | grep -q ":$PORT ") || (fuser $PORT/tcp > /dev/null 2>&1); then
+    echo "=============================================="
+    echo "⚠️  Port $PORT is in use but server not responding"
+    echo "=============================================="
+    echo ""
+    echo "Killing stale process..."
+
+    # Try multiple methods to kill the process
+    fuser -k $PORT/tcp 2>/dev/null || \
+    pkill -f "llama-server.*--port.*$PORT" 2>/dev/null || \
+    pkill -f "llama-server" 2>/dev/null || \
+    true
+
+    sleep 2
+    echo "Port cleared, starting fresh server..."
+    echo ""
+fi
+
 echo "=============================================="
 echo "QwenVL GGUF Server for ComfyUI"
 echo "=============================================="
