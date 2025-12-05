@@ -16,7 +16,7 @@ Usage:
     3. Run the node
     4. Wait for installation to complete
 
-Version: 1.6.0
+Version: 1.7.0
 """
 
 import os
@@ -423,8 +423,9 @@ class ArchAi3D_LlamaCpp_Installer:
             cmake_cmd += f" -DCMAKE_CUDA_COMPILER={cuda_home}/bin/nvcc"
 
         # Add GPU-specific architecture flag for optimal performance
+        # Use CMAKE_CUDA_ARCHITECTURES (not GGML_CUDA_ARCHITECTURES) for proper sm_120 support
         if gpu_info['cuda_arch']:
-            cmake_cmd += f" -DGGML_CUDA_ARCHITECTURES=\"{gpu_info['cuda_arch']}\""
+            cmake_cmd += f" -DCMAKE_CUDA_ARCHITECTURES={gpu_info['cuda_arch']}"
             status_lines.append(f"\n🎯 Targeting CUDA architecture: sm_{gpu_info['cuda_arch']}")
 
         status_lines.append(f"\n🔧 Running: {cmake_cmd}")
