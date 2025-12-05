@@ -31,43 +31,13 @@ GPU_LAYERS="${GPU_LAYERS:-99}"  # 99 for all layers on GPU
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # ============================================================================
-# AUTO-INSTALL CUBLAS (Required for GPU acceleration)
+# USE PERSISTENT CUDA LIBRARIES
 # ============================================================================
-# cuBLAS is a system library that doesn't persist on RunPod between pods.
-# This auto-installs it if missing so you don't have to do it manually.
-check_and_install_cublas() {
-    # Check if libcublas exists
-    if ldconfig -p 2>/dev/null | grep -q libcublas; then
-        return 0  # Already installed
-    fi
-
-    # Check common library paths
-    for lib_path in /usr/local/cuda/lib64/libcublas.so /usr/lib/x86_64-linux-gnu/libcublas.so; do
-        if [ -f "$lib_path" ]; then
-            return 0  # Found
-        fi
-    done
-
-    echo "=============================================="
-    echo "📦 Installing cuBLAS (required for GPU)..."
-    echo "=============================================="
-
-    # Try to install cuBLAS (silent if already installed)
-    if command -v apt-get &> /dev/null; then
-        apt-get update -qq 2>/dev/null
-        # Try CUDA 12.8 first (for Blackwell/RTX 5090), then fallback
-        apt-get install -y -qq libcublas-12-8 libcublas-dev-12-8 2>/dev/null || \
-        apt-get install -y -qq libcublas-12-4 libcublas-dev-12-4 2>/dev/null || \
-        apt-get install -y -qq libcublas-dev 2>/dev/null || \
-        apt-get install -y -qq nvidia-cuda-toolkit 2>/dev/null || true
-    fi
-
-    echo "✅ cuBLAS installed"
-    echo ""
-}
-
-# Auto-install cuBLAS if missing
-check_and_install_cublas
+# CUDA/cuBLAS libraries are copied to lib/ folder during installation.
+# This makes them persist across RunPod pod restarts.
+if [ -d "$SCRIPT_DIR/lib" ]; then
+    export LD_LIBRARY_PATH="$SCRIPT_DIR/lib:${LD_LIBRARY_PATH:-}"
+fi
 
 # Multiple search paths for models (in priority order)
 # 1. Environment variable MODEL_DIR

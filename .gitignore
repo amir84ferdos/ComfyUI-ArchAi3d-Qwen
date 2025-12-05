@@ -58,4 +58,5 @@ install_llama_cpp.sh
 
 # llama.cpp build artifacts (installed per-machine)
 bin/
+lib/
 llama_cpp/

@@ -16,7 +16,7 @@ Usage:
     3. Run the node
     4. Wait for installation to complete
 
-Version: 1.8.0 - Persistent paths for RunPod
+Version: 1.9.0 - Persistent CUDA libs for RunPod
 """
 
 import os
@@ -200,10 +200,64 @@ class ArchAi3D_LlamaCpp_Installer:
 
         return header_found is not None and lib_found is not None, header_found, lib_found
 
+    def copy_cuda_libs_to_persistent(self, cuda_home=None):
+        """Copy CUDA libraries to persistent lib/ folder."""
+        import glob
+
+        paths = self.get_paths()
+        lib_dir = os.path.join(paths["node_dir"], "lib")
+        os.makedirs(lib_dir, exist_ok=True)
+
+        if not cuda_home:
+            _, cuda_home = self.get_cuda_env()
+
+        # Find and copy cuBLAS and related libraries
+        cuda_lib_paths = [
+            f"{cuda_home}/lib64" if cuda_home else "/usr/local/cuda/lib64",
+            "/usr/lib/x86_64-linux-gnu",
+            f"{cuda_home}/targets/x86_64-linux/lib" if cuda_home else "",
+        ]
+
+        libs_to_copy = [
+            "libcublas.so*",
+            "libcublasLt.so*",
+            "libcudart.so*",
+        ]
+
+        copied_libs = []
+        for lib_path in cuda_lib_paths:
+            if not lib_path or not os.path.exists(lib_path):
+                continue
+            for lib_pattern in libs_to_copy:
+                for lib_file in glob.glob(os.path.join(lib_path, lib_pattern)):
+                    if os.path.isfile(lib_file) and not os.path.islink(lib_file):
+                        dest = os.path.join(lib_dir, os.path.basename(lib_file))
+                        if not os.path.exists(dest):
+                            try:
+                                shutil.copy2(lib_file, dest)
+                                copied_libs.append(os.path.basename(lib_file))
+                            except Exception:
+                                pass
+
+        return lib_dir, copied_libs
+
     def install_cublas(self, gpu_info):
-        """Install cuBLAS for CUDA builds."""
+        """Install cuBLAS and copy to persistent location."""
         status_lines = ["=" * 50, "📦 INSTALLING CUBLAS", "=" * 50]
         env, cuda_home = self.get_cuda_env()
+        paths = self.get_paths()
+
+        # Check if libs already exist in persistent location
+        lib_dir = os.path.join(paths["node_dir"], "lib")
+        if os.path.exists(lib_dir):
+            import glob
+            existing_libs = glob.glob(os.path.join(lib_dir, "libcublas*.so*"))
+            if existing_libs:
+                status_lines.append(f"\n✅ CUDA libraries already in persistent location!")
+                status_lines.append(f"   Location: {lib_dir}")
+                status_lines.append(f"   Libraries: {len(existing_libs)} files")
+                status_lines.append("\n" + "=" * 50)
+                return "\n".join(status_lines), True
 
         # Determine CUDA version to install
         if gpu_info.get('is_blackwell'):
@@ -257,6 +311,15 @@ class ArchAi3D_LlamaCpp_Installer:
             status_lines.append("  sudo apt-get install -y cuda-toolkit")
             status_lines.append("\nFor RTX 5090 (Blackwell):")
             status_lines.append("  sudo apt-get install -y libcublas-12-8 libcublas-dev-12-8")
+        else:
+            # Copy libraries to persistent location
+            status_lines.append("\n📦 Copying CUDA libraries to persistent location...")
+            lib_dir, copied_libs = self.copy_cuda_libs_to_persistent(cuda_home)
+            if copied_libs:
+                status_lines.append(f"✅ Copied {len(copied_libs)} libraries to {lib_dir}")
+                status_lines.append("   Libraries will persist across pod restarts!")
+            else:
+                status_lines.append("⚠️ Could not copy libraries (they may already exist)")
 
         status_lines.append("\n" + "=" * 50)
         return "\n".join(status_lines), installed
@@ -317,13 +380,22 @@ class ArchAi3D_LlamaCpp_Installer:
         if cuda_home:
             status_lines.append(f"   CUDA_HOME: {cuda_home}")
 
-        # Check cuBLAS (required for GPU-accelerated builds)
-        cublas_ok, header, lib = self.check_cublas_available(cuda_home)
-        if cublas_ok:
-            status_lines.append(f"✅ cuBLAS: Available")
+        # Check for persistent CUDA libraries (copied to lib/ folder)
+        import glob
+        lib_dir = os.path.join(paths["node_dir"], "lib")
+        persistent_libs = glob.glob(os.path.join(lib_dir, "libcublas*.so*")) if os.path.exists(lib_dir) else []
+
+        if persistent_libs:
+            status_lines.append(f"✅ cuBLAS: Persistent ({len(persistent_libs)} libs in lib/)")
         else:
-            status_lines.append(f"❌ cuBLAS: NOT FOUND (GPU build will fail!)")
-            status_lines.append(f"   Use 'install_cublas' action to install")
+            # Check system cuBLAS (required for GPU-accelerated builds)
+            cublas_ok, header, lib = self.check_cublas_available(cuda_home)
+            if cublas_ok:
+                status_lines.append(f"✅ cuBLAS: System (not persistent)")
+                status_lines.append(f"   Run 'install_cublas' to make it persistent")
+            else:
+                status_lines.append(f"❌ cuBLAS: NOT FOUND")
+                status_lines.append(f"   Use 'install_cublas' action to install & persist")
 
         # Check models
         status_lines.append("\n📦 MODELS:")
@@ -510,8 +582,49 @@ class ArchAi3D_LlamaCpp_Installer:
             os.chmod(paths["llama_server"], 0o755)
             status_lines.append(f"✅ Installed to: {paths['llama_server']}")
 
-            # Verify it runs
-            success, output = self.run_command(f"{paths['llama_server']} --version", env=env)
+            # Copy CUDA/cuBLAS libraries to persistent location
+            status_lines.append("\n📦 Copying CUDA libraries to persistent location...")
+            lib_dir = os.path.join(paths["node_dir"], "lib")
+            os.makedirs(lib_dir, exist_ok=True)
+
+            # Find and copy cuBLAS and related libraries
+            cuda_lib_paths = [
+                f"{cuda_home}/lib64" if cuda_home else "/usr/local/cuda/lib64",
+                "/usr/lib/x86_64-linux-gnu",
+                f"{cuda_home}/targets/x86_64-linux/lib" if cuda_home else "",
+            ]
+
+            libs_to_copy = [
+                "libcublas.so*",
+                "libcublasLt.so*",
+                "libcudart.so*",
+            ]
+
+            copied_libs = []
+            for lib_path in cuda_lib_paths:
+                if not lib_path or not os.path.exists(lib_path):
+                    continue
+                for lib_pattern in libs_to_copy:
+                    import glob
+                    for lib_file in glob.glob(os.path.join(lib_path, lib_pattern)):
+                        if os.path.isfile(lib_file) and not os.path.islink(lib_file):
+                            dest = os.path.join(lib_dir, os.path.basename(lib_file))
+                            if not os.path.exists(dest):
+                                try:
+                                    shutil.copy2(lib_file, dest)
+                                    copied_libs.append(os.path.basename(lib_file))
+                                except Exception:
+                                    pass
+
+            if copied_libs:
+                status_lines.append(f"✅ Copied {len(copied_libs)} CUDA libraries to {lib_dir}")
+            else:
+                status_lines.append("⚠️ Could not copy CUDA libraries (may need manual setup)")
+
+            # Verify it runs with the local libraries
+            test_env = env.copy()
+            test_env["LD_LIBRARY_PATH"] = f"{lib_dir}:" + test_env.get("LD_LIBRARY_PATH", "")
+            success, output = self.run_command(f"{paths['llama_server']} --version", env=test_env)
             if success:
                 status_lines.append(f"✅ Version: {output.strip()[:100]}")
         else:
