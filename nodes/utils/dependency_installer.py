@@ -32,6 +32,7 @@ class ArchAi3D_Dependency_Installer:
     ]
 
     SAM3_DEPS = [
+        "sam3",  # Main SAM3 package - required for ArchAi3D_SAM3_Segment node
         "einops",
         "ftfy",
         "regex",
