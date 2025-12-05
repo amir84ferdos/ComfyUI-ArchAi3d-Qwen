@@ -319,9 +319,24 @@ class ArchAi3D_Nunchaku_Installer:
                 is_compatible = False
 
         if gpu_info['arch'] == 'sm_120':
-            warnings.append("Blackwell GPU detected. Use FP4 models instead of INT4.")
-            if pytorch_version < "2.7":
-                warnings.append("Blackwell requires PyTorch 2.7+. Current: " + pytorch_version)
+            warnings.append("Blackwell GPU detected (RTX 50 series). Use FP4 models instead of INT4.")
+            # Blackwell requires PyTorch 2.8+
+            try:
+                pt_version = float(pytorch_version)
+                if pt_version < 2.8:
+                    warnings.append(f"⚠️ Blackwell GPUs REQUIRE PyTorch 2.8+. Current: {pytorch_version}")
+                    warnings.append("Please upgrade PyTorch before installing Nunchaku.")
+                    is_compatible = False
+            except:
+                pass
+            # Also check CUDA version for Blackwell
+            if cuda_version != "unknown":
+                try:
+                    cuda_ver = float(cuda_version)
+                    if cuda_ver < 12.8:
+                        warnings.append(f"⚠️ Blackwell GPUs require CUDA 12.8+. Current: {cuda_version}")
+                except:
+                    pass
 
         if warnings:
             status_lines.append("WARNINGS:")
