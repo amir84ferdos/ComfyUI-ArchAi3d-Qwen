@@ -61,6 +61,17 @@ setup_cuda_libs() {
         done
     done
 
+    # Create symlinks (e.g., libcublas.so.12 -> libcublas.so.12.8.4.1)
+    cd "$LIB_DIR"
+    for lib in libcublas libcublasLt libcudart; do
+        # Find the full versioned file and create .so.12 symlink
+        full_lib=$(ls ${lib}.so.* 2>/dev/null | grep -v "\.so\.12$" | head -1)
+        if [ -n "$full_lib" ] && [ ! -e "${lib}.so.12" ]; then
+            ln -sf "$full_lib" "${lib}.so.12"
+        fi
+    done
+    cd - > /dev/null
+
     export LD_LIBRARY_PATH="$LIB_DIR:${LD_LIBRARY_PATH:-}"
     echo "Done. Future starts will be instant."
 }

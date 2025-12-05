@@ -239,6 +239,21 @@ class ArchAi3D_LlamaCpp_Installer:
                             except Exception:
                                 pass
 
+        # Create symlinks (e.g., libcublas.so.12 -> libcublas.so.12.8.4.1)
+        for lib_base in ["libcublas", "libcublasLt", "libcudart"]:
+            lib_files = glob.glob(os.path.join(lib_dir, f"{lib_base}.so.*"))
+            # Find full versioned file (not .so.12 symlink)
+            for lib_file in lib_files:
+                basename = os.path.basename(lib_file)
+                if not basename.endswith(".so.12"):
+                    symlink = os.path.join(lib_dir, f"{lib_base}.so.12")
+                    if not os.path.exists(symlink):
+                        try:
+                            os.symlink(basename, symlink)
+                        except Exception:
+                            pass
+                    break
+
         return lib_dir, copied_libs
 
     def install_cublas(self, gpu_info):
