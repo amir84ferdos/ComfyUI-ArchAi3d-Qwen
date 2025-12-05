@@ -31,13 +31,41 @@ GPU_LAYERS="${GPU_LAYERS:-99}"  # 99 for all layers on GPU
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # ============================================================================
-# USE PERSISTENT CUDA LIBRARIES
+# SMART CUDA LIBS: Use persistent, or install+copy if missing
 # ============================================================================
-# CUDA/cuBLAS libraries are copied to lib/ folder during installation.
-# This makes them persist across RunPod pod restarts.
-if [ -d "$SCRIPT_DIR/lib" ]; then
-    export LD_LIBRARY_PATH="$SCRIPT_DIR/lib:${LD_LIBRARY_PATH:-}"
-fi
+setup_cuda_libs() {
+    LIB_DIR="$SCRIPT_DIR/lib"
+
+    # Fast path: use persistent libs if they exist
+    if ls "$LIB_DIR"/libcublas*.so* 1>/dev/null 2>&1; then
+        export LD_LIBRARY_PATH="$LIB_DIR:${LD_LIBRARY_PATH:-}"
+        return 0
+    fi
+
+    # First run: install and copy to persistent location
+    echo "First run: Installing CUDA libraries to persistent location..."
+
+    # Install cuBLAS (try CUDA 12.8 for Blackwell, fallback to others)
+    apt-get update -qq 2>/dev/null
+    apt-get install -y -qq libcublas-12-8 libcublas-dev-12-8 2>/dev/null || \
+    apt-get install -y -qq libcublas-12-4 libcublas-dev-12-4 2>/dev/null || \
+    apt-get install -y -qq libcublas-dev 2>/dev/null || true
+
+    # Copy to persistent location
+    mkdir -p "$LIB_DIR"
+    for src_dir in /usr/local/cuda/lib64 /usr/lib/x86_64-linux-gnu; do
+        [ -d "$src_dir" ] || continue
+        for lib in libcublas libcublasLt libcudart; do
+            find "$src_dir" -maxdepth 1 -name "${lib}.so*" -type f \
+                -exec cp -n {} "$LIB_DIR/" \; 2>/dev/null
+        done
+    done
+
+    export LD_LIBRARY_PATH="$LIB_DIR:${LD_LIBRARY_PATH:-}"
+    echo "Done. Future starts will be instant."
+}
+
+setup_cuda_libs
 
 # Multiple search paths for models (in priority order)
 # 1. Environment variable MODEL_DIR
