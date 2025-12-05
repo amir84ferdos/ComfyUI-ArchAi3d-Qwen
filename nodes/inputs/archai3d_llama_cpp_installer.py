@@ -16,7 +16,7 @@ Usage:
     3. Run the node
     4. Wait for installation to complete
 
-Version: 1.7.0
+Version: 1.8.0 - Persistent paths for RunPod
 """
 
 import os
@@ -78,12 +78,26 @@ class ArchAi3D_LlamaCpp_Installer:
     OUTPUT_NODE = True
 
     def get_paths(self):
-        """Get installation paths."""
-        home = os.path.expanduser("~")
+        """Get installation paths.
+
+        Saves everything within ComfyUI folder for RunPod persistence:
+        - llama.cpp source: ComfyUI/custom_nodes/comfyui-archai3d-qwen/llama_cpp/
+        - llama-server binary: ComfyUI/custom_nodes/comfyui-archai3d-qwen/bin/
+        - Models: ComfyUI/models/llama-models/
+        """
+        # Get this node's directory (comfyui-archai3d-qwen)
+        node_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+        # Get ComfyUI base directory
+        comfyui_dir = os.path.dirname(os.path.dirname(node_dir))
+
+        # Paths within ComfyUI folder (persistent on RunPod)
         return {
-            "llama_cpp_dir": os.path.join(home, "llama.cpp"),
-            "llama_server": os.path.join(home, ".local", "bin", "llama-server"),
-            "models_dir": os.path.join(home, ".cache", "llama-models"),
+            "llama_cpp_dir": os.path.join(node_dir, "llama_cpp"),
+            "llama_server": os.path.join(node_dir, "bin", "llama-server"),
+            "models_dir": os.path.join(comfyui_dir, "models", "llama-models"),
+            "node_dir": node_dir,
+            "comfyui_dir": comfyui_dir,
         }
 
     def get_cuda_env(self):
@@ -271,6 +285,11 @@ class ArchAi3D_LlamaCpp_Installer:
         env, cuda_home = self.get_cuda_env()
         gpu_info = self.get_gpu_info()
         status_lines = ["=" * 50, "🔍 LLAMA.CPP INSTALLATION STATUS", "=" * 50]
+
+        # Show paths (helpful for RunPod users)
+        status_lines.append("\n📂 INSTALLATION PATHS (Persistent on RunPod):")
+        status_lines.append(f"   llama-server: {paths['llama_server']}")
+        status_lines.append(f"   Models: {paths['models_dir']}")
 
         # GPU Info
         status_lines.append(f"\n🎮 GPU: {gpu_info['name']}")

@@ -55,3 +55,7 @@ scratch/
 
 # Llama server scripts (local only - not needed in repo)
 install_llama_cpp.sh
+
+# llama.cpp build artifacts (installed per-machine)
+bin/
+llama_cpp/

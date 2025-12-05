@@ -32,10 +32,13 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Multiple search paths for models (in priority order)
 # 1. Environment variable MODEL_DIR
-# 2. ComfyUI models/LLM folder (RunPod and local installs)
-# 3. Default cache location
+# 2. ComfyUI models/llama-models folder (persistent on RunPod)
+# 3. ComfyUI models/LLM folder (legacy)
+# 4. Default cache location (not persistent on RunPod!)
 SEARCH_PATHS=(
     "${MODEL_DIR:-}"
+    "$SCRIPT_DIR/../../models/llama-models"
+    "/workspace/runpod-slim/ComfyUI/models/llama-models"
     "/workspace/runpod-slim/ComfyUI/models/LLM"
     "$SCRIPT_DIR/../../models/LLM"
     "$HOME/.cache/llama-models"
@@ -184,24 +187,37 @@ echo "=============================================="
 echo ""
 
 # Check if llama-server is available
+# Priority: 1) This node's bin folder (persistent on RunPod)
+#           2) System PATH
+#           3) Legacy locations
 LLAMA_SERVER=""
-if command -v llama-server &> /dev/null; then
+if [ -f "$SCRIPT_DIR/bin/llama-server" ]; then
+    # New persistent location (installed by LlamaCpp Installer node)
+    LLAMA_SERVER="$SCRIPT_DIR/bin/llama-server"
+elif command -v llama-server &> /dev/null; then
     LLAMA_SERVER="llama-server"
 elif [ -f "$HOME/.local/bin/llama-server" ]; then
     LLAMA_SERVER="$HOME/.local/bin/llama-server"
 elif [ -f "$HOME/llama.cpp/build/bin/llama-server" ]; then
     LLAMA_SERVER="$HOME/llama.cpp/build/bin/llama-server"
+elif [ -f "$SCRIPT_DIR/llama_cpp/build/bin/llama-server" ]; then
+    # Source build location
+    LLAMA_SERVER="$SCRIPT_DIR/llama_cpp/build/bin/llama-server"
 else
     echo "ERROR: llama-server not found!"
     echo ""
     echo "Installation options:"
     echo ""
-    echo "1. Build from source (recommended for best CUDA performance):"
+    echo "1. Use the LlamaCpp Installer node in ComfyUI (recommended)"
+    echo "   Add 'ArchAi3d > Setup > LlamaCpp Installer' node and run 'full_install'"
+    echo ""
+    echo "2. Build from source:"
     echo "   git clone https://github.com/ggml-org/llama.cpp"
     echo "   cd llama.cpp"
     echo "   cmake -B build -DGGML_CUDA=ON"
     echo "   cmake --build build --config Release -j"
-    echo "   cp build/bin/llama-server ~/.local/bin/"
+    echo "   mkdir -p $SCRIPT_DIR/bin"
+    echo "   cp build/bin/llama-server $SCRIPT_DIR/bin/"
     echo ""
     exit 1
 fi
@@ -225,13 +241,14 @@ if [ -z "$MODEL_PATH" ] || [ -z "$MMPROJ_PATH" ]; then
         HF_REPO="Qwen/Qwen3-VL-4B-Instruct-GGUF"
     fi
 
-    # Choose download directory (prefer ComfyUI models folder, then default cache)
-    if [ -d "/workspace/runpod-slim/ComfyUI/models/LLM" ]; then
-        LOCAL_DIR="/workspace/runpod-slim/ComfyUI/models/LLM"
-    elif [ -d "$SCRIPT_DIR/../../models/LLM" ]; then
-        LOCAL_DIR="$SCRIPT_DIR/../../models/LLM"
+    # Choose download directory (prefer ComfyUI models/llama-models folder - persistent on RunPod)
+    if [ -d "$SCRIPT_DIR/../../models" ]; then
+        LOCAL_DIR="$SCRIPT_DIR/../../models/llama-models"
+    elif [ -d "/workspace/runpod-slim/ComfyUI/models" ]; then
+        LOCAL_DIR="/workspace/runpod-slim/ComfyUI/models/llama-models"
     else
         LOCAL_DIR="$HOME/.cache/llama-models/$SUBDIR"
+        echo "⚠️ Warning: Downloading to $LOCAL_DIR (NOT persistent on RunPod!)"
     fi
 
     mkdir -p "$LOCAL_DIR"
