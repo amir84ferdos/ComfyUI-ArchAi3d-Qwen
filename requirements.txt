@@ -10,6 +10,7 @@ torchvision
 requests
 
 # For SAM3 Segment node
+sam3
 einops
 ftfy
 typing_extensions
