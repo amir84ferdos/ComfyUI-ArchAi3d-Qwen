@@ -16,7 +16,7 @@ Usage:
     3. Run the node
     4. Wait for installation to complete
 
-Version: 1.5.0
+Version: 1.6.0
 """
 
 import os
@@ -54,9 +54,9 @@ class ArchAi3D_LlamaCpp_Installer:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "action": (["check_status", "install_llama_cpp", "download_model", "full_install"], {
+                "action": (["check_status", "install_llama_cpp", "download_model", "full_install", "install_cublas"], {
                     "default": "check_status",
-                    "tooltip": "check_status: Check what's installed. install_llama_cpp: Build llama.cpp. download_model: Download model only. full_install: Everything."
+                    "tooltip": "check_status: Check what's installed. install_llama_cpp: Build llama.cpp. download_model: Download model only. full_install: Everything. install_cublas: Install CUDA cuBLAS libraries."
                 }),
                 "model_size": (["4B (Recommended)", "2B (Fast/Low VRAM)", "8B (Best Quality)"], {
                     "default": "4B (Recommended)",
@@ -151,6 +151,102 @@ class ArchAi3D_LlamaCpp_Installer:
 
         return {"name": "Unknown", "cuda_arch": None, "vram_gb": 0, "available": False, "is_blackwell": False}
 
+    def check_cublas_available(self, cuda_home):
+        """Check if cuBLAS header and library are available."""
+        if not cuda_home:
+            cuda_home = "/usr/local/cuda"
+
+        # Check for cublas_v2.h header
+        header_paths = [
+            f"{cuda_home}/include/cublas_v2.h",
+            f"{cuda_home}/targets/x86_64-linux/include/cublas_v2.h",
+            "/usr/include/cublas_v2.h",
+            "/usr/local/include/cublas_v2.h",
+        ]
+
+        header_found = None
+        for path in header_paths:
+            if os.path.exists(path):
+                header_found = path
+                break
+
+        # Check for libcublas library
+        lib_paths = [
+            f"{cuda_home}/lib64/libcublas.so",
+            f"{cuda_home}/targets/x86_64-linux/lib/libcublas.so",
+            "/usr/lib/x86_64-linux-gnu/libcublas.so",
+            "/usr/local/lib/libcublas.so",
+        ]
+
+        lib_found = None
+        for path in lib_paths:
+            if os.path.exists(path):
+                lib_found = path
+                break
+
+        return header_found is not None and lib_found is not None, header_found, lib_found
+
+    def install_cublas(self, gpu_info):
+        """Install cuBLAS for CUDA builds."""
+        status_lines = ["=" * 50, "📦 INSTALLING CUBLAS", "=" * 50]
+        env, cuda_home = self.get_cuda_env()
+
+        # Determine CUDA version to install
+        if gpu_info.get('is_blackwell'):
+            # Blackwell needs CUDA 12.8
+            cuda_ver = "12-8"
+            status_lines.append("\n⚡ Installing cuBLAS for Blackwell (CUDA 12.8)...")
+        else:
+            # Try to detect CUDA version
+            cuda_ver = "12-4"  # Default
+            success, output = self.run_command("nvcc --version", env=env)
+            if success:
+                import re
+                match = re.search(r'release (\d+)\.(\d+)', output)
+                if match:
+                    cuda_ver = f"{match.group(1)}-{match.group(2)}"
+            status_lines.append(f"\n📦 Installing cuBLAS for CUDA {cuda_ver.replace('-', '.')}...")
+
+        # Try multiple installation methods
+        install_cmds = [
+            # Method 1: Specific version
+            f"apt-get update && apt-get install -y libcublas-{cuda_ver} libcublas-dev-{cuda_ver}",
+            # Method 2: CUDA libraries package
+            f"apt-get install -y cuda-libraries-{cuda_ver} cuda-libraries-dev-{cuda_ver}",
+            # Method 3: Generic libcublas-dev
+            "apt-get install -y libcublas-dev",
+            # Method 4: Full CUDA toolkit
+            "apt-get install -y nvidia-cuda-toolkit",
+        ]
+
+        installed = False
+        for cmd in install_cmds:
+            status_lines.append(f"\n🔧 Trying: {cmd[:60]}...")
+            success, output = self.run_command(cmd, env=env)
+            if success:
+                # Verify installation
+                cublas_ok, header, lib = self.check_cublas_available(cuda_home)
+                if cublas_ok:
+                    status_lines.append(f"✅ cuBLAS installed successfully!")
+                    status_lines.append(f"   Header: {header}")
+                    status_lines.append(f"   Library: {lib}")
+                    installed = True
+                    break
+            else:
+                status_lines.append(f"   ⚠️ Command failed, trying next...")
+
+        if not installed:
+            status_lines.append("\n❌ Could not install cuBLAS automatically")
+            status_lines.append("\nManual installation options:")
+            status_lines.append(f"  sudo apt-get install -y libcublas-{cuda_ver} libcublas-dev-{cuda_ver}")
+            status_lines.append("  or")
+            status_lines.append("  sudo apt-get install -y cuda-toolkit")
+            status_lines.append("\nFor RTX 5090 (Blackwell):")
+            status_lines.append("  sudo apt-get install -y libcublas-12-8 libcublas-dev-12-8")
+
+        status_lines.append("\n" + "=" * 50)
+        return "\n".join(status_lines), installed
+
     def run_command(self, cmd, cwd=None, env=None):
         """Run a shell command and return output."""
         try:
@@ -201,6 +297,14 @@ class ArchAi3D_LlamaCpp_Installer:
 
         if cuda_home:
             status_lines.append(f"   CUDA_HOME: {cuda_home}")
+
+        # Check cuBLAS (required for GPU-accelerated builds)
+        cublas_ok, header, lib = self.check_cublas_available(cuda_home)
+        if cublas_ok:
+            status_lines.append(f"✅ cuBLAS: Available")
+        else:
+            status_lines.append(f"❌ cuBLAS: NOT FOUND (GPU build will fail!)")
+            status_lines.append(f"   Use 'install_cublas' action to install")
 
         # Check models
         status_lines.append("\n📦 MODELS:")
@@ -261,48 +365,29 @@ class ArchAi3D_LlamaCpp_Installer:
         else:
             status_lines.append("⚠️ Basic tools warning (may already exist)")
 
-        # Install CUDA libraries (cuBLAS is required for GPU acceleration)
-        status_lines.append("\n📦 Installing CUDA libraries (cuBLAS)...")
+        # Check for cuBLAS (required for GPU-accelerated builds)
+        status_lines.append("\n📦 Checking cuBLAS availability...")
+        cublas_ok, header, lib = self.check_cublas_available(cuda_home)
 
-        # Try multiple approaches to get cuBLAS
-        cublas_installed = False
-
-        # Method 1: Try nvidia-cuda-toolkit (has everything)
-        success, output = self.run_command(
-            "apt-get install -y cuda-toolkit-12-4 || apt-get install -y cuda-toolkit || true",
-            env=env
-        )
-        if "cublas" in output.lower() or success:
-            cublas_installed = True
-
-        # Method 2: Try libcublas specifically
-        if not cublas_installed:
-            success, output = self.run_command(
-                "apt-get install -y libcublas-12-4 libcublas-dev-12-4 || "
-                "apt-get install -y libcublas-dev || "
-                "apt-get install -y nvidia-cuda-toolkit || true",
-                env=env
-            )
-            if success:
-                cublas_installed = True
-
-        # Method 3: Check if cuBLAS exists in CUDA path
-        if cuda_home:
-            cublas_paths = [
-                f"{cuda_home}/lib64/libcublas.so",
-                f"{cuda_home}/targets/x86_64-linux/lib/libcublas.so",
-                "/usr/lib/x86_64-linux-gnu/libcublas.so",
-            ]
-            for p in cublas_paths:
-                if os.path.exists(p):
-                    cublas_installed = True
-                    status_lines.append(f"✅ Found cuBLAS at: {p}")
-                    break
-
-        if cublas_installed:
-            status_lines.append("✅ CUDA libraries ready")
+        if cublas_ok:
+            status_lines.append(f"✅ cuBLAS found!")
+            status_lines.append(f"   Header: {header}")
+            status_lines.append(f"   Library: {lib}")
         else:
-            status_lines.append("⚠️ cuBLAS not found - will try CUDA build anyway")
+            status_lines.append("⚠️ cuBLAS not found - attempting to install...")
+
+            # Auto-install cuBLAS
+            install_output, installed = self.install_cublas(gpu_info)
+            status_lines.append(install_output)
+
+            # Re-check after installation
+            cublas_ok, header, lib = self.check_cublas_available(cuda_home)
+
+            if cublas_ok:
+                status_lines.append(f"\n✅ cuBLAS now available!")
+            else:
+                status_lines.append(f"\n⚠️ cuBLAS still not found - GPU build may fail")
+                status_lines.append("   Build will attempt anyway, but may fall back to CPU-only")
 
         # Show CUDA info
         if cuda_home:
@@ -519,6 +604,13 @@ print("Download complete!")
             status_parts.append("\n\n")
             status_parts.append(self.check_status())
             status = "".join(status_parts)
+
+        elif action == "install_cublas":
+            # Install cuBLAS libraries
+            gpu_info = self.get_gpu_info()
+            status, _ = self.install_cublas(gpu_info)
+            # Show final status
+            status += "\n\n" + self.check_status()
 
         else:
             status = f"Unknown action: {action}"
