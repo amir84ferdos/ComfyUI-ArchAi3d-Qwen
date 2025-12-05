@@ -48,9 +48,15 @@ class ArchAi3D_Nunchaku_Installer:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "action": (["Check System", "Install Nunchaku", "Update Versions File"], {
+                "action": ([
+                    "Check System",
+                    "Install Nunchaku",
+                    "Update Versions File",
+                    "Upgrade PyTorch (Blackwell)",
+                    "Build xformers (Blackwell)"
+                ], {
                     "default": "Check System",
-                    "tooltip": "Check System: Show detected configuration\nInstall Nunchaku: Download and install\nUpdate Versions File: Refresh available models"
+                    "tooltip": "Check System: Show detected configuration\nInstall Nunchaku: Download and install\nUpdate Versions File: Refresh available models\nUpgrade PyTorch: Install PyTorch cu128 for RTX 5090\nBuild xformers: Compile xformers for Blackwell"
                 }),
             },
             "optional": {
@@ -278,6 +284,88 @@ class ArchAi3D_Nunchaku_Installer:
 
         return False, "update_versions.py not found. Please install ComfyUI-nunchaku first."
 
+    def _upgrade_pytorch_blackwell(self):
+        """Upgrade PyTorch to cu128 for Blackwell GPUs."""
+        pip_path = self._get_pip_path()
+        results = []
+
+        # Step 1: Uninstall old PyTorch
+        results.append("Uninstalling old PyTorch...")
+        cmd = f"{pip_path} uninstall torch torchvision torchaudio -y"
+        subprocess.run(cmd, shell=True, capture_output=True, text=True)
+
+        # Step 2: Install PyTorch with CUDA 12.8
+        results.append("Installing PyTorch 2.8+ with CUDA 12.8...")
+        cmd = f"{pip_path} install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128"
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+
+        if result.returncode == 0:
+            results.append("✅ PyTorch cu128 installed successfully!")
+            # Verify installation
+            try:
+                import importlib
+                import torch
+                importlib.reload(torch)
+                results.append(f"   Version: {torch.__version__}")
+                results.append(f"   CUDA: {torch.version.cuda}")
+            except Exception as e:
+                results.append(f"   (Verification will work after restart)")
+        else:
+            results.append(f"❌ Failed: {result.stderr[:300]}")
+
+        return results
+
+    def _build_xformers_blackwell(self):
+        """Build xformers from source for Blackwell GPUs (sm_120)."""
+        pip_path = self._get_pip_path()
+        results = []
+
+        # Step 1: Uninstall existing xformers
+        results.append("Uninstalling existing xformers...")
+        cmd = f"{pip_path} uninstall xformers -y"
+        subprocess.run(cmd, shell=True, capture_output=True, text=True)
+
+        # Step 2: Install build dependencies
+        results.append("Installing build dependencies...")
+        cmd = f"{pip_path} install ninja"
+        subprocess.run(cmd, shell=True, capture_output=True, text=True)
+
+        # Step 3: Build xformers with sm_120 support
+        results.append("Building xformers for Blackwell (sm_120)...")
+        results.append("This may take 10-30 minutes...")
+
+        # Set environment variables for Blackwell architecture
+        env = os.environ.copy()
+        env["TORCH_CUDA_ARCH_LIST"] = "12.0"
+        env["MAX_JOBS"] = "4"  # Limit parallel jobs to avoid OOM
+
+        cmd = f"{pip_path} install -v -U git+https://github.com/facebookresearch/xformers.git@main#egg=xformers"
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, env=env, timeout=3600)
+
+        if result.returncode == 0:
+            results.append("✅ xformers built and installed successfully!")
+            # Verify installation
+            try:
+                import importlib
+                import xformers
+                importlib.reload(xformers)
+                results.append(f"   Version: {xformers.__version__}")
+            except Exception as e:
+                results.append(f"   (Verification will work after restart)")
+        else:
+            results.append(f"❌ Build failed:")
+            # Show last part of error
+            error_lines = result.stderr.split('\n')[-10:]
+            for line in error_lines:
+                if line.strip():
+                    results.append(f"   {line[:100]}")
+            results.append("")
+            results.append("Try manual build:")
+            results.append("  export TORCH_CUDA_ARCH_LIST='12.0'")
+            results.append("  pip install -v -U git+https://github.com/facebookresearch/xformers.git@main#egg=xformers")
+
+        return results
+
     def execute(self, action, force_pytorch_version="auto", force_python_version="auto"):
         """Execute the selected action."""
 
@@ -401,6 +489,58 @@ class ArchAi3D_Nunchaku_Installer:
                 status_lines.append(output)
             else:
                 status_lines.append(f"✗ Failed: {output}")
+
+        elif action == "Upgrade PyTorch (Blackwell)":
+            status_lines.append("PYTORCH UPGRADE FOR BLACKWELL")
+            status_lines.append("-" * 30)
+            status_lines.append("")
+            if gpu_info['arch'] != 'sm_120':
+                status_lines.append(f"⚠️ Your GPU ({gpu_info['name']}) is not Blackwell architecture.")
+                status_lines.append("   This upgrade is only needed for RTX 5090/5080/5070.")
+                status_lines.append("")
+                status_lines.append("Proceeding anyway...")
+                status_lines.append("")
+
+            results = self._upgrade_pytorch_blackwell()
+            status_lines.extend(results)
+            status_lines.extend([
+                "",
+                "=" * 50,
+                "⚠️ RESTART COMFYUI AFTER UPGRADE!",
+                "=" * 50,
+            ])
+
+        elif action == "Build xformers (Blackwell)":
+            status_lines.append("XFORMERS BUILD FOR BLACKWELL")
+            status_lines.append("-" * 30)
+            status_lines.append("")
+            if gpu_info['arch'] != 'sm_120':
+                status_lines.append(f"⚠️ Your GPU ({gpu_info['name']}) is not Blackwell architecture.")
+                status_lines.append("   This build is only needed for RTX 5090/5080/5070.")
+                status_lines.append("")
+                status_lines.append("Proceeding anyway...")
+                status_lines.append("")
+
+            # Check PyTorch version first
+            try:
+                pt_ver = float(pytorch_version)
+                if pt_ver < 2.8:
+                    status_lines.append(f"❌ PyTorch {pytorch_version} is too old for Blackwell xformers.")
+                    status_lines.append("   Please use 'Upgrade PyTorch (Blackwell)' first.")
+                    result = "\n".join(status_lines)
+                    print(result)
+                    return (result,)
+            except:
+                pass
+
+            results = self._build_xformers_blackwell()
+            status_lines.extend(results)
+            status_lines.extend([
+                "",
+                "=" * 50,
+                "⚠️ RESTART COMFYUI AFTER BUILD!",
+                "=" * 50,
+            ])
 
         result = "\n".join(status_lines)
         print(result)

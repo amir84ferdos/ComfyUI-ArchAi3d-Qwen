@@ -39,8 +39,22 @@ nvidia-smi
 
 # If not installed:
 sudo apt update
-sudo apt install nvidia-driver-535  # or newer version
+sudo apt install nvidia-driver-535  # or 570+ for RTX 5090
 sudo reboot
+```
+
+### RTX 5090 / Blackwell Note
+
+If you have an **RTX 5090, 5080, or 5070** (Blackwell architecture):
+
+| Requirement | Version |
+|-------------|---------|
+| Driver | 570+ |
+| CUDA | 12.8+ |
+
+```bash
+# For Blackwell GPUs, install driver 570+
+sudo apt install nvidia-driver-570
 ```
 
 ### Step 3: Install CUDA Toolkit
@@ -76,6 +90,9 @@ cd ~/llama.cpp
 # Build with CUDA support
 cmake -B build -DGGML_CUDA=ON
 cmake --build build --config Release -j$(nproc)
+
+# For RTX 5090 (Blackwell) - explicitly set architecture
+# cmake -B build -DGGML_CUDA=ON -DGGML_CUDA_ARCHITECTURES="120"
 
 # Install to local bin
 mkdir -p ~/.local/bin
@@ -129,7 +146,8 @@ EOF
 | 6 GB | 2B |
 | 8 GB | 4B |
 | 12 GB+ | 4B or 8B |
-| 24 GB | 8B (full speed) |
+| 24 GB (RTX 4090) | 8B (full speed) |
+| 32 GB (RTX 5090) | 8B (max performance) |
 
 ---
 

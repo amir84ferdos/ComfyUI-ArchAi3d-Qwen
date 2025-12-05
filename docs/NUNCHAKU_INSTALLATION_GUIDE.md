@@ -17,7 +17,73 @@ A step-by-step guide for installing Nunchaku (quantized Flux/Qwen models) on Run
 - sm_80 (Ampere: A100)
 - sm_86 (Ampere: RTX 3090, A6000)
 - sm_89 (Ada: RTX 4090)
-- sm_120 (Blackwell: RTX 5090) - requires PyTorch 2.7+ and CUDA 12.8+
+- sm_120 (Blackwell: RTX 5090) - requires PyTorch 2.8+ and CUDA 12.8+
+
+---
+
+## RTX 5090 / Blackwell Special Instructions
+
+If you have an **RTX 5090, 5080, or 5070** (Blackwell architecture), follow these additional steps:
+
+### Blackwell Requirements
+
+| Component | Required |
+|-----------|----------|
+| **NVIDIA Driver** | 570+ |
+| **CUDA** | 12.8+ |
+| **PyTorch** | 2.8+ (cu128) |
+| **Model Type** | FP4 (not INT4) |
+
+### Step 1: Upgrade PyTorch for Blackwell
+
+```bash
+# Uninstall old PyTorch
+pip uninstall torch torchvision torchaudio -y
+
+# Install PyTorch with CUDA 12.8
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+```
+
+### Step 2: Install Nunchaku with PyTorch 2.8 Wheel
+
+```bash
+# For PyTorch 2.8 + Python 3.12 (Blackwell)
+pip install https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.1/nunchaku-1.0.1+torch2.8-cp312-cp312-linux_x86_64.whl
+
+# For PyTorch 2.8 + Python 3.11
+pip install https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.1/nunchaku-1.0.1+torch2.8-cp311-cp311-linux_x86_64.whl
+```
+
+### Step 3: Use FP4 Models (Required for Blackwell)
+
+Blackwell GPUs have optimized FP4 tensor cores. **Always use FP4 models:**
+
+| Use This (FP4) | Not This (INT4) |
+|----------------|-----------------|
+| `svdq-fp4_r128-*.safetensors` | `svdq-int4_r128-*.safetensors` |
+
+FP4 models are 20-30% faster on RTX 5090 than INT4.
+
+### Blackwell One-Liner Install
+
+```bash
+# Full Blackwell setup
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 && \
+pip install https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.1/nunchaku-1.0.1+torch2.8-cp312-cp312-linux_x86_64.whl
+```
+
+### Blackwell Troubleshooting
+
+| Error | Solution |
+|-------|----------|
+| `sm_120 unsupported` | Install PyTorch cu128 |
+| `CUDA capability sm_120 not compatible` | Upgrade to PyTorch 2.8+ |
+| Slow performance | Use FP4 models, not INT4 |
+| xformers crash | Build from source or disable |
+
+For complete Blackwell guide, see: [RTX5090_BLACKWELL_GUIDE.md](RTX5090_BLACKWELL_GUIDE.md)
+
+---
 
 ## Quick Check: Your System Info
 

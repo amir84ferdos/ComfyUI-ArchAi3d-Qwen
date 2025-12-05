@@ -8,6 +8,7 @@ LinkedIn: https://www.linkedin.com/in/archai3d/
 Description:
     Install llama.cpp and download QwenVL GGUF models directly from ComfyUI.
     Perfect for RunPod, cloud instances, or fresh installations.
+    Supports RTX 5090/Blackwell (sm_120) GPUs.
 
 Usage:
     1. Add node to workflow
@@ -15,12 +16,27 @@ Usage:
     3. Run the node
     4. Wait for installation to complete
 
-Version: 1.4.0
+Version: 1.5.0
 """
 
 import os
 import subprocess
 import shutil
+
+# GPU architecture mapping for CUDA build
+GPU_ARCHITECTURES = {
+    # Turing (sm_75)
+    "RTX 2080": "75", "RTX 2070": "75", "RTX 2060": "75",
+    # Ampere (sm_86)
+    "RTX 3090": "86", "RTX 3080": "86", "RTX 3070": "86", "RTX 3060": "86",
+    "A6000": "86", "A100": "80",
+    # Ada (sm_89)
+    "RTX 4090": "89", "RTX 4080": "89", "RTX 4070": "89", "RTX 4060": "89",
+    "L40": "89",
+    # Blackwell (sm_120)
+    "RTX 5090": "120", "RTX 5080": "120", "RTX 5070": "120",
+    "B100": "120", "B200": "120",
+}
 
 
 class ArchAi3D_LlamaCpp_Installer:
@@ -97,6 +113,44 @@ class ArchAi3D_LlamaCpp_Installer:
 
         return env, cuda_home
 
+    def get_gpu_info(self):
+        """Detect GPU name and architecture."""
+        try:
+            import torch
+            if torch.cuda.is_available():
+                gpu_name = torch.cuda.get_device_name(0)
+
+                # Detect architecture from GPU name
+                cuda_arch = None
+                for gpu_key, arch in GPU_ARCHITECTURES.items():
+                    if gpu_key.lower() in gpu_name.lower():
+                        cuda_arch = arch
+                        break
+
+                # If not found by name, try compute capability
+                if cuda_arch is None:
+                    major, minor = torch.cuda.get_device_capability(0)
+                    arch_map = {
+                        (7, 5): "75", (8, 0): "80", (8, 6): "86",
+                        (8, 9): "89", (9, 0): "90", (12, 0): "120"
+                    }
+                    cuda_arch = arch_map.get((major, minor), f"{major}{minor}")
+
+                vram = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+                is_blackwell = cuda_arch == "120"
+
+                return {
+                    "name": gpu_name,
+                    "cuda_arch": cuda_arch,
+                    "vram_gb": round(vram, 1),
+                    "available": True,
+                    "is_blackwell": is_blackwell
+                }
+        except Exception:
+            pass
+
+        return {"name": "Unknown", "cuda_arch": None, "vram_gb": 0, "available": False, "is_blackwell": False}
+
     def run_command(self, cmd, cwd=None, env=None):
         """Run a shell command and return output."""
         try:
@@ -119,9 +173,19 @@ class ArchAi3D_LlamaCpp_Installer:
         """Check installation status."""
         paths = self.get_paths()
         env, cuda_home = self.get_cuda_env()
+        gpu_info = self.get_gpu_info()
         status_lines = ["=" * 50, "🔍 LLAMA.CPP INSTALLATION STATUS", "=" * 50]
 
+        # GPU Info
+        status_lines.append(f"\n🎮 GPU: {gpu_info['name']}")
+        if gpu_info['cuda_arch']:
+            status_lines.append(f"   Architecture: sm_{gpu_info['cuda_arch']}")
+            status_lines.append(f"   VRAM: {gpu_info['vram_gb']} GB")
+            if gpu_info['is_blackwell']:
+                status_lines.append("   ⚡ Blackwell GPU detected!")
+
         # Check llama-server
+        status_lines.append("")
         if os.path.exists(paths["llama_server"]):
             status_lines.append(f"✅ llama-server: {paths['llama_server']}")
         else:
@@ -166,7 +230,15 @@ class ArchAi3D_LlamaCpp_Installer:
         """Install llama.cpp with CUDA support."""
         paths = self.get_paths()
         env, cuda_home = self.get_cuda_env()
+        gpu_info = self.get_gpu_info()
         status_lines = ["=" * 50, "🔧 INSTALLING LLAMA.CPP", "=" * 50]
+
+        # Show GPU info
+        status_lines.append(f"\n🎮 Detected GPU: {gpu_info['name']}")
+        if gpu_info['cuda_arch']:
+            status_lines.append(f"   Architecture: sm_{gpu_info['cuda_arch']}")
+            if gpu_info['is_blackwell']:
+                status_lines.append("   ⚡ Building with Blackwell (sm_120) support!")
 
         # Check if already installed
         if os.path.exists(paths["llama_server"]) and not force_rebuild:
@@ -264,6 +336,11 @@ class ArchAi3D_LlamaCpp_Installer:
         cmake_cmd = "cmake -B build -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release -DLLAMA_CURL=OFF -DGGML_CCACHE=OFF"
         if cuda_home:
             cmake_cmd += f" -DCMAKE_CUDA_COMPILER={cuda_home}/bin/nvcc"
+
+        # Add GPU-specific architecture flag for optimal performance
+        if gpu_info['cuda_arch']:
+            cmake_cmd += f" -DGGML_CUDA_ARCHITECTURES=\"{gpu_info['cuda_arch']}\""
+            status_lines.append(f"\n🎯 Targeting CUDA architecture: sm_{gpu_info['cuda_arch']}")
 
         status_lines.append(f"\n🔧 Running: {cmake_cmd}")
         success, output = self.run_command(cmake_cmd, cwd=paths["llama_cpp_dir"], env=env)

@@ -128,6 +128,7 @@ from .nodes.utils.archai3d_solid_color_image import ArchAi3D_Solid_Color_Image
 from .nodes.utils.archai3d_mask_crop_rotate import ArchAi3D_Mask_Crop_Rotate
 from .nodes.utils.archai3d_panorama_offset import ArchAi3D_Panorama_Offset
 from .nodes.utils.nunchaku_installer import ArchAi3D_Nunchaku_Installer
+from .nodes.utils.dependency_installer import ArchAi3D_Dependency_Installer
 
 # ============================================================================
 # OPTIMIZED LOW VRAM NODES
@@ -257,6 +258,7 @@ NODE_CLASS_MAPPINGS = {
 
     # Installer Nodes
     "ArchAi3D_Nunchaku_Installer": ArchAi3D_Nunchaku_Installer,
+    "ArchAi3D_Dependency_Installer": ArchAi3D_Dependency_Installer,
 }
 
 # ============================================================================
@@ -380,6 +382,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
 
     # Installer Nodes
     "ArchAi3D_Nunchaku_Installer": "🔧 Nunchaku Installer",
+    "ArchAi3D_Dependency_Installer": "🔧 Dependency Installer",
 }
 
 # ============================================================================
@@ -410,10 +413,11 @@ print(f"  📸 Camera Control: 28 nodes (Object Focus v1-v7 + Simple + dx8152)")
 print(f"  🎨 Image Editing: 4 nodes")
 print(f"  🎯 Utils: 10 nodes (Mask Crop/Rotate + Color Tools + Low VRAM)")
 print(f"  🌐 Input Nodes: 9 nodes (String, Int, Float, Boolean, Load URL, Save, Conditioning Balance, Gemini)")
-print(f"  🔧 Installer Nodes: 1 node (Nunchaku Installer)")
+print(f"  🔧 Installer Nodes: 2 nodes (Nunchaku + Dependency)")
 print(f"  ✅ Total: {len(NODE_CLASS_MAPPINGS)} nodes loaded!")
 print(f"")
-print(f"  ⭐ NEW: Nunchaku Installer - auto-detect GPU and install correct wheel!")
+print(f"  ⭐ NEW: Dependency Installer - one-click install for all ArchAi3D deps!")
+print(f"  ⭐ RTX 5090 Support: PyTorch 2.8+ and CUDA 12.8+ Blackwell compatibility!")
 print(f"  📚 Documentation: ./docs/")
 print(f"  ⚖️  License: Dual (Free personal, Commercial available)")
 print("=" * 70)
