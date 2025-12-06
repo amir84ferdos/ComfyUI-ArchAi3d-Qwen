@@ -9,7 +9,7 @@ Description:
     Download models from HuggingFace with maximum speed using huggingface_hub.
     Features parallel downloads, resume support, progress indicator, and custom rename option.
 
-Version: 2.1.0
+Version: 2.2.0 - Fixed progress visibility & multi-connection
 """
 
 import os
@@ -37,6 +37,39 @@ try:
 except ImportError:
     HAS_TQDM = False
 
+from functools import partial
+
+
+class ComfyUITqdm(tqdm):
+    """Custom tqdm that sends progress to ComfyUI UI."""
+
+    def __init__(self, *args, node_id=None, **kwargs):
+        self.node_id = node_id
+        self.last_percent = 0
+        super().__init__(*args, **kwargs)
+
+    def update(self, n=1):
+        super().update(n)
+        if self.total and self.total > 0:
+            percent = int((self.n / self.total) * 100)
+            if percent > self.last_percent:
+                self.last_percent = percent
+                # Send progress to ComfyUI UI
+                if HAS_SERVER and self.node_id:
+                    try:
+                        PromptServer.instance.send_sync("progress", {
+                            "node": self.node_id,
+                            "value": percent,
+                            "max": 100
+                        })
+                    except Exception:
+                        pass
+                # Print to console every 10%
+                if percent % 10 == 0:
+                    size_mb = self.n / (1024 * 1024)
+                    total_mb = self.total / (1024 * 1024)
+                    print(f"[HF Download] {percent}% ({size_mb:.1f}/{total_mb:.1f} MB)")
+
 
 def get_model_dirs():
     """Get available model directories from ComfyUI."""
@@ -48,62 +81,6 @@ def get_model_dirs():
         return ["checkpoints"]
     except Exception:
         return ["checkpoints", "loras", "vae", "clip", "unet", "diffusion_models"]
-
-
-class ProgressCallback:
-    """Progress callback for huggingface_hub downloads."""
-
-    def __init__(self, node_id=None, filename=""):
-        self.node_id = node_id
-        self.filename = filename
-        self.pbar = None
-        self.last_percent = 0
-
-    def __call__(self, progress):
-        """Called by huggingface_hub with download progress."""
-        # progress is a dict with 'downloaded', 'total' keys
-        downloaded = progress.get('downloaded', 0)
-        total = progress.get('total', 0)
-
-        if total > 0:
-            percent = (downloaded / total) * 100
-
-            # Initialize progress bar
-            if self.pbar is None and HAS_TQDM:
-                self.pbar = tqdm(
-                    total=total,
-                    unit='iB',
-                    unit_scale=True,
-                    desc=f"[HF] {self.filename[:30]}",
-                    file=sys.stdout
-                )
-
-            # Update tqdm
-            if self.pbar:
-                self.pbar.n = downloaded
-                self.pbar.refresh()
-
-            # Send progress to ComfyUI (every 1%)
-            if HAS_SERVER and self.node_id and int(percent) > self.last_percent:
-                self.last_percent = int(percent)
-                try:
-                    PromptServer.instance.send_sync("progress", {
-                        "node": self.node_id,
-                        "value": int(percent),
-                        "max": 100
-                    })
-                except Exception:
-                    pass
-
-            # Print progress every 10%
-            if int(percent) % 10 == 0 and int(percent) > self.last_percent - 1:
-                size_downloaded = downloaded / (1024 * 1024)
-                size_total = total / (1024 * 1024)
-                print(f"[ArchAi3D HF Download] Progress: {percent:.0f}% ({size_downloaded:.1f}/{size_total:.1f} MB)")
-
-    def close(self):
-        if self.pbar:
-            self.pbar.close()
 
 
 class ArchAi3D_HF_Download:
@@ -209,15 +186,15 @@ class ArchAi3D_HF_Download:
         print(f"[ArchAi3D HF Download] Saving as: {final_filename}")
         print(f"[ArchAi3D HF Download] Using huggingface_hub for maximum speed...")
 
-        # Create progress callback
-        progress_callback = ProgressCallback(node_id=node_id, filename=base_filename)
-
         try:
             # Use huggingface_hub for optimized download
             token = hf_token.strip() if hf_token.strip() else None
 
-            # Enable progress reporting via environment variable
+            # Enable hf_transfer for multi-connection fast downloads
             os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
+
+            # Create custom tqdm class that sends progress to ComfyUI
+            tqdm_cls = partial(ComfyUITqdm, node_id=node_id)
 
             # Download to cache first (fast, parallel, resumable)
             downloaded_path = hf_hub_download(
@@ -225,10 +202,8 @@ class ArchAi3D_HF_Download:
                 filename=filename,
                 token=token,
                 force_download=overwrite,
+                tqdm_class=tqdm_cls,  # Shows progress in ComfyUI!
             )
-
-            # Close progress bar
-            progress_callback.close()
 
             # Copy/move to final destination with custom name
             print(f"[ArchAi3D HF Download] Copying to destination...")
@@ -255,7 +230,6 @@ class ArchAi3D_HF_Download:
             return (status,)
 
         except Exception as e:
-            progress_callback.close()
             error_msg = str(e)
             if "401" in error_msg or "403" in error_msg:
                 return (f"❌ Access denied. This may be a gated model.\nProvide HF token or accept license at: https://huggingface.co/{repo_id}",)

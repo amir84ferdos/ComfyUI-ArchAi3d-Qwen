@@ -24,6 +24,7 @@ tqdm
 
 # For Metric3D Depth/Normal nodes
 huggingface_hub>=0.19.0
+hf_transfer  # Multi-connection fast downloads
 opencv-python>=4.7.0
 matplotlib
 timm
