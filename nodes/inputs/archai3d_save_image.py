@@ -162,15 +162,13 @@ class ArchAi3D_Save_Image:
                 img.save(filepath, quality=quality, lossless=lossless)
 
             # Save workflow as separate JSON file if requested
-            if save_workflow_json:
+            if save_workflow_json and extra_pnginfo:
                 json_filepath = filepath.rsplit('.', 1)[0] + '.json'
-                workflow_data = {
-                    "prompt": prompt,
-                    "workflow": extra_pnginfo.get("workflow") if extra_pnginfo else None,
-                    "output_name": output_name
-                }
-                with open(json_filepath, 'w') as f:
-                    json.dump(workflow_data, f, indent=2)
+                # Save the raw workflow (what ComfyUI expects when you drag & drop)
+                workflow = extra_pnginfo.get("workflow")
+                if workflow:
+                    with open(json_filepath, 'w') as f:
+                        json.dump(workflow, f, indent=2)
 
             results.append({
                 "filename": file,
