@@ -7,7 +7,7 @@
 # Email: Amir84ferdos@gmail.com
 # LinkedIn: https://www.linkedin.com/in/archai3d/
 # GitHub: https://github.com/amir84ferdos
-# Version: 1.1.0
+# Version: 1.2.0 - Added Ultra Quality preset (12000 tokens, full resolution)
 # License: Dual License (Free for personal use, Commercial license required for business use)
 
 import base64
@@ -70,6 +70,11 @@ QUALITY_PRESETS = {
         "max_tokens": 3072,
         "max_image_size": "2048",
         "description": "Maximum creativity and token output"
+    },
+    "🔬 Ultra Quality (Maximum)": {
+        "max_tokens": 12000,
+        "max_image_size": "Original",
+        "description": "Maximum quality - full resolution, 12000 tokens"
     },
     "⚙️ Custom": {
         "max_tokens": None,  # Use manual settings
@@ -269,7 +274,7 @@ class ArchAi3D_QwenVL_GGUF:
                 "max_tokens": ("INT", {
                     "default": 2048,
                     "min": 64,
-                    "max": 4096,
+                    "max": 16384,
                     "tooltip": "Maximum tokens (only used with Custom quality preset)"
                 }),
                 "max_image_size": (["Original", "512", "768", "1024", "1536", "2048"], {
