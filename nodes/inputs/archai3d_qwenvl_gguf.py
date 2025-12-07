@@ -74,8 +74,8 @@ QUALITY_PRESETS = {
     "🔬 Ultra Focused (Accurate)": {
         "max_tokens": 16384,
         "max_image_size": "Original",
-        "creativity": 0.1,
-        "description": "Ultra quality, low creativity - most accurate/deterministic"
+        "creativity": 0.2,
+        "description": "Ultra quality, low creativity - accurate with slight variation"
     },
     "🔬 Ultra Balanced": {
         "max_tokens": 16384,
