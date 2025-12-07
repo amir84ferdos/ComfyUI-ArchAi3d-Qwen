@@ -7,7 +7,7 @@
 # Email: Amir84ferdos@gmail.com
 # LinkedIn: https://www.linkedin.com/in/archai3d/
 # GitHub: https://github.com/amir84ferdos
-# Version: 1.2.0 - Added Ultra Quality preset (12000 tokens, full resolution)
+# Version: 1.3.0 - Ultra presets with built-in creativity (Focused/Balanced/Creative)
 # License: Dual License (Free for personal use, Commercial license required for business use)
 
 import base64
@@ -71,10 +71,23 @@ QUALITY_PRESETS = {
         "max_image_size": "2048",
         "description": "Maximum creativity and token output"
     },
-    "🔬 Ultra Quality (Maximum)": {
-        "max_tokens": 12000,
+    "🔬 Ultra Focused (Accurate)": {
+        "max_tokens": 16384,
         "max_image_size": "Original",
-        "description": "Maximum quality - full resolution, 12000 tokens"
+        "creativity": 0.1,
+        "description": "Ultra quality, low creativity - most accurate/deterministic"
+    },
+    "🔬 Ultra Balanced": {
+        "max_tokens": 16384,
+        "max_image_size": "Original",
+        "creativity": 0.5,
+        "description": "Ultra quality, medium creativity - balanced output"
+    },
+    "🔬 Ultra Creative": {
+        "max_tokens": 16384,
+        "max_image_size": "Original",
+        "creativity": 0.9,
+        "description": "Ultra quality, high creativity - creative/varied output"
     },
     "⚙️ Custom": {
         "max_tokens": None,  # Use manual settings
@@ -401,10 +414,11 @@ class ArchAi3D_QwenVL_GGUF:
             max_tokens = preset_config["max_tokens"]
             max_image_size = preset_config["max_image_size"]
 
-        # ===== APPLY CREATIVITY SLIDER =====
-        # Creativity controls sampling params (unless Custom preset with manual overrides)
+        # ===== APPLY CREATIVITY =====
+        # Use preset's creativity if set, otherwise use the slider
         if quality_preset != "⚙️ Custom":
-            creativity_params = creativity_to_params(creativity)
+            preset_creativity = preset_config.get("creativity", creativity)
+            creativity_params = creativity_to_params(preset_creativity)
             temperature = creativity_params["temperature"]
             top_p = creativity_params["top_p"]
             top_k = creativity_params["top_k"]
@@ -412,7 +426,8 @@ class ArchAi3D_QwenVL_GGUF:
             repeat_penalty = creativity_params["repeat_penalty"]
 
         # Log applied settings
-        print(f"[QwenVL-GGUF] Quality: {quality_preset}, Creativity: {creativity:.2f}")
+        actual_creativity = preset_config.get("creativity", creativity) if quality_preset != "⚙️ Custom" else creativity
+        print(f"[QwenVL-GGUF] Quality: {quality_preset}, Creativity: {actual_creativity:.2f}")
         print(f"[QwenVL-GGUF] Settings: tokens={max_tokens}, temp={temperature:.2f}, top_p={top_p:.2f}, top_k={top_k}, min_p={min_p:.3f}, repeat_pen={repeat_penalty:.2f}")
 
         # Parse max_image_size
