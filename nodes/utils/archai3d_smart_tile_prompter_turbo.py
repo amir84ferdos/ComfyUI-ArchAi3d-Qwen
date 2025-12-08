@@ -7,7 +7,7 @@
 #   3. Text Transcription - verbatim text in quotes
 #
 # Author: Amir Ferdos (ArchAi3d)
-# Version: 1.0.1 - Fixed: no meta-commentary, shorter prompts for CLIP
+# Version: 1.0.2 - Fixed: spatial zone hints to prevent hallucinating floor objects in ceiling tiles
 # License: Dual License (Free for personal use, Commercial license required for business use)
 
 import base64
@@ -122,19 +122,27 @@ TILE_PROMPT_TEMPLATE = """STYLE GUIDE FOR CONSISTENCY:
 ---
 
 TILE POSITION: {position} (row {row}, column {col})
+SPATIAL ZONE: {spatial_zone}
 CONSISTENCY RULE: {consistency_rule}
+
+CRITICAL - DESCRIBE ONLY WHAT YOU SEE:
+- This tile shows the {spatial_zone} of the scene
+- Do NOT place floor-level objects (tables, furniture bases, rugs) in top/ceiling tiles
+- Do NOT place ceiling elements (lights, beams, ceiling fixtures) in bottom/floor tiles
+- If the tile shows mostly ceiling, describe ONLY ceiling. If floor, describe ONLY floor.
+- Use the style guide for materials and colors, but ONLY for objects ACTUALLY VISIBLE in this tile
 
 Write a DENSE PARAGRAPH description of this tile region following this 3-step structure:
 
-1. CORE (Subject & Action) - Start with exact facts:
-   - What subjects/objects are visible (even partially cut off)
-   - Their positions and relationships
-   - Actions or states
+1. CORE (Subject & Action) - ONLY what is visible in THIS tile:
+   - What subjects/objects are ACTUALLY visible (even partially cut off)
+   - Their positions and relationships within THIS tile only
+   - Do NOT invent objects from the style guide that aren't in THIS tile
 
 2. VISUAL EXPANSION (Style, Lighting, Atmosphere) - Add professional details:
    - Lighting on THIS specific area (source direction, quality, shadows)
    - Textures and materials you can see (fabric weave, wood grain, surface sheen)
-   - Colors matching the style guide exactly
+   - Colors matching the style guide for visible elements only
    - Depth and composition in this tile
 
 3. TEXT (if any) - End with any visible text in "double quotes"
@@ -397,6 +405,55 @@ def get_position_name(x, y, tiles_x, tiles_y):
         return "center"
 
 
+def get_spatial_zone(row, col, tiles_y, tiles_x):
+    """
+    Determine what spatial zone this tile represents.
+
+    This helps the LLM understand what SHOULD be visible in this tile
+    based on its position in the grid, preventing hallucination of
+    floor-level objects in ceiling tiles and vice versa.
+
+    Args:
+        row: Row index (0 = top)
+        col: Column index (0 = left)
+        tiles_y: Total rows
+        tiles_x: Total columns
+
+    Returns:
+        Human-readable spatial zone description
+    """
+    # Vertical zones based on row position
+    if tiles_y >= 4:
+        # 4+ rows: top, upper-middle, lower-middle, bottom
+        if row == 0:
+            v_zone = "ceiling/uppermost area (lights, ceiling fixtures, top of walls)"
+        elif row == tiles_y - 1:
+            v_zone = "floor/ground level (floor, rug, furniture bases, lowest objects)"
+        elif row < tiles_y // 2:
+            v_zone = "upper area (upper walls, windows, hanging items, tall furniture tops)"
+        else:
+            v_zone = "lower-middle area (furniture, seated figures, tabletops, mid-height objects)"
+    elif tiles_y == 3:
+        # 3 rows: top, middle, bottom
+        if row == 0:
+            v_zone = "ceiling/upper wall area (ceiling, lights, top of tall furniture)"
+        elif row == 1:
+            v_zone = "mid-height area (furniture, windows, people, countertops)"
+        else:
+            v_zone = "floor/lower area (floor, rugs, furniture bases, low objects)"
+    elif tiles_y == 2:
+        # 2 rows: top half, bottom half
+        if row == 0:
+            v_zone = "upper half (ceiling, upper walls, hanging lights, tops of furniture)"
+        else:
+            v_zone = "lower half (floor, lower furniture, bases of objects)"
+    else:
+        # 1 row: full height
+        v_zone = "full height"
+
+    return v_zone
+
+
 def crop_tile(image_tensor, tile_x, tile_y, tiles_x, tiles_y, overlap=0):
     """Extract a tile region from the image tensor.
 
@@ -569,7 +626,7 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
             image = bundle.get("scaled_image", image)
             tiles_x = bundle.get("tiles_x", tiles_x)
             tiles_y = bundle.get("tiles_y", tiles_y)
-            print(f"[Smart Tile Prompter Turbo v1.0] Using bundle: {tiles_x}x{tiles_y} tiles")
+            print(f"[Smart Tile Prompter Turbo v1.0.2] Using bundle: {tiles_x}x{tiles_y} tiles")
 
         start_time = time.time()
         total_tiles = tiles_x * tiles_y
@@ -634,11 +691,13 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
                 tile_b64 = image_to_base64(tile_image, max_size=1024)
 
                 # Build tile prompt
+                spatial_zone = get_spatial_zone(y, x, tiles_y, tiles_x)
                 tile_prompt = TILE_PROMPT_TEMPLATE.format(
                     style_guide=style_guide,
                     position=position,
                     row=y + 1,
                     col=x + 1,
+                    spatial_zone=spatial_zone,
                     consistency_rule=consistency_rule
                 )
 
@@ -678,7 +737,7 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
         elapsed = time.time() - start_time
         debug_lines = [
             "=" * 50,
-            "Smart Tile Prompter Turbo v1.0.1 (Z-Image-Turbo)",
+            "Smart Tile Prompter Turbo v1.0.2 (Z-Image-Turbo)",
             "=" * 50,
             f"Tiles: {tiles_x}x{tiles_y} = {total_tiles} total",
             f"Model: {model_size}",
