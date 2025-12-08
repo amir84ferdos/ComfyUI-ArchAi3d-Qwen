@@ -10,7 +10,7 @@ Email: Amir84ferdos@gmail.com
 LinkedIn: https://www.linkedin.com/in/archai3d/
 GitHub: https://github.com/amir84ferdos
 
-Version: 1.0.0
+Version: 1.1.0 - Added overlap_scale for global overlap control
 License: Dual License (Free for personal use, Commercial license required for business use)
 """
 
@@ -244,6 +244,13 @@ class ArchAi3D_Smart_Tile_Calculator:
                     "default": "Proportional",
                     "tooltip": "Proportional: scale blur/padding with tile size. Fixed: use USDU defaults"
                 }),
+                "overlap_scale": ("FLOAT", {
+                    "default": 1.0,
+                    "min": 0.25,
+                    "max": 2.0,
+                    "step": 0.05,
+                    "tooltip": "Global overlap multiplier: 1.0=100%, 0.5=50% less overlap, 1.5=50% more overlap"
+                }),
             }
         }
 
@@ -257,7 +264,7 @@ class ArchAi3D_Smart_Tile_Calculator:
     FUNCTION = "calculate"
     CATEGORY = "ArchAi3d/Utils"
 
-    def calculate(self, image, target_upscale, target_tile_mp, upscale_tolerance, scaling_mode):
+    def calculate(self, image, target_upscale, target_tile_mp, upscale_tolerance, scaling_mode, overlap_scale):
         """
         Calculate optimal tile size and upscale factor.
 
@@ -275,11 +282,23 @@ class ArchAi3D_Smart_Tile_Calculator:
         min_tile_dim = min(tile_w, tile_h)
         overlap_params = scale_overlap_params(min_tile_dim, base_tile=512, mode=scaling_mode)
 
-        mask_blur = overlap_params["mask_blur"]
-        tile_padding = overlap_params["tile_padding"]
-        seam_fix_width = overlap_params["seam_fix_width"]
-        seam_fix_mask_blur = overlap_params["seam_fix_mask_blur"]
-        seam_fix_padding = overlap_params["seam_fix_padding"]
+        # Step 2.5: Apply global overlap_scale multiplier
+        # This allows user to test with less/more overlap (e.g., 0.5 = 50% less)
+        mask_blur = max(1, int(overlap_params["mask_blur"] * overlap_scale))
+        tile_padding = max(8, int(overlap_params["tile_padding"] * overlap_scale))
+        seam_fix_width = max(8, int(overlap_params["seam_fix_width"] * overlap_scale))
+        seam_fix_mask_blur = max(1, int(overlap_params["seam_fix_mask_blur"] * overlap_scale))
+        seam_fix_padding = max(8, int(overlap_params["seam_fix_padding"] * overlap_scale))
+
+        # Round padding/width to step size 8 (USDU requirement)
+        tile_padding = round(tile_padding / 8) * 8
+        seam_fix_width = round(seam_fix_width / 8) * 8
+        seam_fix_padding = round(seam_fix_padding / 8) * 8
+
+        # Ensure minimum values
+        tile_padding = max(8, tile_padding)
+        seam_fix_width = max(8, seam_fix_width)
+        seam_fix_padding = max(8, seam_fix_padding)
 
         # Step 3: Find optimal upscale factor
         best_upscale, efficiency, tiles_x, tiles_y = find_optimal_upscale(
@@ -306,7 +325,7 @@ class ArchAi3D_Smart_Tile_Calculator:
             f"Upscale: {best_upscale}x (target was {target_upscale}x)",
             f"Output: {output_width}x{output_height}",
             "",
-            "--- Overlap Parameters ({}) ---".format(scaling_mode),
+            "--- Overlap Parameters ({}, scale={:.0%}) ---".format(scaling_mode, overlap_scale),
             f"mask_blur: {mask_blur}",
             f"tile_padding: {tile_padding}",
             f"seam_fix_width: {seam_fix_width}",
@@ -324,6 +343,7 @@ class ArchAi3D_Smart_Tile_Calculator:
         print(f"\n[Smart Tile Calculator]")
         print(f"  Input: {width}x{height} → Tile: {tile_w}x{tile_h}")
         print(f"  Upscale: {best_upscale}x → Output: {output_width}x{output_height}")
+        print(f"  Overlap: {scaling_mode}, scale={overlap_scale:.0%} (blur={mask_blur}, pad={tile_padding})")
         print(f"  Tiles: {tiles_x}x{tiles_y}={total_tiles}, Efficiency: {efficiency*100:.1f}%")
 
         return (
