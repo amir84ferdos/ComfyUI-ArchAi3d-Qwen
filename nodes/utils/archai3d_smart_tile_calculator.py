@@ -10,7 +10,7 @@ Email: Amir84ferdos@gmail.com
 LinkedIn: https://www.linkedin.com/in/archai3d/
 GitHub: https://github.com/amir84ferdos
 
-Version: 1.1.0 - Added overlap_scale for global overlap control
+Version: 1.2.0 - Comprehensive tile+upscale optimization (2D search)
 License: Dual License (Free for personal use, Commercial license required for business use)
 """
 
@@ -196,6 +196,118 @@ def find_optimal_upscale(input_w: int, input_h: int, tile_w: int, tile_h: int,
     return round(best_upscale, 2), best_efficiency, best_tiles_x, best_tiles_y
 
 
+def find_optimal_tile_and_upscale(input_w: int, input_h: int, aspect_ratio: float,
+                                   target_upscale: float, upscale_tolerance: float,
+                                   max_tile_mp: float, scaling_mode: str,
+                                   overlap_scale: float) -> dict:
+    """
+    Comprehensive 2D search: find best combination of tile size AND upscale factor.
+
+    Searches tile sizes from 0.5MP to max_tile_mp, and upscales within tolerance,
+    to find the combination with maximum efficiency.
+
+    Args:
+        input_w, input_h: Input image dimensions
+        aspect_ratio: Width / Height ratio
+        target_upscale: User's desired upscale factor
+        upscale_tolerance: How much upscale can deviate (e.g., 0.5 = ±50%)
+        max_tile_mp: Maximum megapixels per tile (e.g., 2.0 for z-image-turbo)
+        scaling_mode: "Proportional" or "Fixed" for blur/padding
+        overlap_scale: Global multiplier for overlap parameters
+
+    Returns:
+        Dict with best tile size, upscale, overlap params, efficiency, etc.
+    """
+    best_result = None
+    best_efficiency = 0
+
+    # Search tile sizes from 1.0MP to max_tile_mp (in 0.25MP steps)
+    tile_mp = 1.0
+    while tile_mp <= max_tile_mp:
+        # Calculate tile dimensions for this MP
+        tile_w, tile_h = find_optimal_tile_size(aspect_ratio, tile_mp, divisor=8)
+        actual_mp = (tile_w * tile_h) / 1_000_000
+
+        # Calculate overlap params for this tile size
+        min_tile_dim = min(tile_w, tile_h)
+        overlap_params = scale_overlap_params(min_tile_dim, base_tile=512, mode=scaling_mode)
+
+        # Apply overlap_scale
+        mask_blur = max(1, int(overlap_params["mask_blur"] * overlap_scale))
+        tile_padding = max(8, int(overlap_params["tile_padding"] * overlap_scale))
+        seam_fix_width = max(8, int(overlap_params["seam_fix_width"] * overlap_scale))
+        seam_fix_mask_blur = max(1, int(overlap_params["seam_fix_mask_blur"] * overlap_scale))
+        seam_fix_padding = max(8, int(overlap_params["seam_fix_padding"] * overlap_scale))
+
+        # Round to step size 8
+        tile_padding = max(8, round(tile_padding / 8) * 8)
+        seam_fix_width = max(8, round(seam_fix_width / 8) * 8)
+        seam_fix_padding = max(8, round(seam_fix_padding / 8) * 8)
+
+        # Search upscale factors for this tile size
+        min_upscale = max(0.05, target_upscale * (1 - upscale_tolerance))
+        max_upscale = min(4.0, target_upscale * (1 + upscale_tolerance))
+
+        upscale = min_upscale
+        while upscale <= max_upscale:
+            out_w = int(input_w * upscale)
+            out_h = int(input_h * upscale)
+
+            efficiency, tiles_x, tiles_y, waste_mp = calculate_efficiency(
+                out_w, out_h, tile_w, tile_h,
+                tile_padding, mask_blur, seam_fix_width
+            )
+
+            if efficiency > best_efficiency:
+                best_efficiency = efficiency
+                best_result = {
+                    "tile_w": tile_w,
+                    "tile_h": tile_h,
+                    "tile_mp": actual_mp,
+                    "upscale": round(upscale, 2),
+                    "efficiency": efficiency,
+                    "tiles_x": tiles_x,
+                    "tiles_y": tiles_y,
+                    "total_tiles": tiles_x * tiles_y,
+                    "output_w": out_w,
+                    "output_h": out_h,
+                    "waste_mp": waste_mp,
+                    "mask_blur": mask_blur,
+                    "tile_padding": tile_padding,
+                    "seam_fix_width": seam_fix_width,
+                    "seam_fix_mask_blur": seam_fix_mask_blur,
+                    "seam_fix_padding": seam_fix_padding,
+                }
+
+            upscale += 0.05
+
+        tile_mp += 0.25
+
+    # Fallback if nothing found
+    if best_result is None:
+        tile_w, tile_h = find_optimal_tile_size(aspect_ratio, max_tile_mp, divisor=8)
+        best_result = {
+            "tile_w": tile_w,
+            "tile_h": tile_h,
+            "tile_mp": (tile_w * tile_h) / 1_000_000,
+            "upscale": target_upscale,
+            "efficiency": 0.5,
+            "tiles_x": 1,
+            "tiles_y": 1,
+            "total_tiles": 1,
+            "output_w": int(input_w * target_upscale),
+            "output_h": int(input_h * target_upscale),
+            "waste_mp": 0,
+            "mask_blur": 8,
+            "tile_padding": 32,
+            "seam_fix_width": 64,
+            "seam_fix_mask_blur": 8,
+            "seam_fix_padding": 16,
+        }
+
+    return best_result
+
+
 # ============================================================================
 # NODE CLASS
 # ============================================================================
@@ -226,19 +338,19 @@ class ArchAi3D_Smart_Tile_Calculator:
                     "step": 0.05,
                     "tooltip": "Desired upscale factor (will be optimized within tolerance)"
                 }),
-                "target_tile_mp": ("FLOAT", {
+                "max_tile_mp": ("FLOAT", {
                     "default": 2.0,
-                    "min": 0.5,
+                    "min": 1.0,
                     "max": 4.0,
-                    "step": 0.1,
-                    "tooltip": "Target megapixels per tile (2.0 for z-image-turbo)"
+                    "step": 0.25,
+                    "tooltip": "MAXIMUM tile megapixels (2.0 for z-image-turbo). Node searches 1.0MP to this value."
                 }),
                 "upscale_tolerance": ("FLOAT", {
-                    "default": 0.3,
+                    "default": 0.5,
                     "min": 0.0,
-                    "max": 0.5,
+                    "max": 0.75,
                     "step": 0.05,
-                    "tooltip": "How much upscale can deviate from target (0.3 = ±30%)"
+                    "tooltip": "How much upscale can deviate from target (0.5 = ±50%). More tolerance = better optimization."
                 }),
                 "scaling_mode": (["Proportional", "Fixed"], {
                     "default": "Proportional",
@@ -264,9 +376,12 @@ class ArchAi3D_Smart_Tile_Calculator:
     FUNCTION = "calculate"
     CATEGORY = "ArchAi3d/Utils"
 
-    def calculate(self, image, target_upscale, target_tile_mp, upscale_tolerance, scaling_mode, overlap_scale):
+    def calculate(self, image, target_upscale, max_tile_mp, upscale_tolerance, scaling_mode, overlap_scale):
         """
-        Calculate optimal tile size and upscale factor.
+        Calculate optimal tile size and upscale factor using comprehensive 2D search.
+
+        Searches through tile sizes (1MP to max_tile_mp) and upscale factors (within tolerance)
+        to find the combination with maximum efficiency.
 
         Returns all values needed for Ultimate SD Upscale.
         """
@@ -274,53 +389,46 @@ class ArchAi3D_Smart_Tile_Calculator:
         _, height, width, _ = image.shape
         aspect_ratio = width / height
 
-        # Step 1: Calculate optimal tile size
-        tile_w, tile_h = find_optimal_tile_size(aspect_ratio, target_tile_mp, divisor=8)
-        actual_tile_mp = (tile_w * tile_h) / 1_000_000
-
-        # Step 2: Calculate blur/padding values
-        min_tile_dim = min(tile_w, tile_h)
-        overlap_params = scale_overlap_params(min_tile_dim, base_tile=512, mode=scaling_mode)
-
-        # Step 2.5: Apply global overlap_scale multiplier
-        # This allows user to test with less/more overlap (e.g., 0.5 = 50% less)
-        mask_blur = max(1, int(overlap_params["mask_blur"] * overlap_scale))
-        tile_padding = max(8, int(overlap_params["tile_padding"] * overlap_scale))
-        seam_fix_width = max(8, int(overlap_params["seam_fix_width"] * overlap_scale))
-        seam_fix_mask_blur = max(1, int(overlap_params["seam_fix_mask_blur"] * overlap_scale))
-        seam_fix_padding = max(8, int(overlap_params["seam_fix_padding"] * overlap_scale))
-
-        # Round padding/width to step size 8 (USDU requirement)
-        tile_padding = round(tile_padding / 8) * 8
-        seam_fix_width = round(seam_fix_width / 8) * 8
-        seam_fix_padding = round(seam_fix_padding / 8) * 8
-
-        # Ensure minimum values
-        tile_padding = max(8, tile_padding)
-        seam_fix_width = max(8, seam_fix_width)
-        seam_fix_padding = max(8, seam_fix_padding)
-
-        # Step 3: Find optimal upscale factor
-        best_upscale, efficiency, tiles_x, tiles_y = find_optimal_upscale(
-            width, height, tile_w, tile_h,
-            target_upscale, upscale_tolerance,
-            tile_padding, mask_blur, seam_fix_width
+        # Comprehensive 2D search: find best tile size AND upscale combo
+        result = find_optimal_tile_and_upscale(
+            input_w=width,
+            input_h=height,
+            aspect_ratio=aspect_ratio,
+            target_upscale=target_upscale,
+            upscale_tolerance=upscale_tolerance,
+            max_tile_mp=max_tile_mp,
+            scaling_mode=scaling_mode,
+            overlap_scale=overlap_scale
         )
 
-        # Calculate final output dimensions
-        output_width = int(width * best_upscale)
-        output_height = int(height * best_upscale)
-        total_tiles = tiles_x * tiles_y
+        # Extract results
+        tile_w = result["tile_w"]
+        tile_h = result["tile_h"]
+        actual_tile_mp = result["tile_mp"]
+        best_upscale = result["upscale"]
+        efficiency = result["efficiency"]
+        tiles_x = result["tiles_x"]
+        tiles_y = result["tiles_y"]
+        total_tiles = result["total_tiles"]
+        output_width = result["output_w"]
+        output_height = result["output_h"]
+        waste_mp = result["waste_mp"]
+        mask_blur = result["mask_blur"]
+        tile_padding = result["tile_padding"]
+        seam_fix_width = result["seam_fix_width"]
+        seam_fix_mask_blur = result["seam_fix_mask_blur"]
+        seam_fix_padding = result["seam_fix_padding"]
 
         # Build debug info
         debug_lines = [
             "=" * 50,
-            "Smart Tile Calculator Results",
+            "Smart Tile Calculator v1.2 (2D Search)",
             "=" * 50,
             f"Input: {width}x{height} ({aspect_ratio:.3f} aspect ratio)",
-            f"Target: {target_upscale}x upscale, {target_tile_mp}MP tiles",
+            f"Target: {target_upscale}x upscale, max {max_tile_mp}MP tiles",
+            f"Search: tiles 1.0-{max_tile_mp}MP, upscale ±{upscale_tolerance*100:.0f}%",
             "",
-            "--- Calculated Values ---",
+            "--- OPTIMIZED Values ---",
             f"Tile Size: {tile_w}x{tile_h} ({actual_tile_mp:.2f}MP)",
             f"Upscale: {best_upscale}x (target was {target_upscale}x)",
             f"Output: {output_width}x{output_height}",
@@ -335,16 +443,17 @@ class ArchAi3D_Smart_Tile_Calculator:
             "--- Efficiency ---",
             f"Tiles: {tiles_x}x{tiles_y} = {total_tiles} total",
             f"Efficiency: {efficiency*100:.1f}%",
+            f"Wasted: {waste_mp:.2f}MP",
             "=" * 50,
         ]
         debug_info = "\n".join(debug_lines)
 
         # Log to console
-        print(f"\n[Smart Tile Calculator]")
-        print(f"  Input: {width}x{height} → Tile: {tile_w}x{tile_h}")
+        print(f"\n[Smart Tile Calculator v1.2]")
+        print(f"  Input: {width}x{height} → Tile: {tile_w}x{tile_h} ({actual_tile_mp:.2f}MP)")
         print(f"  Upscale: {best_upscale}x → Output: {output_width}x{output_height}")
         print(f"  Overlap: {scaling_mode}, scale={overlap_scale:.0%} (blur={mask_blur}, pad={tile_padding})")
-        print(f"  Tiles: {tiles_x}x{tiles_y}={total_tiles}, Efficiency: {efficiency*100:.1f}%")
+        print(f"  Tiles: {tiles_x}x{tiles_y}={total_tiles}, Efficiency: {efficiency*100:.1f}%, Waste: {waste_mp:.2f}MP")
 
         return (
             best_upscale,
