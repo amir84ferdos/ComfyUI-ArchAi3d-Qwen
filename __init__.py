@@ -100,6 +100,7 @@ from .nodes.editing.archai3d_qwen_style_transfer import ArchAi3D_Qwen_Style_Tran
 # ============================================================================
 
 from .nodes.utils.archai3d_mask_to_position_guide import ArchAi3D_Mask_To_Position_Guide
+from .nodes.utils.archai3d_smart_tile_calculator import ArchAi3D_Smart_Tile_Calculator
 
 # ============================================================================
 # INPUT NODES (Web Interface Integration)
@@ -223,6 +224,7 @@ NODE_CLASS_MAPPINGS = {
 
     # Utils
     "ArchAi3D_Mask_To_Position_Guide": ArchAi3D_Mask_To_Position_Guide,
+    "ArchAi3D_Smart_Tile_Calculator": ArchAi3D_Smart_Tile_Calculator,
     "ArchAi3D_Position_Guide_Prompt_Builder": ArchAi3D_Position_Guide_Prompt_Builder,
     "ArchAi3D_Simple_Position_Prompt": ArchAi3D_Simple_Position_Prompt,
     "ArchAi3D_Color_Correction_BT709": ArchAi3D_Color_Correction_BT709,
@@ -347,6 +349,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
 
     # Utils
     "ArchAi3D_Mask_To_Position_Guide": "🎯 Mask to Position Guide",
+    "ArchAi3D_Smart_Tile_Calculator": "🧮 Smart Tile Calculator",
     "ArchAi3D_Position_Guide_Prompt_Builder": "📝 Position Guide Prompt Builder",
     "ArchAi3D_Simple_Position_Prompt": "📝 Simple Position Prompt",
     "ArchAi3D_Color_Correction_BT709": "🎨 Color Correction BT.709",
