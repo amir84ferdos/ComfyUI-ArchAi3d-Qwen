@@ -7,7 +7,7 @@
 #   3. Text Transcription - verbatim text in quotes
 #
 # Author: Amir Ferdos (ArchAi3d)
-# Version: 1.0.3 - Added sharpness/quality cues to prevent blurry outputs
+# Version: 1.0.4 - Added photorealistic style tags + sharpness cues
 # License: Dual License (Free for personal use, Commercial license required for business use)
 
 import base64
@@ -147,11 +147,17 @@ Write a DENSE PARAGRAPH description of this tile region following this 3-step st
 
 3. TEXT (if any) - End with any visible text in "double quotes"
 
-SHARPNESS REQUIREMENT - CRITICAL FOR IMAGE QUALITY:
-- START the paragraph with "Sharp focus on" or "Crisp detail of" or "Highly detailed"
-- Include at least 2-3 sharpness descriptors: "sharp edges", "crisp definition", "fine detail", "clearly defined", "precise texture", "high clarity", "distinct edges"
-- Describe textures with precision: "visible grain", "individual threads", "distinct separation"
-- AVOID soft/blurry language: do NOT use "softly", "gently blurred", "subtly fading", "soft gradients"
+QUALITY REQUIREMENTS - CRITICAL FOR SHARP, REALISTIC OUTPUT:
+
+SHARPNESS (prevents blurry output):
+- START with "Sharp focus on" or "Crisp detail of" or "Highly detailed"
+- Include 2-3 sharpness words: "sharp edges", "crisp", "fine detail", "clearly defined", "precise", "distinct"
+- AVOID: "softly", "gently blurred", "subtly fading", "soft gradients"
+
+PHOTOREALISTIC STYLE (ensures real photo look):
+- Include "photorealistic" or "real photograph" or "DSLR quality" somewhere in the description
+- End paragraph with style tags: "professional photography, 8K resolution, photorealistic"
+- Use camera terms: "shallow depth of field", "natural lighting", "lens flare", "bokeh" where appropriate
 
 CRITICAL RULES:
 - Write as a FLOWING PARAGRAPH, not bullet points or categories
@@ -161,8 +167,8 @@ CRITICAL RULES:
 - If text IS visible, end with it in quotes (e.g., The sign reads "OPEN")
 - Output ONLY the description paragraph, nothing else
 
-Example format (with sharpness cues):
-"Sharp focus on a leather armchair in the left foreground, its worn brown surface showing crisp creasing detail at the armrests with clearly defined stitching. Precise window light from the upper right creates distinct tonal gradients across the seat cushion, with hard-edged shadows pooling beneath the curved wooden legs. The floor beneath reveals highly detailed oak planks with sharp grain patterns running diagonally, each plank edge crisply defined..."
+Example format (with sharpness + photorealistic style):
+"Sharp focus on a leather armchair in the left foreground, its worn brown surface showing crisp creasing detail at the armrests with clearly defined stitching, photorealistic texture capturing every pore of the leather. Precise natural window light from the upper right creates distinct tonal gradients across the seat cushion, with hard-edged shadows pooling beneath the curved wooden legs. The floor beneath reveals highly detailed oak planks with sharp grain patterns, each plank edge crisply defined, professional photography, 8K resolution, photorealistic."
 """
 
 # Result cache
@@ -632,7 +638,7 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
             image = bundle.get("scaled_image", image)
             tiles_x = bundle.get("tiles_x", tiles_x)
             tiles_y = bundle.get("tiles_y", tiles_y)
-            print(f"[Smart Tile Prompter Turbo v1.0.3] Using bundle: {tiles_x}x{tiles_y} tiles")
+            print(f"[Smart Tile Prompter Turbo v1.0.4] Using bundle: {tiles_x}x{tiles_y} tiles")
 
         start_time = time.time()
         total_tiles = tiles_x * tiles_y
@@ -743,7 +749,7 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
         elapsed = time.time() - start_time
         debug_lines = [
             "=" * 50,
-            "Smart Tile Prompter Turbo v1.0.3 (Z-Image-Turbo)",
+            "Smart Tile Prompter Turbo v1.0.4 (Z-Image-Turbo)",
             "=" * 50,
             f"Tiles: {tiles_x}x{tiles_y} = {total_tiles} total",
             f"Model: {model_size}",
