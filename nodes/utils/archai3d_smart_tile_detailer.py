@@ -4,7 +4,8 @@
 # Optimized pipeline for per-tile prompts
 #
 # Author: Amir Ferdos (ArchAi3d)
-# Version: 2.0.0 - Simplified: removed guide_size and feather
+# Version: 2.0.1 - Fixed mask dimension bug in F.interpolate
+#                  v2.0.0: Simplified - removed guide_size and feather
 #                  Tiles processed at original size
 #                  Use SEGS Mask Blur node for mask feathering
 # License: Dual License (Free for personal use, Commercial license required for business use)
@@ -288,13 +289,17 @@ class ArchAi3D_Smart_Tile_Detailer:
             # Use SEG mask for noise masking if available
             if seg.cropped_mask is not None:
                 mask = torch.from_numpy(seg.cropped_mask).float()
+
+                # Ensure mask is 4D (N, C, H, W) for F.interpolate
                 if mask.dim() == 2:
-                    mask = mask.unsqueeze(0)
+                    mask = mask.unsqueeze(0).unsqueeze(0)  # (H, W) -> (1, 1, H, W)
+                elif mask.dim() == 3:
+                    mask = mask.unsqueeze(0)  # (C, H, W) -> (1, C, H, W)
 
                 # Resize mask to latent size (1/8 of image)
                 latent_h = crop_h // 8
                 latent_w = crop_w // 8
-                noise_mask = F.interpolate(mask.unsqueeze(0).unsqueeze(0),
+                noise_mask = F.interpolate(mask,
                                            size=(latent_h, latent_w),
                                            mode='bilinear', align_corners=False)
                 latent["noise_mask"] = noise_mask.squeeze(0)
