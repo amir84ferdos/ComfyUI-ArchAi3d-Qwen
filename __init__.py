@@ -101,6 +101,8 @@ from .nodes.editing.archai3d_qwen_style_transfer import ArchAi3D_Qwen_Style_Tran
 
 from .nodes.utils.archai3d_mask_to_position_guide import ArchAi3D_Mask_To_Position_Guide
 from .nodes.utils.archai3d_smart_tile_calculator import ArchAi3D_Smart_Tile_Calculator
+from .nodes.utils.archai3d_smart_tile_prompter import ArchAi3D_Smart_Tile_Prompter
+from .nodes.utils.archai3d_smart_tile_segs import ArchAi3D_Smart_Tile_SEGS
 
 # ============================================================================
 # INPUT NODES (Web Interface Integration)
@@ -225,6 +227,8 @@ NODE_CLASS_MAPPINGS = {
     # Utils
     "ArchAi3D_Mask_To_Position_Guide": ArchAi3D_Mask_To_Position_Guide,
     "ArchAi3D_Smart_Tile_Calculator": ArchAi3D_Smart_Tile_Calculator,
+    "ArchAi3D_Smart_Tile_Prompter": ArchAi3D_Smart_Tile_Prompter,
+    "ArchAi3D_Smart_Tile_SEGS": ArchAi3D_Smart_Tile_SEGS,
     "ArchAi3D_Position_Guide_Prompt_Builder": ArchAi3D_Position_Guide_Prompt_Builder,
     "ArchAi3D_Simple_Position_Prompt": ArchAi3D_Simple_Position_Prompt,
     "ArchAi3D_Color_Correction_BT709": ArchAi3D_Color_Correction_BT709,
@@ -350,6 +354,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # Utils
     "ArchAi3D_Mask_To_Position_Guide": "🎯 Mask to Position Guide",
     "ArchAi3D_Smart_Tile_Calculator": "🧮 Smart Tile Calculator",
+    "ArchAi3D_Smart_Tile_Prompter": "🧩 Smart Tile Prompter",
+    "ArchAi3D_Smart_Tile_SEGS": "🧱 Smart Tile SEGS",
     "ArchAi3D_Position_Guide_Prompt_Builder": "📝 Position Guide Prompt Builder",
     "ArchAi3D_Simple_Position_Prompt": "📝 Simple Position Prompt",
     "ArchAi3D_Color_Correction_BT709": "🎨 Color Correction BT.709",
@@ -414,7 +420,7 @@ print(f"  📏 Core Utils: 1 node (Image Scale)")
 print(f"  💬 Prompt Builders: 3 nodes (Clean Room + Position Guide)")
 print(f"  📸 Camera Control: 28 nodes (Object Focus v1-v7 + Simple + dx8152)")
 print(f"  🎨 Image Editing: 4 nodes")
-print(f"  🎯 Utils: 10 nodes (Mask Crop/Rotate + Color Tools + Low VRAM)")
+print(f"  🎯 Utils: 11 nodes (Smart Tile Prompter + Color Tools + Low VRAM)")
 print(f"  🌐 Input Nodes: 9 nodes (String, Int, Float, Boolean, Load URL, Save, Conditioning Balance, Gemini)")
 print(f"  🔧 Installer Nodes: 2 nodes (Nunchaku + Dependency)")
 print(f"  ✅ Total: {len(NODE_CLASS_MAPPINGS)} nodes loaded!")

@@ -2,7 +2,7 @@
 ArchAi3D Save Image Node
 Saves an image with format options and workflow embedding control.
 
-Version: 2.0.0 - Added format selection, quality, workflow options
+Version: 2.1.0 - Fixed history registration (removed non-standard output_name from results)
 """
 
 import os
@@ -173,8 +173,7 @@ class ArchAi3D_Save_Image:
             results.append({
                 "filename": file,
                 "subfolder": subfolder,
-                "type": self.type,
-                "output_name": output_name
+                "type": self.type
             })
 
             counter += 1
