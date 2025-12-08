@@ -5,7 +5,7 @@
 # Phase 2: Generate per-tile prompts with style guide context
 #
 # Author: Amir Ferdos (ArchAi3d)
-# Version: 1.2.0 - Enhanced prompts for detailed object/furniture descriptions
+# Version: 1.6.0 - Added bundle output for one-wire connection to Conditioning
 # License: Dual License (Free for personal use, Commercial license required for business use)
 
 import base64
@@ -13,6 +13,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import signal
 import subprocess
 import time
@@ -212,6 +213,52 @@ def ensure_server_running(model_size, auto_start=True, gpu_layers=99, context_si
     return False, f"Server failed to start after 60s. Try: ./start_qwenvl_server.sh {model_short}"
 
 
+def stop_server(model_size):
+    """Stop the QwenVL server for the specified model size."""
+    config = MODEL_CONFIGS.get(model_size, MODEL_CONFIGS["4B (Balanced)"])
+    port = config['port']
+    model_short = model_size.split()[0]
+
+    if not check_server_ready(port):
+        print(f"[Smart Tile Prompter] Server for {model_short} is not running")
+        return False
+
+    try:
+        # Find and kill the process using the port
+        # Use ss to find the PID listening on the port
+        result = subprocess.run(
+            ['ss', '-tlnp', f'sport = :{port}'],
+            capture_output=True, text=True
+        )
+
+        # Parse the output to find PID
+        # Format: LISTEN 0 128 *:8033 *:* users:(("llama-server",pid=12345,fd=3))
+        output = result.stdout
+        if f':{port}' in output:
+            # Extract PID from output
+            pid_match = re.search(r'pid=(\d+)', output)
+            if pid_match:
+                pid = int(pid_match.group(1))
+                os.kill(pid, signal.SIGTERM)
+                print(f"[Smart Tile Prompter] Stopped server for {model_short} (PID {pid})")
+
+                # Wait for server to stop
+                for _ in range(10):
+                    time.sleep(0.5)
+                    if not check_server_ready(port):
+                        print(f"[Smart Tile Prompter] Server stopped successfully")
+                        return True
+
+        # Fallback: try pkill
+        subprocess.run(['pkill', '-f', f'llama-server.*{port}'], capture_output=True)
+        print(f"[Smart Tile Prompter] Sent stop signal to server on port {port}")
+        return True
+
+    except Exception as e:
+        print(f"[Smart Tile Prompter] Error stopping server: {e}")
+        return False
+
+
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
@@ -238,7 +285,7 @@ def image_to_base64(image_tensor, index=0, max_size=1024):
     return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
 
-def call_qwenvl_api(image_b64, prompt, model_size, quality_preset):
+def call_qwenvl_api(image_b64, prompt, model_size, quality_preset, seed=1):
     """Call QwenVL GGUF API and return response text."""
     config = MODEL_CONFIGS.get(model_size, MODEL_CONFIGS["4B (Balanced)"])
     port = config['port']
@@ -264,7 +311,7 @@ def call_qwenvl_api(image_b64, prompt, model_size, quality_preset):
         "top_k": preset["top_k"] if preset["top_k"] > 0 else -1,
         "min_p": preset["min_p"],
         "repeat_penalty": preset["repeat_penalty"],
-        "seed": 1,
+        "seed": seed,
         "stream": False
     }
 
@@ -357,7 +404,7 @@ def crop_tile(image_tensor, tile_x, tile_y, tiles_x, tiles_y, overlap=0):
     return cropped
 
 
-def compute_cache_key(image_tensor, tiles_x, tiles_y, model_size, quality_preset, consistency_level, user_context):
+def compute_cache_key(image_tensor, tiles_x, tiles_y, model_size, quality_preset, consistency_level, user_context, seed):
     """Create unique hash for caching."""
     hasher = hashlib.md5()
     hasher.update(image_tensor.cpu().numpy().tobytes())
@@ -366,6 +413,7 @@ def compute_cache_key(image_tensor, tiles_x, tiles_y, model_size, quality_preset
     hasher.update(quality_preset.encode())
     hasher.update(consistency_level.encode())
     hasher.update(user_context.encode())
+    hasher.update(str(seed).encode())
     return hasher.hexdigest()
 
 
@@ -386,9 +434,9 @@ class ArchAi3D_Smart_Tile_Prompter:
     """
 
     CATEGORY = "ArchAi3d/Utils"
-    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING", "INT", "INT", "STRING")
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING", "INT", "INT", "STRING", "SMART_TILE_BUNDLE")
     RETURN_NAMES = ("global_context", "tile_prompts", "tile_prompts_json",
-                    "tile_prompts_labels", "tiles_x", "tiles_y", "debug_info")
+                    "tile_prompts_labels", "tiles_x", "tiles_y", "debug_info", "bundle")
     FUNCTION = "generate"
 
     @classmethod
@@ -424,6 +472,9 @@ class ArchAi3D_Smart_Tile_Prompter:
                 }),
             },
             "optional": {
+                "bundle": ("SMART_TILE_BUNDLE", {
+                    "tooltip": "Connect bundle from Smart Tile Calculator (auto-fills tiles_x, tiles_y, image)"
+                }),
                 "user_context": ("STRING", {
                     "default": "",
                     "multiline": True,
@@ -457,19 +508,38 @@ class ArchAi3D_Smart_Tile_Prompter:
                     "step": 1024,
                     "tooltip": "Context window size in tokens"
                 }),
+                "stop_server_after": ("BOOLEAN", {
+                    "default": False,
+                    "tooltip": "Stop the QwenVL server after generating prompts (frees VRAM for diffusion)"
+                }),
+                "seed": ("INT", {
+                    "default": 1,
+                    "min": 0,
+                    "max": 0xffffffffffffffff,
+                    "tooltip": "Random seed for reproducible prompt generation"
+                }),
             }
         }
 
     def generate(self, image, tiles_x, tiles_y, model_size, quality_preset,
-                 consistency_level, user_context="", tile_overlap=0, use_cache=True,
-                 auto_start_server=True, gpu_layers=99, context_size=8192):
+                 consistency_level, bundle=None, user_context="", tile_overlap=0, use_cache=True,
+                 auto_start_server=True, gpu_layers=99, context_size=8192,
+                 stop_server_after=False, seed=1):
         """Generate consistent prompts for all tiles."""
+
+        # If bundle provided, extract values (overrides individual inputs)
+        if bundle is not None:
+            image = bundle.get("scaled_image", image)
+            tiles_x = bundle.get("tiles_x", tiles_x)
+            tiles_y = bundle.get("tiles_y", tiles_y)
+            print(f"[Smart Tile Prompter v1.6] Using bundle: {tiles_x}x{tiles_y} tiles")
 
         start_time = time.time()
         total_tiles = tiles_x * tiles_y
 
         print(f"\n[Smart Tile Prompter] Starting {tiles_x}x{tiles_y} = {total_tiles} tiles")
         print(f"  Model: {model_size}, Preset: {quality_preset}, Consistency: {consistency_level}")
+        print(f"  Seed: {seed}")
 
         # ===== CHECK SERVER =====
         server_ok, error_msg = ensure_server_running(
@@ -483,7 +553,7 @@ class ArchAi3D_Smart_Tile_Prompter:
         if use_cache:
             cache_key = compute_cache_key(
                 image, tiles_x, tiles_y, model_size, quality_preset,
-                consistency_level, user_context
+                consistency_level, user_context, seed
             )
             if cache_key in TILE_PROMPTER_CACHE:
                 print("[Smart Tile Prompter] Cache hit!")
@@ -498,7 +568,8 @@ class ArchAi3D_Smart_Tile_Prompter:
             full_image_b64,
             STYLE_GUIDE_PROMPT,
             model_size,
-            quality_preset
+            quality_preset,
+            seed=seed
         )
 
         # Add user context if provided
@@ -533,12 +604,13 @@ class ArchAi3D_Smart_Tile_Prompter:
                     consistency_rule=consistency_rule
                 )
 
-                # Call API
+                # Call API (use seed + tile_num for reproducible but unique per-tile results)
                 tile_description = call_qwenvl_api(
                     tile_b64,
                     tile_prompt,
                     model_size,
-                    quality_preset
+                    quality_preset,
+                    seed=seed + tile_num
                 )
 
                 tile_prompts_list.append({
@@ -568,13 +640,14 @@ class ArchAi3D_Smart_Tile_Prompter:
         elapsed = time.time() - start_time
         debug_lines = [
             "=" * 50,
-            "Smart Tile Prompter v1.2.0 (Enhanced Object Detection)",
+            "Smart Tile Prompter v1.6.0 (Bundle Output)",
             "=" * 50,
             f"Tiles: {tiles_x}x{tiles_y} = {total_tiles} total",
             f"Model: {model_size}",
             f"Preset: {quality_preset}",
             f"Consistency: {consistency_level}",
             f"Overlap: {tile_overlap}px",
+            f"Seed: {seed}",
             "",
             f"API Calls: {total_tiles + 1} (1 global + {total_tiles} tiles)",
             f"Total Time: {elapsed:.1f}s",
@@ -591,12 +664,29 @@ class ArchAi3D_Smart_Tile_Prompter:
 
         print(f"[Smart Tile Prompter] Done in {elapsed:.1f}s")
 
+        # Create output bundle (pass through input bundle data + add prompts)
+        output_bundle = {}
+        if bundle is not None:
+            output_bundle.update(bundle)  # Copy all data from input bundle
+        # Add/update prompt data
+        output_bundle["tile_prompts_labels"] = tile_prompts_labels
+        output_bundle["tile_prompts_list"] = tile_prompts_list  # Full list with positions
+        output_bundle["style_guide"] = style_guide
+        output_bundle["tiles_x"] = tiles_x
+        output_bundle["tiles_y"] = tiles_y
+        output_bundle["total_tiles"] = total_tiles
+
         # Cache result
         result = (style_guide, tile_prompts_combined, tile_prompts_json,
-                  tile_prompts_labels, tiles_x, tiles_y, debug_info)
+                  tile_prompts_labels, tiles_x, tiles_y, debug_info, output_bundle)
         if use_cache and cache_key:
             TILE_PROMPTER_CACHE[cache_key] = result
             print(f"[Smart Tile Prompter] Result cached ({len(TILE_PROMPTER_CACHE)} entries)")
+
+        # Stop server if requested (frees VRAM for diffusion model)
+        if stop_server_after:
+            print(f"[Smart Tile Prompter] Stopping server to free VRAM...")
+            stop_server(model_size)
 
         return result
 

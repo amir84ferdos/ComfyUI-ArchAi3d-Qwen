@@ -10,7 +10,7 @@ Email: Amir84ferdos@gmail.com
 LinkedIn: https://www.linkedin.com/in/archai3d/
 GitHub: https://github.com/amir84ferdos
 
-Version: 2.2.0 - Added scaled_image output for direct use with Smart Tile SEGS
+Version: 2.4.0 - Added SMART_TILE_BUNDLE output for one-wire connections
 License: Dual License (Free for personal use, Commercial license required for business use)
 """
 
@@ -542,12 +542,14 @@ class ArchAi3D_Smart_Tile_Calculator:
         }
 
     RETURN_TYPES = ("IMAGE", "FLOAT", "INT", "INT", "INT", "INT", "INT", "INT", "INT",
-                    "INT", "INT", "INT", "FLOAT", "FLOAT", "INT", "INT", "STRING")
+                    "INT", "INT", "INT", "FLOAT", "FLOAT", "INT", "INT", "STRING", "INT",
+                    "SMART_TILE_BUNDLE")
     RETURN_NAMES = ("scaled_image", "upscale_by", "tile_width", "tile_height",
                     "mask_blur", "tile_padding", "seam_fix_width",
                     "seam_fix_mask_blur", "seam_fix_padding",
                     "tiles_x", "tiles_y", "total_tiles",
-                    "efficiency", "crop_factor", "output_width", "output_height", "debug_info")
+                    "efficiency", "crop_factor", "output_width", "output_height", "debug_info", "guide_size",
+                    "bundle")
     FUNCTION = "calculate"
     CATEGORY = "ArchAi3d/Utils"
 
@@ -605,6 +607,9 @@ class ArchAi3D_Smart_Tile_Calculator:
         # This gives the expansion ratio around each tile for context
         crop_factor = (tile_w + 2 * tile_padding) / tile_w
 
+        # Calculate guide_size for Detailer (SEGS) - use larger tile dimension
+        guide_size = max(tile_w, tile_h)
+
         # Determine algorithm used
         if is_perfect:
             algo_status = "PERFECT ALIGNMENT (100% efficiency)"
@@ -614,7 +619,7 @@ class ArchAi3D_Smart_Tile_Calculator:
         # Build debug info
         debug_lines = [
             "=" * 50,
-            "Smart Tile Calculator v2.2 (Two-Phase Algorithm)",
+            "Smart Tile Calculator v2.4 (Bundle Output)",
             "=" * 50,
             f"Input: {width}x{height} ({aspect_ratio:.3f} aspect ratio)",
             f"Target: {target_upscale}x upscale, tiles {min_tile_mp}-{max_tile_mp}MP",
@@ -632,6 +637,7 @@ class ArchAi3D_Smart_Tile_Calculator:
             f"seam_fix_mask_blur: {seam_fix_mask_blur}",
             f"seam_fix_padding: {seam_fix_padding}",
             f"crop_factor: {crop_factor:.3f} (for Smart Tile SEGS)",
+            f"guide_size: {guide_size} (for Detailer SEGS)",
             "",
             "--- Efficiency ---",
             f"Tiles: {tiles_x}x{tiles_y} = {total_tiles} total",
@@ -643,7 +649,7 @@ class ArchAi3D_Smart_Tile_Calculator:
 
         # Log to console
         perfect_tag = " [PERFECT]" if is_perfect else ""
-        print(f"\n[Smart Tile Calculator v2.2]{perfect_tag}")
+        print(f"\n[Smart Tile Calculator v2.4]{perfect_tag}")
         print(f"  Input: {width}x{height} → Tile: {tile_w}x{tile_h} ({actual_tile_mp:.2f}MP)")
         print(f"  Upscale: {best_upscale}x → Output: {output_width}x{output_height}")
         print(f"  Overlap: {scaling_mode}, scale={overlap_scale:.0%} (blur={mask_blur}, pad={tile_padding})")
@@ -655,6 +661,27 @@ class ArchAi3D_Smart_Tile_Calculator:
         scaled = F.interpolate(img_permuted, size=(output_height, output_width), mode='bilinear', align_corners=False)
         scaled_image = scaled.permute(0, 2, 3, 1)  # Back to (B, H, W, C)
         print(f"  Scaled image: {width}x{height} → {output_width}x{output_height}")
+
+        # Create bundle with all tile data (for one-wire connections)
+        bundle = {
+            "scaled_image": scaled_image,
+            "tile_width": tile_w,
+            "tile_height": tile_h,
+            "tiles_x": tiles_x,
+            "tiles_y": tiles_y,
+            "total_tiles": total_tiles,
+            "tile_padding": tile_padding,
+            "mask_blur": mask_blur,
+            "crop_factor": round(crop_factor, 3),
+            "guide_size": guide_size,
+            "seam_fix_width": seam_fix_width,
+            "seam_fix_mask_blur": seam_fix_mask_blur,
+            "seam_fix_padding": seam_fix_padding,
+            "upscale_by": best_upscale,
+            "output_width": output_width,
+            "output_height": output_height,
+            "efficiency": round(efficiency, 4),
+        }
 
         return (
             scaled_image,
@@ -673,7 +700,9 @@ class ArchAi3D_Smart_Tile_Calculator:
             round(crop_factor, 3),
             output_width,
             output_height,
-            debug_info
+            debug_info,
+            guide_size,
+            bundle
         )
 
 

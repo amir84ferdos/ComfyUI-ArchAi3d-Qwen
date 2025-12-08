@@ -2,7 +2,7 @@
 ArchAi3D Save Image Node
 Saves an image with format options and workflow embedding control.
 
-Version: 2.1.0 - Fixed history registration (removed non-standard output_name from results)
+Version: 2.2.0 - Added debug output for API troubleshooting
 """
 
 import os
@@ -177,5 +177,10 @@ class ArchAi3D_Save_Image:
             })
 
             counter += 1
+
+        # Debug output for API troubleshooting
+        print(f"\n[ArchAi3D Save Image] Saved {len(results)} image(s)")
+        for r in results:
+            print(f"  - filename: {r['filename']}, subfolder: '{r['subfolder']}', type: {r['type']}")
 
         return {"ui": {"images": results}}

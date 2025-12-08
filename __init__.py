@@ -103,6 +103,8 @@ from .nodes.utils.archai3d_mask_to_position_guide import ArchAi3D_Mask_To_Positi
 from .nodes.utils.archai3d_smart_tile_calculator import ArchAi3D_Smart_Tile_Calculator
 from .nodes.utils.archai3d_smart_tile_prompter import ArchAi3D_Smart_Tile_Prompter
 from .nodes.utils.archai3d_smart_tile_segs import ArchAi3D_Smart_Tile_SEGS
+from .nodes.utils.archai3d_smart_tile_conditioning import ArchAi3D_Smart_Tile_Conditioning
+from .nodes.utils.archai3d_smart_tile_detailer import ArchAi3D_Smart_Tile_Detailer
 
 # ============================================================================
 # INPUT NODES (Web Interface Integration)
@@ -229,6 +231,8 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_Smart_Tile_Calculator": ArchAi3D_Smart_Tile_Calculator,
     "ArchAi3D_Smart_Tile_Prompter": ArchAi3D_Smart_Tile_Prompter,
     "ArchAi3D_Smart_Tile_SEGS": ArchAi3D_Smart_Tile_SEGS,
+    "ArchAi3D_Smart_Tile_Conditioning": ArchAi3D_Smart_Tile_Conditioning,
+    "ArchAi3D_Smart_Tile_Detailer": ArchAi3D_Smart_Tile_Detailer,
     "ArchAi3D_Position_Guide_Prompt_Builder": ArchAi3D_Position_Guide_Prompt_Builder,
     "ArchAi3D_Simple_Position_Prompt": ArchAi3D_Simple_Position_Prompt,
     "ArchAi3D_Color_Correction_BT709": ArchAi3D_Color_Correction_BT709,
@@ -356,6 +360,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Smart_Tile_Calculator": "🧮 Smart Tile Calculator",
     "ArchAi3D_Smart_Tile_Prompter": "🧩 Smart Tile Prompter",
     "ArchAi3D_Smart_Tile_SEGS": "🧱 Smart Tile SEGS",
+    "ArchAi3D_Smart_Tile_Conditioning": "🎯 Smart Tile Conditioning",
+    "ArchAi3D_Smart_Tile_Detailer": "🔧 Smart Tile Detailer",
     "ArchAi3D_Position_Guide_Prompt_Builder": "📝 Position Guide Prompt Builder",
     "ArchAi3D_Simple_Position_Prompt": "📝 Simple Position Prompt",
     "ArchAi3D_Color_Correction_BT709": "🎨 Color Correction BT.709",

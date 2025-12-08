@@ -4,7 +4,7 @@
 # Compatible with Impact Pack's DetailerForEach and SEGSLabelAssign
 #
 # Author: Amir Ferdos (ArchAi3d)
-# Version: 1.2.0 - Fixed tile positioning to use step size (tile - padding) for proper overlap
+# Version: 1.3.0 - Added SMART_TILE_BUNDLE input for one-wire connections
 # License: Dual License (Free for personal use, Commercial license required for business use)
 
 import numpy as np
@@ -230,6 +230,9 @@ class ArchAi3D_Smart_Tile_SEGS:
                 }),
             },
             "optional": {
+                "bundle": ("SMART_TILE_BUNDLE", {
+                    "tooltip": "Connect bundle from Smart Tile Calculator (overrides individual inputs)"
+                }),
                 "filter_in_segs_opt": ("SEGS", {
                     "tooltip": "Only include tiles that overlap with these SEGS (e.g., face detection)"
                 }),
@@ -254,7 +257,7 @@ class ArchAi3D_Smart_Tile_SEGS:
         }
 
     def create_segs(self, image, tile_width, tile_height, tiles_x, tiles_y,
-                    tile_padding, filter_in_segs_opt=None, filter_out_segs_opt=None,
+                    tile_padding, bundle=None, filter_in_segs_opt=None, filter_out_segs_opt=None,
                     crop_factor=1.5, mask_irregularity=0.0):
         """
         Create SEGS from explicit tile grid.
@@ -266,6 +269,17 @@ class ArchAi3D_Smart_Tile_SEGS:
         - filter_in_segs_opt: Only include tiles that overlap with these SEGS
         - filter_out_segs_opt: Exclude tiles that overlap with these SEGS
         """
+        # If bundle provided, extract values (overrides individual inputs)
+        if bundle is not None:
+            image = bundle.get("scaled_image", image)
+            tile_width = bundle.get("tile_width", tile_width)
+            tile_height = bundle.get("tile_height", tile_height)
+            tiles_x = bundle.get("tiles_x", tiles_x)
+            tiles_y = bundle.get("tiles_y", tiles_y)
+            tile_padding = bundle.get("tile_padding", tile_padding)
+            crop_factor = bundle.get("crop_factor", crop_factor)
+            print(f"[Smart Tile SEGS v1.3] Using bundle: {tiles_x}x{tiles_y} tiles, {tile_width}x{tile_height}px")
+
         # Get image dimensions (B, H, W, C)
         _, ih, iw, _ = image.shape
 
@@ -287,7 +301,7 @@ class ArchAi3D_Smart_Tile_SEGS:
         step_w = tile_width - tile_padding
         step_h = tile_height - tile_padding
 
-        print(f"\n[Smart Tile SEGS v1.2] Creating SEGS for {tiles_x}x{tiles_y} = {total_tiles} tiles")
+        print(f"\n[Smart Tile SEGS v1.3] Creating SEGS for {tiles_x}x{tiles_y} = {total_tiles} tiles")
         print(f"  Image: {iw}x{ih}, Tile: {tile_width}x{tile_height}, Padding: {tile_padding}")
         print(f"  Step: {step_w}x{step_h}, Crop factor: {crop_factor}")
 
@@ -355,9 +369,9 @@ class ArchAi3D_Smart_Tile_SEGS:
         result = ((ih, iw), segs)
 
         if filtered_count > 0:
-            print(f"[Smart Tile SEGS v1.2] Created {len(segs)} SEGS segments ({filtered_count} filtered out)")
+            print(f"[Smart Tile SEGS v1.3] Created {len(segs)} SEGS segments ({filtered_count} filtered out)")
         else:
-            print(f"[Smart Tile SEGS v1.2] Created {len(segs)} SEGS segments")
+            print(f"[Smart Tile SEGS v1.3] Created {len(segs)} SEGS segments")
 
         return (result,)
 
