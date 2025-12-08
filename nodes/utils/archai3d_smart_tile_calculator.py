@@ -10,7 +10,7 @@ Email: Amir84ferdos@gmail.com
 LinkedIn: https://www.linkedin.com/in/archai3d/
 GitHub: https://github.com/amir84ferdos
 
-Version: 1.2.0 - Comprehensive tile+upscale optimization (2D search)
+Version: 1.3.0 - Added min_tile_mp for controllable tile size range
 License: Dual License (Free for personal use, Commercial license required for business use)
 """
 
@@ -198,12 +198,12 @@ def find_optimal_upscale(input_w: int, input_h: int, tile_w: int, tile_h: int,
 
 def find_optimal_tile_and_upscale(input_w: int, input_h: int, aspect_ratio: float,
                                    target_upscale: float, upscale_tolerance: float,
-                                   max_tile_mp: float, scaling_mode: str,
-                                   overlap_scale: float) -> dict:
+                                   min_tile_mp: float, max_tile_mp: float,
+                                   scaling_mode: str, overlap_scale: float) -> dict:
     """
     Comprehensive 2D search: find best combination of tile size AND upscale factor.
 
-    Searches tile sizes from 0.5MP to max_tile_mp, and upscales within tolerance,
+    Searches tile sizes from min_tile_mp to max_tile_mp, and upscales within tolerance,
     to find the combination with maximum efficiency.
 
     Args:
@@ -211,6 +211,7 @@ def find_optimal_tile_and_upscale(input_w: int, input_h: int, aspect_ratio: floa
         aspect_ratio: Width / Height ratio
         target_upscale: User's desired upscale factor
         upscale_tolerance: How much upscale can deviate (e.g., 0.5 = ±50%)
+        min_tile_mp: Minimum megapixels per tile to search
         max_tile_mp: Maximum megapixels per tile (e.g., 2.0 for z-image-turbo)
         scaling_mode: "Proportional" or "Fixed" for blur/padding
         overlap_scale: Global multiplier for overlap parameters
@@ -221,8 +222,8 @@ def find_optimal_tile_and_upscale(input_w: int, input_h: int, aspect_ratio: floa
     best_result = None
     best_efficiency = 0
 
-    # Search tile sizes from 1.0MP to max_tile_mp (in 0.25MP steps)
-    tile_mp = 1.0
+    # Search tile sizes from min_tile_mp to max_tile_mp (in 0.25MP steps)
+    tile_mp = min_tile_mp
     while tile_mp <= max_tile_mp:
         # Calculate tile dimensions for this MP
         tile_w, tile_h = find_optimal_tile_size(aspect_ratio, tile_mp, divisor=8)
@@ -338,12 +339,19 @@ class ArchAi3D_Smart_Tile_Calculator:
                     "step": 0.05,
                     "tooltip": "Desired upscale factor (will be optimized within tolerance)"
                 }),
-                "max_tile_mp": ("FLOAT", {
-                    "default": 2.0,
-                    "min": 1.0,
+                "min_tile_mp": ("FLOAT", {
+                    "default": 1.0,
+                    "min": 0.5,
                     "max": 4.0,
                     "step": 0.25,
-                    "tooltip": "MAXIMUM tile megapixels (2.0 for z-image-turbo). Node searches 1.0MP to this value."
+                    "tooltip": "MINIMUM tile megapixels to search. Set equal to max for fixed tile size."
+                }),
+                "max_tile_mp": ("FLOAT", {
+                    "default": 2.0,
+                    "min": 0.5,
+                    "max": 4.0,
+                    "step": 0.25,
+                    "tooltip": "MAXIMUM tile megapixels (2.0 for z-image-turbo). Node searches min to max."
                 }),
                 "upscale_tolerance": ("FLOAT", {
                     "default": 0.5,
@@ -376,11 +384,11 @@ class ArchAi3D_Smart_Tile_Calculator:
     FUNCTION = "calculate"
     CATEGORY = "ArchAi3d/Utils"
 
-    def calculate(self, image, target_upscale, max_tile_mp, upscale_tolerance, scaling_mode, overlap_scale):
+    def calculate(self, image, target_upscale, min_tile_mp, max_tile_mp, upscale_tolerance, scaling_mode, overlap_scale):
         """
         Calculate optimal tile size and upscale factor using comprehensive 2D search.
 
-        Searches through tile sizes (1MP to max_tile_mp) and upscale factors (within tolerance)
+        Searches through tile sizes (min_tile_mp to max_tile_mp) and upscale factors (within tolerance)
         to find the combination with maximum efficiency.
 
         Returns all values needed for Ultimate SD Upscale.
@@ -389,6 +397,10 @@ class ArchAi3D_Smart_Tile_Calculator:
         _, height, width, _ = image.shape
         aspect_ratio = width / height
 
+        # Ensure min <= max
+        if min_tile_mp > max_tile_mp:
+            min_tile_mp, max_tile_mp = max_tile_mp, min_tile_mp
+
         # Comprehensive 2D search: find best tile size AND upscale combo
         result = find_optimal_tile_and_upscale(
             input_w=width,
@@ -396,6 +408,7 @@ class ArchAi3D_Smart_Tile_Calculator:
             aspect_ratio=aspect_ratio,
             target_upscale=target_upscale,
             upscale_tolerance=upscale_tolerance,
+            min_tile_mp=min_tile_mp,
             max_tile_mp=max_tile_mp,
             scaling_mode=scaling_mode,
             overlap_scale=overlap_scale
@@ -422,11 +435,11 @@ class ArchAi3D_Smart_Tile_Calculator:
         # Build debug info
         debug_lines = [
             "=" * 50,
-            "Smart Tile Calculator v1.2 (2D Search)",
+            "Smart Tile Calculator v1.3 (2D Search)",
             "=" * 50,
             f"Input: {width}x{height} ({aspect_ratio:.3f} aspect ratio)",
-            f"Target: {target_upscale}x upscale, max {max_tile_mp}MP tiles",
-            f"Search: tiles 1.0-{max_tile_mp}MP, upscale ±{upscale_tolerance*100:.0f}%",
+            f"Target: {target_upscale}x upscale, tiles {min_tile_mp}-{max_tile_mp}MP",
+            f"Search: tiles {min_tile_mp}-{max_tile_mp}MP, upscale ±{upscale_tolerance*100:.0f}%",
             "",
             "--- OPTIMIZED Values ---",
             f"Tile Size: {tile_w}x{tile_h} ({actual_tile_mp:.2f}MP)",
@@ -449,7 +462,7 @@ class ArchAi3D_Smart_Tile_Calculator:
         debug_info = "\n".join(debug_lines)
 
         # Log to console
-        print(f"\n[Smart Tile Calculator v1.2]")
+        print(f"\n[Smart Tile Calculator v1.3]")
         print(f"  Input: {width}x{height} → Tile: {tile_w}x{tile_h} ({actual_tile_mp:.2f}MP)")
         print(f"  Upscale: {best_upscale}x → Output: {output_width}x{output_height}")
         print(f"  Overlap: {scaling_mode}, scale={overlap_scale:.0%} (blur={mask_blur}, pad={tile_padding})")
