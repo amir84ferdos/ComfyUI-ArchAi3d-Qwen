@@ -7,7 +7,7 @@
 #   3. Text Transcription - verbatim text in quotes
 #
 # Author: Amir Ferdos (ArchAi3d)
-# Version: 1.0.4 - Added photorealistic style tags + sharpness cues
+# Version: 1.0.5 - Fixed stop_server: added SIGKILL fallback + fuser + pkill patterns
 # License: Dual License (Free for personal use, Commercial license required for business use)
 
 import base64
@@ -274,39 +274,75 @@ def stop_server(model_size):
     model_short = model_size.split()[0]
 
     if not check_server_ready(port):
-        print(f"[Smart Tile Prompter Turbo] Server for {model_short} is not running")
+        print(f"[Smart Tile Prompter Turbo] Server for {model_short} is not running on port {port}")
         return False
 
+    print(f"[Smart Tile Prompter Turbo] Stopping server for {model_short} on port {port}...")
+
     try:
-        # Find and kill the process using the port
-        # Use ss to find the PID listening on the port
+        # Method 1: Find PID via ss and kill it
         result = subprocess.run(
             ['ss', '-tlnp', f'sport = :{port}'],
             capture_output=True, text=True
         )
 
-        # Parse the output to find PID
-        # Format: LISTEN 0 128 *:8033 *:* users:(("llama-server",pid=12345,fd=3))
         output = result.stdout
+        pid = None
         if f':{port}' in output:
-            # Extract PID from output
             pid_match = re.search(r'pid=(\d+)', output)
             if pid_match:
                 pid = int(pid_match.group(1))
-                os.kill(pid, signal.SIGTERM)
-                print(f"[Smart Tile Prompter Turbo] Stopped server for {model_short} (PID {pid})")
 
-                # Wait for server to stop
-                for _ in range(10):
-                    time.sleep(0.5)
-                    if not check_server_ready(port):
-                        print(f"[Smart Tile Prompter Turbo] Server stopped successfully")
-                        return True
+        if pid:
+            # Try SIGTERM first
+            print(f"  Found PID {pid}, sending SIGTERM...")
+            os.kill(pid, signal.SIGTERM)
 
-        # Fallback: try pkill
-        subprocess.run(['pkill', '-f', f'llama-server.*{port}'], capture_output=True)
-        print(f"[Smart Tile Prompter Turbo] Sent stop signal to server on port {port}")
-        return True
+            # Wait up to 5 seconds for graceful shutdown
+            for i in range(10):
+                time.sleep(0.5)
+                if not check_server_ready(port):
+                    print(f"[Smart Tile Prompter Turbo] Server stopped successfully (SIGTERM)")
+                    return True
+
+            # SIGTERM didn't work, try SIGKILL
+            print(f"  SIGTERM failed, sending SIGKILL...")
+            try:
+                os.kill(pid, signal.SIGKILL)
+                time.sleep(1)
+                if not check_server_ready(port):
+                    print(f"[Smart Tile Prompter Turbo] Server stopped successfully (SIGKILL)")
+                    return True
+            except ProcessLookupError:
+                # Process already dead
+                print(f"[Smart Tile Prompter Turbo] Server stopped successfully")
+                return True
+
+        # Method 2: Fallback - use fuser to kill process on port
+        print(f"  Trying fuser to kill port {port}...")
+        subprocess.run(['fuser', '-k', f'{port}/tcp'], capture_output=True)
+        time.sleep(1)
+        if not check_server_ready(port):
+            print(f"[Smart Tile Prompter Turbo] Server stopped successfully (fuser)")
+            return True
+
+        # Method 3: Fallback - pkill with multiple patterns
+        print(f"  Trying pkill patterns...")
+        patterns = [
+            f'llama-server.*--port.*{port}',
+            f'llama-server.*{port}',
+            f'llama.*{port}',
+        ]
+        for pattern in patterns:
+            subprocess.run(['pkill', '-9', '-f', pattern], capture_output=True)
+
+        time.sleep(1)
+        if not check_server_ready(port):
+            print(f"[Smart Tile Prompter Turbo] Server stopped successfully (pkill)")
+            return True
+
+        print(f"[Smart Tile Prompter Turbo] WARNING: Could not stop server on port {port}")
+        return False
 
     except Exception as e:
         print(f"[Smart Tile Prompter Turbo] Error stopping server: {e}")
@@ -638,7 +674,7 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
             image = bundle.get("scaled_image", image)
             tiles_x = bundle.get("tiles_x", tiles_x)
             tiles_y = bundle.get("tiles_y", tiles_y)
-            print(f"[Smart Tile Prompter Turbo v1.0.4] Using bundle: {tiles_x}x{tiles_y} tiles")
+            print(f"[Smart Tile Prompter Turbo v1.0.5] Using bundle: {tiles_x}x{tiles_y} tiles")
 
         start_time = time.time()
         total_tiles = tiles_x * tiles_y
@@ -749,7 +785,7 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
         elapsed = time.time() - start_time
         debug_lines = [
             "=" * 50,
-            "Smart Tile Prompter Turbo v1.0.4 (Z-Image-Turbo)",
+            "Smart Tile Prompter Turbo v1.0.5 (Z-Image-Turbo)",
             "=" * 50,
             f"Tiles: {tiles_x}x{tiles_y} = {total_tiles} total",
             f"Model: {model_size}",
