@@ -9,7 +9,7 @@ Description:
     Download models from HuggingFace with maximum speed using huggingface_hub.
     Features parallel downloads, resume support, progress indicator, and custom rename option.
 
-Version: 2.3.0 - Fallback for older huggingface_hub versions
+Version: 2.4.0 - Auto-upgrade huggingface_hub for progress bar support
 """
 
 import os
@@ -208,14 +208,33 @@ class ArchAi3D_HF_Download:
                 )
             except TypeError as te:
                 if "tqdm_class" in str(te):
-                    # Fallback for older huggingface_hub versions (< 0.17.0)
-                    print("[ArchAi3D HF Download] Note: Update huggingface_hub for progress bar (pip install -U huggingface_hub)")
-                    downloaded_path = hf_hub_download(
-                        repo_id=repo_id,
-                        filename=filename,
-                        token=token,
-                        force_download=overwrite,
-                    )
+                    # Auto-upgrade huggingface_hub for progress bar support
+                    print("[ArchAi3D HF Download] Upgrading huggingface_hub for progress bar support...")
+                    import subprocess
+                    try:
+                        subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", "huggingface_hub", "-q"])
+                        print("[ArchAi3D HF Download] Upgrade complete! Retrying with progress bar...")
+                        # Reload the module to get updated function
+                        import importlib
+                        import huggingface_hub
+                        importlib.reload(huggingface_hub)
+                        from huggingface_hub import hf_hub_download as hf_download_new
+                        downloaded_path = hf_download_new(
+                            repo_id=repo_id,
+                            filename=filename,
+                            token=token,
+                            force_download=overwrite,
+                            tqdm_class=tqdm_cls,
+                        )
+                    except Exception as upgrade_error:
+                        # If upgrade fails, continue without progress bar
+                        print(f"[ArchAi3D HF Download] Auto-upgrade failed, continuing without progress bar: {upgrade_error}")
+                        downloaded_path = hf_hub_download(
+                            repo_id=repo_id,
+                            filename=filename,
+                            token=token,
+                            force_download=overwrite,
+                        )
                 else:
                     raise
 
