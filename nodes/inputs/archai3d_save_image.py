@@ -2,7 +2,10 @@
 ArchAi3D Save Image Node
 Saves an image with format options and workflow embedding control.
 
-Version: 2.2.0 - Added debug output for API troubleshooting
+Version: 3.0.0 - Fixed API/history registration for RunPod compatibility
+- Changed FUNCTION to "save_images" to match standard SaveImage
+- Fixed filename format with trailing underscore
+- Added verbose debug logging for API troubleshooting
 """
 
 import os
@@ -78,7 +81,7 @@ class ArchAi3D_Save_Image:
         }
 
     RETURN_TYPES = ()
-    FUNCTION = "execute"
+    FUNCTION = "save_images"  # Match standard SaveImage for proper history registration
     OUTPUT_NODE = True
     CATEGORY = "ArchAi3d/Inputs"
 
@@ -86,17 +89,24 @@ class ArchAi3D_Save_Image:
         """Find the next available counter to avoid overwriting files."""
         counter = 1
         while True:
-            test_file = os.path.join(folder, f"{filename_prefix}_{counter:05d}.{ext}")
+            # Match standard SaveImage format: filename_00001_.ext
+            test_file = os.path.join(folder, f"{filename_prefix}_{counter:05}_.{ext}")
             if not os.path.exists(test_file):
                 return counter
             counter += 1
 
-    def execute(self, images, save=True, filename_prefix="ComfyUI", format="PNG",
-                quality=95, embed_workflow=True, save_workflow_json=False,
-                output_name="output_image", prompt=None, extra_pnginfo=None):
+    def save_images(self, images, save=True, filename_prefix="ComfyUI", format="PNG",
+                    quality=95, embed_workflow=True, save_workflow_json=False,
+                    output_name="output_image", prompt=None, extra_pnginfo=None):
+        """
+        Save images with proper ComfyUI history registration.
+
+        Returns {"ui": {"images": results}} for history registration.
+        """
         # If save is False, return empty results (no saving)
         if not save:
-            return {"ui": {"images": []}}
+            print("[ArchAi3D Save Image v3.0] save=False, skipping save")
+            return { "ui": { "images": [] } }
 
         filename_prefix += self.prefix_append
 
@@ -119,10 +129,11 @@ class ArchAi3D_Save_Image:
             img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
 
             # Generate filename with batch number if multiple images
+            # Format matches standard SaveImage: filename_00001_.ext (trailing underscore)
             if len(images) > 1:
-                file = f"{filename}_{batch_number:05d}_{counter:05d}.{ext}"
+                file = f"{filename}_{batch_number:05}_{counter:05}_.{ext}"
             else:
-                file = f"{filename}_{counter:05d}.{ext}"
+                file = f"{filename}_{counter:05}_.{ext}"
 
             filepath = os.path.join(full_output_folder, file)
 
@@ -130,9 +141,9 @@ class ArchAi3D_Save_Image:
             while os.path.exists(filepath):
                 counter += 1
                 if len(images) > 1:
-                    file = f"{filename}_{batch_number:05d}_{counter:05d}.{ext}"
+                    file = f"{filename}_{batch_number:05}_{counter:05}_.{ext}"
                 else:
-                    file = f"{filename}_{counter:05d}.{ext}"
+                    file = f"{filename}_{counter:05}_.{ext}"
                 filepath = os.path.join(full_output_folder, file)
 
             # Save based on format
@@ -178,9 +189,11 @@ class ArchAi3D_Save_Image:
 
             counter += 1
 
-        # Debug output for API troubleshooting
-        print(f"\n[ArchAi3D Save Image] Saved {len(results)} image(s)")
-        for r in results:
-            print(f"  - filename: {r['filename']}, subfolder: '{r['subfolder']}', type: {r['type']}")
+        # Verbose debug output for API/history troubleshooting
+        print(f"\n[ArchAi3D Save Image v3.0] Returning to ComfyUI history:")
+        print(f"  Node output: {{'ui': {{'images': {len(results)} items}}}}")
+        for i, r in enumerate(results):
+            print(f"    [{i}] filename={r['filename']}, subfolder='{r['subfolder']}', type={r['type']}")
 
-        return {"ui": {"images": results}}
+        # Return format MUST match standard SaveImage exactly for history registration
+        return { "ui": { "images": results } }
