@@ -4,7 +4,7 @@
 # Use before DetailerForEach or Smart Tile Detailer for seamless blending
 #
 # Author: Amir Ferdos (ArchAi3d)
-# Version: 1.0.0
+# Version: 1.0.1 - Added debug output for mask values
 # License: Dual License (Free for personal use, Commercial license required for business use)
 
 import numpy as np
@@ -97,6 +97,9 @@ class ArchAi3D_SEGS_Mask_Blur:
             if mask_np.ndim == 3:
                 mask_np = mask_np.squeeze()
 
+            # Debug: show original mask stats
+            orig_min, orig_max = mask_np.min(), mask_np.max()
+
             # Convert to uint8 for PIL
             mask_uint8 = (mask_np * 255).astype(np.uint8)
             mask_pil = Image.fromarray(mask_uint8, mode='L')
@@ -106,6 +109,19 @@ class ArchAi3D_SEGS_Mask_Blur:
 
             # Convert back to numpy float
             blurred_np = np.array(blurred_pil).astype(np.float32) / 255.0
+
+            # Debug: show blurred mask stats and edge values
+            if i == 0:  # Only print for first segment
+                h, w = blurred_np.shape
+                edge_vals = [
+                    blurred_np[0, w//2],           # top edge center
+                    blurred_np[h-1, w//2],         # bottom edge center
+                    blurred_np[h//2, 0],           # left edge center
+                    blurred_np[h//2, w-1],         # right edge center
+                    blurred_np[h//2, w//2],        # center
+                ]
+                print(f"  Mask[0] before blur: min={orig_min:.2f}, max={orig_max:.2f}")
+                print(f"  Mask[0] after blur: edges=[{edge_vals[0]:.2f}, {edge_vals[1]:.2f}, {edge_vals[2]:.2f}, {edge_vals[3]:.2f}], center={edge_vals[4]:.2f}")
 
             # Create new SEG with blurred mask
             new_seg = SEG(
