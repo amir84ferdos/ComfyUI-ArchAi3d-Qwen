@@ -7,7 +7,7 @@
 #   3. Text Transcription - verbatim text in quotes
 #
 # Author: Amir Ferdos (ArchAi3d)
-# Version: 1.0.0 - Z-Image-Turbo optimized prompts
+# Version: 1.0.1 - Fixed: no meta-commentary, shorter prompts for CLIP
 # License: Dual License (Free for personal use, Commercial license required for business use)
 
 import base64
@@ -139,8 +139,13 @@ Write a DENSE PARAGRAPH description of this tile region following this 3-step st
 
 3. TEXT (if any) - End with any visible text in "double quotes"
 
-CRITICAL: Write as a FLOWING PARAGRAPH, not bullet points or categories.
-The description should read like professional art direction (150-200 words).
+CRITICAL RULES:
+- Write as a FLOWING PARAGRAPH, not bullet points or categories
+- Keep it to 100-150 words (CLIP has token limits)
+- Do NOT include notes, disclaimers, meta-commentary, or explanations
+- Do NOT write "No text is visible" - just end the paragraph if no text exists
+- If text IS visible, end with it in quotes (e.g., The sign reads "OPEN")
+- Output ONLY the description paragraph, nothing else
 
 Example format:
 "A leather armchair occupies the left foreground, its worn brown surface showing subtle creasing at the armrests. Soft window light from the upper right creates a gentle gradient across the seat cushion, with shadows pooling beneath the curved wooden legs. The floor beneath reveals aged oak planks with honey-colored grain running diagonally..."
@@ -673,7 +678,7 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
         elapsed = time.time() - start_time
         debug_lines = [
             "=" * 50,
-            "Smart Tile Prompter Turbo v1.0 (Z-Image-Turbo)",
+            "Smart Tile Prompter Turbo v1.0.1 (Z-Image-Turbo)",
             "=" * 50,
             f"Tiles: {tiles_x}x{tiles_y} = {total_tiles} total",
             f"Model: {model_size}",
