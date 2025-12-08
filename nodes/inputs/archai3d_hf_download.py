@@ -9,7 +9,7 @@ Description:
     Download models from HuggingFace with maximum speed using huggingface_hub.
     Features parallel downloads, resume support, progress indicator, and custom rename option.
 
-Version: 2.2.0 - Fixed progress visibility & multi-connection
+Version: 2.3.0 - Fallback for older huggingface_hub versions
 """
 
 import os
@@ -197,13 +197,27 @@ class ArchAi3D_HF_Download:
             tqdm_cls = partial(ComfyUITqdm, node_id=node_id)
 
             # Download to cache first (fast, parallel, resumable)
-            downloaded_path = hf_hub_download(
-                repo_id=repo_id,
-                filename=filename,
-                token=token,
-                force_download=overwrite,
-                tqdm_class=tqdm_cls,  # Shows progress in ComfyUI!
-            )
+            # Try with tqdm_class first (requires huggingface_hub >= 0.17.0)
+            try:
+                downloaded_path = hf_hub_download(
+                    repo_id=repo_id,
+                    filename=filename,
+                    token=token,
+                    force_download=overwrite,
+                    tqdm_class=tqdm_cls,  # Shows progress in ComfyUI!
+                )
+            except TypeError as te:
+                if "tqdm_class" in str(te):
+                    # Fallback for older huggingface_hub versions (< 0.17.0)
+                    print("[ArchAi3D HF Download] Note: Update huggingface_hub for progress bar (pip install -U huggingface_hub)")
+                    downloaded_path = hf_hub_download(
+                        repo_id=repo_id,
+                        filename=filename,
+                        token=token,
+                        force_download=overwrite,
+                    )
+                else:
+                    raise
 
             # Copy/move to final destination with custom name
             print(f"[ArchAi3D HF Download] Copying to destination...")
