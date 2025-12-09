@@ -18,12 +18,12 @@ class ArchAi3D_Batch_Text_Encode:
     This allows different prompts for each image in a batch, processed in a single
     GPU forward pass.
 
-    Works with: SD1.5, SD2.x, Flux, and other non-SDXL models.
+    Works with: SD1.5, SD2.x, Flux, Z-Image, and other models.
     """
 
     CATEGORY = "ArchAi3d/Conditioning"
-    RETURN_TYPES = ("CONDITIONING", "INT")
-    RETURN_NAMES = ("conditioning", "batch_size")
+    RETURN_TYPES = ("CONDITIONING", "INT", "STRING")
+    RETURN_NAMES = ("conditioning", "batch_size", "debug_info")
     FUNCTION = "encode_batch"
 
     @classmethod
@@ -96,9 +96,29 @@ class ArchAi3D_Batch_Text_Encode:
 
         conditioning = [[batched_cond, result_dict]]
 
+        # Build debug info
+        debug_lines = [
+            "=" * 50,
+            f"📦 Batch Text Encode Debug",
+            "=" * 50,
+            f"Separator: {separator}",
+            f"Batch size: {batch_size}",
+            f"Output shape: {batched_cond.shape}",
+            f"Max sequence length: {max_seq_len} tokens",
+            "",
+            "Parsed Prompts:",
+            "-" * 50,
+        ]
+        for i, prompt in enumerate(prompt_list):
+            # Truncate long prompts for display
+            display_prompt = prompt[:100] + "..." if len(prompt) > 100 else prompt
+            debug_lines.append(f"[{i+1}] {display_prompt}")
+        debug_lines.append("=" * 50)
+        debug_info = "\n".join(debug_lines)
+
         print(f"[Batch Text Encode] Output shape: {batched_cond.shape} (padded to {max_seq_len} tokens)")
 
-        return (conditioning, batch_size)
+        return (conditioning, batch_size, debug_info)
 
 
 class ArchAi3D_Batch_Text_Encode_SDXL:
@@ -109,8 +129,8 @@ class ArchAi3D_Batch_Text_Encode_SDXL:
     """
 
     CATEGORY = "ArchAi3d/Conditioning"
-    RETURN_TYPES = ("CONDITIONING", "INT")
-    RETURN_NAMES = ("conditioning", "batch_size")
+    RETURN_TYPES = ("CONDITIONING", "INT", "STRING")
+    RETURN_NAMES = ("conditioning", "batch_size", "debug_info")
     FUNCTION = "encode_batch"
 
     @classmethod
@@ -227,9 +247,30 @@ class ArchAi3D_Batch_Text_Encode_SDXL:
 
         conditioning = [[batched_cond, result_dict]]
 
+        # Build debug info
+        debug_lines = [
+            "=" * 50,
+            f"📦 Batch Text Encode SDXL Debug",
+            "=" * 50,
+            f"Separator: {separator}",
+            f"Batch size: {batch_size}",
+            f"Output shape: {batched_cond.shape}",
+            f"Max sequence length: {max_seq_len} tokens",
+            f"Resolution: {width}x{height}",
+            "",
+            "Parsed Prompts:",
+            "-" * 50,
+        ]
+        for i, prompt in enumerate(prompt_list):
+            # Truncate long prompts for display
+            display_prompt = prompt[:100] + "..." if len(prompt) > 100 else prompt
+            debug_lines.append(f"[{i+1}] {display_prompt}")
+        debug_lines.append("=" * 50)
+        debug_info = "\n".join(debug_lines)
+
         print(f"[Batch Text Encode SDXL] Output shape: {batched_cond.shape} (padded to {max_seq_len} tokens)")
 
-        return (conditioning, batch_size)
+        return (conditioning, batch_size, debug_info)
 
 
 class ArchAi3D_Empty_Latent_Batch:
