@@ -4,7 +4,8 @@
 # Use before DetailerForEach or Smart Tile Detailer for seamless blending
 #
 # Author: Amir Ferdos (ArchAi3d)
-# Version: 1.0.1 - Added debug output for mask values
+# Version: 1.1.0 - Clamp blur to tile_padding when bundle connected (prevents seam artifacts)
+#                  v1.0.1: Added debug output for mask values
 # License: Dual License (Free for personal use, Commercial license required for business use)
 
 import numpy as np
@@ -71,16 +72,21 @@ class ArchAi3D_SEGS_Mask_Blur:
         # Extract mask_blur from bundle if provided
         if bundle is not None:
             mask_blur = bundle.get("mask_blur", mask_blur)
-            print(f"[SEGS Mask Blur v1.0] Using bundle mask_blur: {mask_blur}")
+            tile_padding = bundle.get("tile_padding", 32)
+            # Clamp blur to never exceed padding (prevents seam artifacts)
+            if mask_blur > tile_padding:
+                print(f"[SEGS Mask Blur v1.1] Warning: blur {mask_blur} > padding {tile_padding}, clamping to {tile_padding}")
+                mask_blur = tile_padding
+            print(f"[SEGS Mask Blur v1.1] Using bundle: mask_blur={mask_blur}, tile_padding={tile_padding}")
 
         # Unpack SEGS
         segs_header, seg_list = segs
 
         if mask_blur == 0:
-            print(f"[SEGS Mask Blur v1.0] mask_blur=0, passing through unchanged")
+            print(f"[SEGS Mask Blur v1.1] mask_blur=0, passing through unchanged")
             return (segs,)
 
-        print(f"\n[SEGS Mask Blur v1.0] Applying blur={mask_blur} to {len(seg_list)} segments")
+        print(f"\n[SEGS Mask Blur v1.1] Applying blur={mask_blur} to {len(seg_list)} segments")
 
         new_segs = []
         for i, seg in enumerate(seg_list):
@@ -136,7 +142,7 @@ class ArchAi3D_SEGS_Mask_Blur:
             new_segs.append(new_seg)
 
         result = (segs_header, new_segs)
-        print(f"[SEGS Mask Blur v1.0] Done! Blurred {len(new_segs)} masks with radius {mask_blur}")
+        print(f"[SEGS Mask Blur v1.1] Done! Blurred {len(new_segs)} masks with radius {mask_blur}")
 
         return (result,)
 

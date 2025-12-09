@@ -4,7 +4,8 @@
 # Compatible with Impact Pack's DetailerForEach and SEGSLabelAssign
 #
 # Author: Amir Ferdos (ArchAi3d)
-# Version: 1.5.1 - Works with Calculator v2.5 (divisor=32), rounding now a no-op safety check
+# Version: 1.5.2 - Pass mask_blur from input bundle to output bundle
+#                  v1.5.1: Works with Calculator v2.5 (divisor=32), rounding now a no-op safety check
 #                  v1.5.0: Divisible by 32, edge tiles extend to image boundary, removed irregularity
 # License: Dual License (Free for personal use, Commercial license required for business use)
 
@@ -261,6 +262,9 @@ class ArchAi3D_Smart_Tile_SEGS:
         - filter_in_segs_opt: Only include tiles that overlap with these SEGS
         - filter_out_segs_opt: Exclude tiles that overlap with these SEGS
         """
+        # Default mask_blur (will be overridden by bundle if provided)
+        mask_blur = 8
+
         # If bundle provided, extract values (overrides individual inputs)
         if bundle is not None:
             image = bundle.get("scaled_image", image)
@@ -270,7 +274,8 @@ class ArchAi3D_Smart_Tile_SEGS:
             tiles_y = bundle.get("tiles_y", tiles_y)
             tile_padding = bundle.get("tile_padding", tile_padding)
             crop_factor = bundle.get("crop_factor", crop_factor)
-            print(f"[Smart Tile SEGS v1.5] Using bundle: {tiles_x}x{tiles_y} tiles, {tile_width}x{tile_height}px")
+            mask_blur = bundle.get("mask_blur", mask_blur)
+            print(f"[Smart Tile SEGS v1.5.2] Using bundle: {tiles_x}x{tiles_y} tiles, {tile_width}x{tile_height}px, blur={mask_blur}")
 
         # Round all dimensions to 32 (ensure divisibility)
         tile_width = ((tile_width + 31) // 32) * 32
@@ -298,7 +303,7 @@ class ArchAi3D_Smart_Tile_SEGS:
         step_w = tile_width - tile_padding
         step_h = tile_height - tile_padding
 
-        print(f"\n[Smart Tile SEGS v1.5] Creating SEGS for {tiles_x}x{tiles_y} = {total_tiles} tiles")
+        print(f"\n[Smart Tile SEGS v1.5.2] Creating SEGS for {tiles_x}x{tiles_y} = {total_tiles} tiles")
         print(f"  Image: {iw}x{ih}, Tile: {tile_width}x{tile_height} (divisible by 32)")
         print(f"  Padding: {tile_padding}, Step: {step_w}x{step_h}, Crop factor: {crop_factor}")
 
@@ -373,9 +378,9 @@ class ArchAi3D_Smart_Tile_SEGS:
         result = ((ih, iw), segs)
 
         if filtered_count > 0:
-            print(f"[Smart Tile SEGS v1.5] Created {len(segs)} SEGS segments ({filtered_count} filtered out)")
+            print(f"[Smart Tile SEGS v1.5.2] Created {len(segs)} SEGS segments ({filtered_count} filtered out)")
         else:
-            print(f"[Smart Tile SEGS v1.5] Created {len(segs)} SEGS segments")
+            print(f"[Smart Tile SEGS v1.5.2] Created {len(segs)} SEGS segments")
 
         # Create bundle for downstream nodes (always create fresh with rounded values)
         output_bundle = {
@@ -386,7 +391,7 @@ class ArchAi3D_Smart_Tile_SEGS:
             "tiles_y": tiles_y,
             "tile_padding": tile_padding,
             "crop_factor": crop_factor,
-            "mask_blur": 8,  # default for SEGS Blur
+            "mask_blur": mask_blur,  # from input bundle or default 8
             "latent_divisor": 32,
         }
 
