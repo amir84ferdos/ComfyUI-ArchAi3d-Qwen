@@ -7,7 +7,8 @@
 #   3. Text Transcription - verbatim text in quotes
 #
 # Author: Amir Ferdos (ArchAi3d)
-# Version: 1.0.5 - Fixed stop_server: added SIGKILL fallback + fuser + pkill patterns
+# Version: 1.0.6 - Added retry logic with exponential backoff for HTTP 500 errors
+#                  v1.0.5: Fixed stop_server: added SIGKILL fallback + fuser + pkill patterns
 # License: Dual License (Free for personal use, Commercial license required for business use)
 
 import base64
@@ -375,8 +376,20 @@ def image_to_base64(image_tensor, index=0, max_size=1024):
     return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
 
-def call_qwenvl_api(image_b64, prompt, model_size, quality_preset, seed=1):
-    """Call QwenVL GGUF API and return response text."""
+def call_qwenvl_api(image_b64, prompt, model_size, quality_preset, seed=1, max_retries=3):
+    """Call QwenVL GGUF API and return response text.
+
+    Args:
+        image_b64: Base64 encoded image
+        prompt: Text prompt to send
+        model_size: Model size key (e.g., "4B (Balanced)")
+        quality_preset: Quality preset name
+        seed: Random seed for generation
+        max_retries: Number of retries for HTTP 500 errors (default 3)
+
+    Returns:
+        Response text or error message
+    """
     config = MODEL_CONFIGS.get(model_size, MODEL_CONFIGS["4B (Balanced)"])
     port = config['port']
     server_url = f"http://localhost:{port}"
@@ -405,19 +418,32 @@ def call_qwenvl_api(image_b64, prompt, model_size, quality_preset, seed=1):
         "stream": False
     }
 
-    try:
-        response = requests.post(
-            f"{server_url}/v1/chat/completions",
-            json=payload,
-            timeout=120
-        )
-        response.raise_for_status()
-        result = response.json()
-        return result["choices"][0]["message"]["content"]
-    except requests.exceptions.ConnectionError:
-        return f"ERROR: Cannot connect to QwenVL server on port {port}. Start with: ./start_qwenvl_server.sh"
-    except Exception as e:
-        return f"ERROR: {type(e).__name__}: {str(e)}"
+    # Retry loop for transient server errors (HTTP 500)
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(
+                f"{server_url}/v1/chat/completions",
+                json=payload,
+                timeout=120
+            )
+            response.raise_for_status()
+            result = response.json()
+            return result["choices"][0]["message"]["content"]
+        except requests.exceptions.ConnectionError:
+            return f"ERROR: Cannot connect to QwenVL server on port {port}. Start with: ./start_qwenvl_server.sh"
+        except requests.exceptions.HTTPError as e:
+            # Retry on HTTP 500 (server error) - often caused by memory pressure
+            if response.status_code == 500 and attempt < max_retries - 1:
+                wait_time = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
+                print(f"[Smart Tile Prompter Turbo] HTTP 500 error, retrying in {wait_time}s... (attempt {attempt + 1}/{max_retries})")
+                time.sleep(wait_time)
+                continue
+            return f"ERROR: {type(e).__name__}: {str(e)}"
+        except Exception as e:
+            return f"ERROR: {type(e).__name__}: {str(e)}"
+
+    # Should not reach here, but safety fallback
+    return "ERROR: Max retries exceeded"
 
 
 def get_position_name(x, y, tiles_x, tiles_y):
@@ -674,7 +700,7 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
             image = bundle.get("scaled_image", image)
             tiles_x = bundle.get("tiles_x", tiles_x)
             tiles_y = bundle.get("tiles_y", tiles_y)
-            print(f"[Smart Tile Prompter Turbo v1.0.5] Using bundle: {tiles_x}x{tiles_y} tiles")
+            print(f"[Smart Tile Prompter Turbo v1.0.6] Using bundle: {tiles_x}x{tiles_y} tiles")
 
         start_time = time.time()
         total_tiles = tiles_x * tiles_y
@@ -785,7 +811,7 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
         elapsed = time.time() - start_time
         debug_lines = [
             "=" * 50,
-            "Smart Tile Prompter Turbo v1.0.5 (Z-Image-Turbo)",
+            "Smart Tile Prompter Turbo v1.0.6 (Z-Image-Turbo)",
             "=" * 50,
             f"Tiles: {tiles_x}x{tiles_y} = {total_tiles} total",
             f"Model: {model_size}",
