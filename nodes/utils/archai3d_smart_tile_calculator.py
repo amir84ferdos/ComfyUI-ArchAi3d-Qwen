@@ -10,7 +10,8 @@ Email: Amir84ferdos@gmail.com
 LinkedIn: https://www.linkedin.com/in/archai3d/
 GitHub: https://github.com/amir84ferdos
 
-Version: 2.4.0 - Added SMART_TILE_BUNDLE output for one-wire connections
+Version: 2.5.0 - Changed tile divisor from 8 to 32 for VAE compatibility
+              v2.4.0: Added SMART_TILE_BUNDLE output for one-wire connections
 License: Dual License (Free for personal use, Commercial license required for business use)
 """
 
@@ -23,14 +24,14 @@ import torch.nn.functional as F
 # HELPER FUNCTIONS
 # ============================================================================
 
-def find_optimal_tile_size(aspect_ratio: float, target_mp: float = 2.0, divisor: int = 8) -> tuple:
+def find_optimal_tile_size(aspect_ratio: float, target_mp: float = 2.0, divisor: int = 32) -> tuple:
     """
     Find tile dimensions matching aspect ratio, ~target_mp, divisible by divisor.
 
     Args:
         aspect_ratio: Width / Height ratio of the image
         target_mp: Target megapixels per tile (default 2.0 for z-image-turbo)
-        divisor: Tile dimensions must be divisible by this (8 for USDU)
+        divisor: Tile dimensions must be divisible by this (32 for VAE compatibility)
 
     Returns:
         Tuple of (tile_width, tile_height)
@@ -44,7 +45,7 @@ def find_optimal_tile_size(aspect_ratio: float, target_mp: float = 2.0, divisor:
     tile_h = math.sqrt(target_area / aspect_ratio)
     tile_w = tile_h * aspect_ratio
 
-    # Round to nearest divisor (8 for Ultimate SD Upscale compatibility)
+    # Round to nearest divisor (32 for VAE/latent compatibility)
     tile_h = round(tile_h / divisor) * divisor
     tile_w = round(tile_w / divisor) * divisor
 
@@ -255,7 +256,7 @@ def find_perfect_alignments(input_w: int, input_h: int, aspect_ratio: float,
     tile_mp = min_tile_mp
     while tile_mp <= max_tile_mp + 0.001:
         # Calculate tile dimensions for this MP
-        tile_w, tile_h = find_optimal_tile_size(aspect_ratio, tile_mp, divisor=8)
+        tile_w, tile_h = find_optimal_tile_size(aspect_ratio, tile_mp, divisor=32)
         actual_mp = (tile_w * tile_h) / 1_000_000
 
         # Get overlap params for this tile size
@@ -349,7 +350,7 @@ def find_best_near_perfect(input_w: int, input_h: int, aspect_ratio: float,
     # Search tile sizes in 0.1 MP steps
     tile_mp = min_tile_mp
     while tile_mp <= max_tile_mp + 0.001:
-        tile_w, tile_h = find_optimal_tile_size(aspect_ratio, tile_mp, divisor=8)
+        tile_w, tile_h = find_optimal_tile_size(aspect_ratio, tile_mp, divisor=32)
         actual_mp = (tile_w * tile_h) / 1_000_000
 
         params = get_overlap_params_for_tile(tile_w, tile_h, scaling_mode, overlap_scale)
@@ -457,7 +458,7 @@ def find_optimal_tile_and_upscale(input_w: int, input_h: int, aspect_ratio: floa
         return near_perfect
 
     # Fallback if nothing found (shouldn't happen with reasonable params)
-    tile_w, tile_h = find_optimal_tile_size(aspect_ratio, max_tile_mp, divisor=8)
+    tile_w, tile_h = find_optimal_tile_size(aspect_ratio, max_tile_mp, divisor=32)
     params = get_overlap_params_for_tile(tile_w, tile_h, scaling_mode, overlap_scale)
     return {
         "tile_w": tile_w,
@@ -619,7 +620,7 @@ class ArchAi3D_Smart_Tile_Calculator:
         # Build debug info
         debug_lines = [
             "=" * 50,
-            "Smart Tile Calculator v2.4 (Bundle Output)",
+            "Smart Tile Calculator v2.5 (Bundle Output)",
             "=" * 50,
             f"Input: {width}x{height} ({aspect_ratio:.3f} aspect ratio)",
             f"Target: {target_upscale}x upscale, tiles {min_tile_mp}-{max_tile_mp}MP",
@@ -649,7 +650,7 @@ class ArchAi3D_Smart_Tile_Calculator:
 
         # Log to console
         perfect_tag = " [PERFECT]" if is_perfect else ""
-        print(f"\n[Smart Tile Calculator v2.4]{perfect_tag}")
+        print(f"\n[Smart Tile Calculator v2.5]{perfect_tag}")
         print(f"  Input: {width}x{height} → Tile: {tile_w}x{tile_h} ({actual_tile_mp:.2f}MP)")
         print(f"  Upscale: {best_upscale}x → Output: {output_width}x{output_height}")
         print(f"  Overlap: {scaling_mode}, scale={overlap_scale:.0%} (blur={mask_blur}, pad={tile_padding})")

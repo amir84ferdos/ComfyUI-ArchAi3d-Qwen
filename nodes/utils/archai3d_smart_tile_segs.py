@@ -4,7 +4,8 @@
 # Compatible with Impact Pack's DetailerForEach and SEGSLabelAssign
 #
 # Author: Amir Ferdos (ArchAi3d)
-# Version: 1.3.0 - Added SMART_TILE_BUNDLE input for one-wire connections
+# Version: 1.5.1 - Works with Calculator v2.5 (divisor=32), rounding now a no-op safety check
+#                  v1.5.0: Divisible by 32, edge tiles extend to image boundary, removed irregularity
 # License: Dual License (Free for personal use, Commercial license required for business use)
 
 import numpy as np
@@ -74,7 +75,7 @@ def normalize_region(limit, startp, size):
     return int(new_startp), int(new_endp)
 
 
-def make_crop_region(w, h, bbox, crop_factor):
+def make_crop_region(w, h, bbox, crop_factor, divisor=32):
     """
     Create expanded crop region around bbox.
 
@@ -82,6 +83,7 @@ def make_crop_region(w, h, bbox, crop_factor):
         w, h: Image dimensions
         bbox: (x1, y1, x2, y2) bounding box
         crop_factor: How much to expand (1.0 = no expansion, 2.0 = 2x size)
+        divisor: Ensure dimensions are divisible by this value (default 32)
 
     Returns:
         (cx1, cy1, cx2, cy2) - expanded crop region
@@ -91,9 +93,13 @@ def make_crop_region(w, h, bbox, crop_factor):
     bbox_w = x2 - x1
     bbox_h = y2 - y1
 
-    # Calculate expanded size
+    # Calculate expanded size and round UP to divisor
     crop_w = int(bbox_w * crop_factor)
     crop_h = int(bbox_h * crop_factor)
+
+    # Round up to nearest divisor
+    crop_w = ((crop_w + divisor - 1) // divisor) * divisor
+    crop_h = ((crop_h + divisor - 1) // divisor) * divisor
 
     # Center the crop around the bbox
     cx1 = x1 - (crop_w - bbox_w) // 2
@@ -106,15 +112,22 @@ def make_crop_region(w, h, bbox, crop_factor):
     return (cx1, cy1, cx2, cy2)
 
 
-def create_tile_mask(mask_h, mask_w, bbox, crop_region, irregularity=0.0):
+def create_tile_mask(mask_h, mask_w, bbox, crop_region,
+                     is_left_edge, is_right_edge, is_top_edge, is_bottom_edge):
     """
     Create a mask for the tile within the crop region.
+
+    For edge tiles (touching image boundary), mask extends to the crop boundary
+    so there's no gap at the image edge.
 
     Args:
         mask_h, mask_w: Mask dimensions (crop region size)
         bbox: (x1, y1, x2, y2) - tile bounding box in image coordinates
         crop_region: (cx1, cy1, cx2, cy2) - crop region in image coordinates
-        irregularity: Amount of edge irregularity (0-1)
+        is_left_edge: True if tile touches left image boundary
+        is_right_edge: True if tile touches right image boundary
+        is_top_edge: True if tile touches top image boundary
+        is_bottom_edge: True if tile touches bottom image boundary
 
     Returns:
         numpy array mask
@@ -130,38 +143,24 @@ def create_tile_mask(mask_h, mask_w, bbox, crop_region, irregularity=0.0):
     rel_x2 = x2 - cx1
     rel_y2 = y2 - cy1
 
-    # Clamp to mask bounds
-    rel_x1 = max(0, min(rel_x1, mask_w))
-    rel_y1 = max(0, min(rel_y1, mask_h))
-    rel_x2 = max(0, min(rel_x2, mask_w))
-    rel_y2 = max(0, min(rel_y2, mask_h))
+    # For edge tiles, extend mask to crop boundary (no gap at image edge)
+    if is_left_edge:
+        rel_x1 = 0
+    if is_right_edge:
+        rel_x2 = mask_w
+    if is_top_edge:
+        rel_y1 = 0
+    if is_bottom_edge:
+        rel_y2 = mask_h
 
-    if irregularity > 0:
-        # Add some noise to edges for better blending
-        noise_mask = np.random.rand(mask_h, mask_w).astype(np.float32) * irregularity
-        mask[rel_y1:rel_y2, rel_x1:rel_x2] = 1.0
+    # Clamp to mask bounds (safety)
+    rel_x1 = max(0, min(int(rel_x1), mask_w))
+    rel_y1 = max(0, min(int(rel_y1), mask_h))
+    rel_x2 = max(0, min(int(rel_x2), mask_w))
+    rel_y2 = max(0, min(int(rel_y2), mask_h))
 
-        # Apply edge feathering
-        edge_size = max(4, int((rel_x2 - rel_x1) * 0.1))
-
-        # Horizontal feathering
-        for i in range(edge_size):
-            alpha = i / edge_size
-            if rel_x1 + i < rel_x2:
-                mask[rel_y1:rel_y2, rel_x1 + i] *= alpha
-            if rel_x2 - i - 1 >= rel_x1:
-                mask[rel_y1:rel_y2, rel_x2 - i - 1] *= alpha
-
-        # Vertical feathering
-        for i in range(edge_size):
-            alpha = i / edge_size
-            if rel_y1 + i < rel_y2:
-                mask[rel_y1 + i, rel_x1:rel_x2] *= alpha
-            if rel_y2 - i - 1 >= rel_y1:
-                mask[rel_y2 - i - 1, rel_x1:rel_x2] *= alpha
-    else:
-        # Simple rectangular mask
-        mask[rel_y1:rel_y2, rel_x1:rel_x2] = 1.0
+    # Fill mask with 1.0 (simple rectangle)
+    mask[rel_y1:rel_y2, rel_x1:rel_x2] = 1.0
 
     return mask
 
@@ -184,8 +183,8 @@ class ArchAi3D_Smart_Tile_SEGS:
     """
 
     CATEGORY = "ArchAi3d/Utils"
-    RETURN_TYPES = ("SEGS",)
-    RETURN_NAMES = ("segs",)
+    RETURN_TYPES = ("SEGS", "SMART_TILE_BUNDLE")
+    RETURN_NAMES = ("segs", "bundle")
     FUNCTION = "create_segs"
 
     @classmethod
@@ -199,14 +198,14 @@ class ArchAi3D_Smart_Tile_SEGS:
                     "default": 512,
                     "min": 64,
                     "max": 4096,
-                    "step": 8,
+                    "step": 32,
                     "tooltip": "Width of each tile (from Smart Tile Calculator)"
                 }),
                 "tile_height": ("INT", {
                     "default": 512,
                     "min": 64,
                     "max": 4096,
-                    "step": 8,
+                    "step": 32,
                     "tooltip": "Height of each tile (from Smart Tile Calculator)"
                 }),
                 "tiles_x": ("INT", {
@@ -225,7 +224,7 @@ class ArchAi3D_Smart_Tile_SEGS:
                     "default": 32,
                     "min": 0,
                     "max": 512,
-                    "step": 8,
+                    "step": 32,
                     "tooltip": "Tile padding/overlap (from Smart Tile Calculator)"
                 }),
             },
@@ -246,19 +245,12 @@ class ArchAi3D_Smart_Tile_SEGS:
                     "step": 0.1,
                     "tooltip": "Extra context around each tile for better blending (from Smart Tile Calculator)"
                 }),
-                "mask_irregularity": ("FLOAT", {
-                    "default": 0.0,
-                    "min": 0.0,
-                    "max": 1.0,
-                    "step": 0.05,
-                    "tooltip": "How irregular the mask edges are (0=sharp, 1=very irregular)"
-                }),
             }
         }
 
     def create_segs(self, image, tile_width, tile_height, tiles_x, tiles_y,
                     tile_padding, bundle=None, filter_in_segs_opt=None, filter_out_segs_opt=None,
-                    crop_factor=1.5, mask_irregularity=0.0):
+                    crop_factor=1.5):
         """
         Create SEGS from explicit tile grid.
 
@@ -278,7 +270,12 @@ class ArchAi3D_Smart_Tile_SEGS:
             tiles_y = bundle.get("tiles_y", tiles_y)
             tile_padding = bundle.get("tile_padding", tile_padding)
             crop_factor = bundle.get("crop_factor", crop_factor)
-            print(f"[Smart Tile SEGS v1.3] Using bundle: {tiles_x}x{tiles_y} tiles, {tile_width}x{tile_height}px")
+            print(f"[Smart Tile SEGS v1.5] Using bundle: {tiles_x}x{tiles_y} tiles, {tile_width}x{tile_height}px")
+
+        # Round all dimensions to 32 (ensure divisibility)
+        tile_width = ((tile_width + 31) // 32) * 32
+        tile_height = ((tile_height + 31) // 32) * 32
+        tile_padding = ((tile_padding + 31) // 32) * 32
 
         # Get image dimensions (B, H, W, C)
         _, ih, iw, _ = image.shape
@@ -301,9 +298,9 @@ class ArchAi3D_Smart_Tile_SEGS:
         step_w = tile_width - tile_padding
         step_h = tile_height - tile_padding
 
-        print(f"\n[Smart Tile SEGS v1.3] Creating SEGS for {tiles_x}x{tiles_y} = {total_tiles} tiles")
-        print(f"  Image: {iw}x{ih}, Tile: {tile_width}x{tile_height}, Padding: {tile_padding}")
-        print(f"  Step: {step_w}x{step_h}, Crop factor: {crop_factor}")
+        print(f"\n[Smart Tile SEGS v1.5] Creating SEGS for {tiles_x}x{tiles_y} = {total_tiles} tiles")
+        print(f"  Image: {iw}x{ih}, Tile: {tile_width}x{tile_height} (divisible by 32)")
+        print(f"  Padding: {tile_padding}, Step: {step_w}x{step_h}, Crop factor: {crop_factor}")
 
         segs = []
         tile_num = 0
@@ -312,6 +309,12 @@ class ArchAi3D_Smart_Tile_SEGS:
         for y in range(tiles_y):
             for x in range(tiles_x):
                 tile_num += 1
+
+                # Detect edge tiles (touching image boundary)
+                is_left_edge = (x == 0)
+                is_right_edge = (x == tiles_x - 1)
+                is_top_edge = (y == 0)
+                is_bottom_edge = (y == tiles_y - 1)
 
                 # Calculate tile boundaries using step size for overlapping tiles
                 # Formula: x1 = x * step_w (where step_w = tile_width - tile_padding)
@@ -345,10 +348,11 @@ class ArchAi3D_Smart_Tile_SEGS:
                 crop_region = make_crop_region(iw, ih, bbox, crop_factor)
                 cx1, cy1, cx2, cy2 = crop_region
 
-                # Create mask
+                # Create mask (edge tiles extend to image boundary)
                 mask_h = cy2 - cy1
                 mask_w = cx2 - cx1
-                mask = create_tile_mask(mask_h, mask_w, bbox, crop_region, mask_irregularity)
+                mask = create_tile_mask(mask_h, mask_w, bbox, crop_region,
+                                        is_left_edge, is_right_edge, is_top_edge, is_bottom_edge)
 
                 # Create label
                 label = f"tile_{y}_{x}"
@@ -369,11 +373,24 @@ class ArchAi3D_Smart_Tile_SEGS:
         result = ((ih, iw), segs)
 
         if filtered_count > 0:
-            print(f"[Smart Tile SEGS v1.3] Created {len(segs)} SEGS segments ({filtered_count} filtered out)")
+            print(f"[Smart Tile SEGS v1.5] Created {len(segs)} SEGS segments ({filtered_count} filtered out)")
         else:
-            print(f"[Smart Tile SEGS v1.3] Created {len(segs)} SEGS segments")
+            print(f"[Smart Tile SEGS v1.5] Created {len(segs)} SEGS segments")
 
-        return (result,)
+        # Create bundle for downstream nodes (always create fresh with rounded values)
+        output_bundle = {
+            "scaled_image": image,
+            "tile_width": tile_width,
+            "tile_height": tile_height,
+            "tiles_x": tiles_x,
+            "tiles_y": tiles_y,
+            "tile_padding": tile_padding,
+            "crop_factor": crop_factor,
+            "mask_blur": 8,  # default for SEGS Blur
+            "latent_divisor": 32,
+        }
+
+        return (result, output_bundle)
 
 
 # ============================================================================

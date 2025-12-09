@@ -4,7 +4,9 @@
 # Optimized pipeline for per-tile prompts
 #
 # Author: Amir Ferdos (ArchAi3d)
-# Version: 2.0.1 - Fixed mask dimension bug in F.interpolate
+# Version: 2.2.0 - Don't overwrite image from bundle (user's connected image takes priority)
+#                  v2.1.0: Fixed tile/mask extraction bounds (prevents 32px strip at bottom)
+#                  v2.0.1: Fixed mask dimension bug in F.interpolate
 #                  v2.0.0: Simplified - removed guide_size and feather
 #                  Tiles processed at original size
 #                  Use SEGS Mask Blur node for mask feathering
@@ -206,21 +208,21 @@ class ArchAi3D_Smart_Tile_Detailer:
         Returns:
             Processed image with all tiles enhanced
         """
-        # Extract from bundle if available
+        # Extract grid info from bundle if available
+        # NOTE: We do NOT overwrite the image from bundle - user's connected image takes priority
         tiles_x = None
         tiles_y = None
 
         if bundle is not None:
-            image = bundle.get("scaled_image", image)
             tiles_x = bundle.get("tiles_x", None)
             tiles_y = bundle.get("tiles_y", None)
-            print(f"[Smart Tile Detailer v2.0] Using bundle: grid={tiles_x}x{tiles_y}")
+            print(f"[Smart Tile Detailer v2.2] Using bundle: grid={tiles_x}x{tiles_y}")
 
         # Unpack SEGS
         (img_h, img_w), seg_list = segs
 
         if not seg_list:
-            print("[Smart Tile Detailer v2.0] No segments to process")
+            print("[Smart Tile Detailer v2.2] No segments to process")
             return (image,)
 
         num_segs = len(seg_list)
@@ -239,12 +241,12 @@ class ArchAi3D_Smart_Tile_Detailer:
                 if rows and cols:
                     tiles_y = max(rows) + 1
                     tiles_x = max(cols) + 1
-                    print(f"[Smart Tile Detailer v2.0] Inferred grid: {tiles_x}x{tiles_y} from labels")
+                    print(f"[Smart Tile Detailer v2.2] Inferred grid: {tiles_x}x{tiles_y} from labels")
 
         if num_conds < num_segs:
-            print(f"[Smart Tile Detailer v2.0] Warning: {num_segs} SEGs but only {num_conds} conditionings. Reusing last conditioning.")
+            print(f"[Smart Tile Detailer v2.2] Warning: {num_segs} SEGs but only {num_conds} conditionings. Reusing last conditioning.")
 
-        print(f"\n[Smart Tile Detailer v2.0] Processing {num_segs} tiles at original size...")
+        print(f"\n[Smart Tile Detailer v2.2] Processing {num_segs} tiles at original size...")
         print(f"  Grid: {tiles_x}x{tiles_y if tiles_x and tiles_y else 'unknown'}")
         print(f"  Sampler: {sampler_name}, Steps: {steps}, CFG: {cfg}, Denoise: {denoise}")
 
@@ -338,23 +340,47 @@ class ArchAi3D_Smart_Tile_Detailer:
             rel_x2 = bbox_x2 - x1
             rel_y2 = bbox_y2 - y1
 
-            # Extract just the tile portion from decoded result
-            tile_result = decoded[:, rel_y1:rel_y2, rel_x1:rel_x2, :]
+            # Get actual decoded dimensions (may differ from crop due to VAE rounding)
+            decoded_h = decoded.shape[1]
+            decoded_w = decoded.shape[2]
 
-            # Ensure size matches (handle any rounding issues)
+            # Clamp extraction bounds to actual decoded size (prevents out-of-bounds)
+            safe_rel_x1 = max(0, min(rel_x1, decoded_w))
+            safe_rel_y1 = max(0, min(rel_y1, decoded_h))
+            safe_rel_x2 = max(0, min(rel_x2, decoded_w))
+            safe_rel_y2 = max(0, min(rel_y2, decoded_h))
+
+            # Extract just the tile portion from decoded result
+            tile_result = decoded[:, safe_rel_y1:safe_rel_y2, safe_rel_x1:safe_rel_x2, :]
+
+            # Resize if extracted size doesn't match expected tile size
             if tile_result.shape[1] != tile_h or tile_result.shape[2] != tile_w:
+                print(f"    Resizing tile from {tile_result.shape[2]}x{tile_result.shape[1]} to {tile_w}x{tile_h}")
                 tile_result = tensor_resize(tile_result, tile_w, tile_h)
 
             # Create blend mask from SEG mask (already blurred if SEGS Mask Blur was used)
             if seg.cropped_mask is not None:
                 # Extract the tile portion of the mask
                 full_mask = torch.from_numpy(seg.cropped_mask).float()
-                if full_mask.dim() == 2:
-                    blend_mask = full_mask[rel_y1:rel_y2, rel_x1:rel_x2]
-                else:
-                    blend_mask = full_mask[0, rel_y1:rel_y2, rel_x1:rel_x2]
 
-                # Ensure size matches
+                # Get mask dimensions for bounds checking
+                if full_mask.dim() == 2:
+                    mask_h, mask_w = full_mask.shape
+                else:
+                    mask_h, mask_w = full_mask.shape[1], full_mask.shape[2]
+
+                # Clamp extraction bounds to actual mask size (prevents out-of-bounds)
+                safe_mask_y1 = max(0, min(rel_y1, mask_h))
+                safe_mask_y2 = max(0, min(rel_y2, mask_h))
+                safe_mask_x1 = max(0, min(rel_x1, mask_w))
+                safe_mask_x2 = max(0, min(rel_x2, mask_w))
+
+                if full_mask.dim() == 2:
+                    blend_mask = full_mask[safe_mask_y1:safe_mask_y2, safe_mask_x1:safe_mask_x2]
+                else:
+                    blend_mask = full_mask[0, safe_mask_y1:safe_mask_y2, safe_mask_x1:safe_mask_x2]
+
+                # Ensure size matches expected tile size
                 if blend_mask.shape[0] != tile_h or blend_mask.shape[1] != tile_w:
                     blend_mask = F.interpolate(blend_mask.unsqueeze(0).unsqueeze(0),
                                                 size=(tile_h, tile_w),
@@ -370,7 +396,7 @@ class ArchAi3D_Smart_Tile_Detailer:
 
             print(f"    Done! Composited tile at ({bbox_x1},{bbox_y1}) size {tile_w}x{tile_h}")
 
-        print(f"\n[Smart Tile Detailer v2.0] Completed! Processed {num_segs} tiles.")
+        print(f"\n[Smart Tile Detailer v2.2] Completed! Processed {num_segs} tiles.")
 
         return (result,)
 

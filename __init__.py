@@ -106,6 +106,7 @@ from .nodes.utils.archai3d_smart_tile_segs import ArchAi3D_Smart_Tile_SEGS
 from .nodes.utils.archai3d_smart_tile_conditioning import ArchAi3D_Smart_Tile_Conditioning
 from .nodes.utils.archai3d_smart_tile_detailer import ArchAi3D_Smart_Tile_Detailer
 from .nodes.utils.archai3d_segs_mask_blur import ArchAi3D_SEGS_Mask_Blur
+from .nodes.utils.archai3d_segs_mask_irregularity import ArchAi3D_SEGS_Mask_Irregularity
 from .nodes.utils.archai3d_smart_tile_prompter_turbo import ArchAi3D_Smart_Tile_Prompter_Turbo
 from .nodes.utils.archai3d_info import ArchAi3D_Info
 
@@ -237,6 +238,7 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_Smart_Tile_Conditioning": ArchAi3D_Smart_Tile_Conditioning,
     "ArchAi3D_Smart_Tile_Detailer": ArchAi3D_Smart_Tile_Detailer,
     "ArchAi3D_SEGS_Mask_Blur": ArchAi3D_SEGS_Mask_Blur,
+    "ArchAi3D_SEGS_Mask_Irregularity": ArchAi3D_SEGS_Mask_Irregularity,
     "ArchAi3D_Smart_Tile_Prompter_Turbo": ArchAi3D_Smart_Tile_Prompter_Turbo,
     "ArchAi3D_Info": ArchAi3D_Info,
     "ArchAi3D_Position_Guide_Prompt_Builder": ArchAi3D_Position_Guide_Prompt_Builder,
@@ -369,6 +371,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Smart_Tile_Conditioning": "🎯 Smart Tile Conditioning",
     "ArchAi3D_Smart_Tile_Detailer": "🔧 Smart Tile Detailer",
     "ArchAi3D_SEGS_Mask_Blur": "🌫️ SEGS Mask Blur",
+    "ArchAi3D_SEGS_Mask_Irregularity": "🎭 SEGS Mask Irregularity",
     "ArchAi3D_Smart_Tile_Prompter_Turbo": "🚀 Smart Tile Prompter Turbo",
     "ArchAi3D_Info": "ℹ️ ArchAi3D Info",
     "ArchAi3D_Position_Guide_Prompt_Builder": "📝 Position Guide Prompt Builder",
