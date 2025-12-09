@@ -80,15 +80,17 @@ setup_cuda_libs
 
 # Multiple search paths for models (in priority order)
 # 1. Environment variable MODEL_DIR
-# 2. ComfyUI models/llama-models folder (persistent on RunPod)
-# 3. ComfyUI models/LLM folder (legacy)
-# 4. Default cache location (not persistent on RunPod!)
+# 2. ComfyUI models/LLM/GGUF folder (preferred - organized with other LLM models)
+# 3. ComfyUI models/llama-models folder (legacy)
+# 4. Default cache location (fallback - not persistent on RunPod!)
 SEARCH_PATHS=(
     "${MODEL_DIR:-}"
-    "$SCRIPT_DIR/../../models/llama-models"
-    "/workspace/runpod-slim/ComfyUI/models/llama-models"
-    "/workspace/runpod-slim/ComfyUI/models/LLM"
+    "$SCRIPT_DIR/../../models/LLM/GGUF"
     "$SCRIPT_DIR/../../models/LLM"
+    "$SCRIPT_DIR/../../models/llama-models"
+    "/workspace/runpod-slim/ComfyUI/models/LLM/GGUF"
+    "/workspace/runpod-slim/ComfyUI/models/LLM"
+    "/workspace/runpod-slim/ComfyUI/models/llama-models"
     "$HOME/.cache/llama-models"
 )
 
@@ -289,13 +291,13 @@ if [ -z "$MODEL_PATH" ] || [ -z "$MMPROJ_PATH" ]; then
         HF_REPO="Qwen/Qwen3-VL-4B-Instruct-GGUF"
     fi
 
-    # Choose download directory (prefer ComfyUI models/llama-models folder - persistent on RunPod)
+    # Choose download directory (prefer ComfyUI models/LLM/GGUF folder - persistent on RunPod)
     if [ -d "$SCRIPT_DIR/../../models" ]; then
-        LOCAL_DIR="$SCRIPT_DIR/../../models/llama-models"
+        LOCAL_DIR="$SCRIPT_DIR/../../models/LLM/GGUF"
     elif [ -d "/workspace/runpod-slim/ComfyUI/models" ]; then
-        LOCAL_DIR="/workspace/runpod-slim/ComfyUI/models/llama-models"
+        LOCAL_DIR="/workspace/runpod-slim/ComfyUI/models/LLM/GGUF"
     else
-        LOCAL_DIR="$HOME/.cache/llama-models/$SUBDIR"
+        LOCAL_DIR="$HOME/.cache/llama-models"
         echo "⚠️ Warning: Downloading to $LOCAL_DIR (NOT persistent on RunPod!)"
     fi
 
