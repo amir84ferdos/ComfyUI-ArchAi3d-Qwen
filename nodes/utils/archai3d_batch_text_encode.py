@@ -110,9 +110,10 @@ class ArchAi3D_Batch_Text_Encode:
             "-" * 50,
         ]
         for i, prompt in enumerate(prompt_list):
-            # Truncate long prompts for display
-            display_prompt = prompt[:100] + "..." if len(prompt) > 100 else prompt
-            debug_lines.append(f"[{i+1}] {display_prompt}")
+            debug_lines.append(f"\n[Prompt {i+1}] ({len(prompt)} chars)")
+            debug_lines.append("-" * 30)
+            debug_lines.append(prompt)
+            debug_lines.append("")
         debug_lines.append("=" * 50)
         debug_info = "\n".join(debug_lines)
 
@@ -262,9 +263,10 @@ class ArchAi3D_Batch_Text_Encode_SDXL:
             "-" * 50,
         ]
         for i, prompt in enumerate(prompt_list):
-            # Truncate long prompts for display
-            display_prompt = prompt[:100] + "..." if len(prompt) > 100 else prompt
-            debug_lines.append(f"[{i+1}] {display_prompt}")
+            debug_lines.append(f"\n[Prompt {i+1}] ({len(prompt)} chars)")
+            debug_lines.append("-" * 30)
+            debug_lines.append(prompt)
+            debug_lines.append("")
         debug_lines.append("=" * 50)
         debug_info = "\n".join(debug_lines)
 
