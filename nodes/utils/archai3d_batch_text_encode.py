@@ -72,9 +72,22 @@ class ArchAi3D_Batch_Text_Encode:
             if pooled is not None:
                 pooled_list.append(pooled)
 
+        # Handle variable-length sequences (Z-Image/Qwen uses variable tokenization)
+        # Find max sequence length and pad all tensors to match
+        max_seq_len = max(c.shape[1] for c in cond_list)
+        padded_cond_list = []
+        for cond in cond_list:
+            if cond.shape[1] < max_seq_len:
+                # Pad with zeros to match max length
+                pad_size = max_seq_len - cond.shape[1]
+                padding = torch.zeros(cond.shape[0], pad_size, cond.shape[2],
+                                     dtype=cond.dtype, device=cond.device)
+                cond = torch.cat([cond, padding], dim=1)
+            padded_cond_list.append(cond)
+
         # Concatenate along batch dimension (dim=0)
         # Shape: [batch_size, seq_len, hidden_dim] e.g. [4, 77, 768]
-        batched_cond = torch.cat(cond_list, dim=0)
+        batched_cond = torch.cat(padded_cond_list, dim=0)
 
         result_dict = {}
         if pooled_list:
@@ -83,7 +96,7 @@ class ArchAi3D_Batch_Text_Encode:
 
         conditioning = [[batched_cond, result_dict]]
 
-        print(f"[Batch Text Encode] Output shape: {batched_cond.shape}")
+        print(f"[Batch Text Encode] Output shape: {batched_cond.shape} (padded to {max_seq_len} tokens)")
 
         return (conditioning, batch_size)
 
@@ -183,8 +196,21 @@ class ArchAi3D_Batch_Text_Encode_SDXL:
             if pooled is not None:
                 pooled_list.append(pooled)
 
+        # Handle variable-length sequences (Z-Image/Qwen uses variable tokenization)
+        # Find max sequence length and pad all tensors to match
+        max_seq_len = max(c.shape[1] for c in cond_list)
+        padded_cond_list = []
+        for cond in cond_list:
+            if cond.shape[1] < max_seq_len:
+                # Pad with zeros to match max length
+                pad_size = max_seq_len - cond.shape[1]
+                padding = torch.zeros(cond.shape[0], pad_size, cond.shape[2],
+                                     dtype=cond.dtype, device=cond.device)
+                cond = torch.cat([cond, padding], dim=1)
+            padded_cond_list.append(cond)
+
         # Concatenate along batch dimension
-        batched_cond = torch.cat(cond_list, dim=0)
+        batched_cond = torch.cat(padded_cond_list, dim=0)
 
         result_dict = {
             "width": width,
@@ -201,7 +227,7 @@ class ArchAi3D_Batch_Text_Encode_SDXL:
 
         conditioning = [[batched_cond, result_dict]]
 
-        print(f"[Batch Text Encode SDXL] Output shape: {batched_cond.shape}")
+        print(f"[Batch Text Encode SDXL] Output shape: {batched_cond.shape} (padded to {max_seq_len} tokens)")
 
         return (conditioning, batch_size)
 
