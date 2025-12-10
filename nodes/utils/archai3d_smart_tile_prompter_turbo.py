@@ -1,14 +1,25 @@
 # ArchAi3D Smart Tile Prompter Turbo
 #
 # Z-Image-Turbo optimized prompting for tiled upscaling
-# Generates dense paragraph prompts following 3-step structure:
-#   1. Core (Subject & Action) - exact facts
-#   2. Visual Expansion (Style, Lighting, Atmosphere) - professional aesthetics
-#   3. Text Transcription - verbatim text in quotes
+# v3.0: Z-Image Turbo Texture-Focused Prompting
+#   - Global style extraction (environment + lighting + color palette)
+#   - Local texture-only descriptions (NO object inference)
+#   - Anti-hallucination: describes surfaces only, not partially visible objects
+#   - Hierarchical assembly: [Local Texture] + [Global Style]
 #
 # Author: Amir Ferdos (ArchAi3d)
-# Version: 1.0.6 - Added retry logic with exponential backoff for HTTP 500 errors
-#                  v1.0.5: Fixed stop_server: added SIGKILL fallback + fuser + pkill patterns
+# Version: 3.6.0 - Professional Architectural Photography Style
+#                  Magazine-quality descriptions by default (Arch Digest, Dwell, Dezeen)
+#                  Professional terminology for all materials and finishes
+#                  v3.5.0: VLLM Guidance Instructions
+#                  v3.4.0: Spatial Context for High Denoise (camera angle, depth layer)
+#                  v3.3.0: Extended Detail + Use Cases (30% longer prompts, 5 photography modes)
+#                  v3.2.0: Foreground First (objects > background, prevents erasing furniture)
+#                  v3.1.0: Foreground Specificity + Background Texture
+#                  v3.0.0: Z-Image Turbo optimized (texture focus, no hallucination)
+#                  v2.1.0: Enhanced with materials + neighbor awareness
+#                  v2.0.0: Scene-grounded prompting (short scene + tile details)
+#                  v1.0.7: Added clear_cache option + better cache diagnostics
 # License: Dual License (Free for personal use, Commercial license required for business use)
 
 import base64
@@ -77,10 +88,232 @@ CONSISTENCY_PROMPTS = {
 }
 
 # ============================================================================
-# Z-IMAGE-TURBO OPTIMIZED PROMPTS
+# V3.0 Z-IMAGE TURBO OPTIMIZED PROMPTS
+# ============================================================================
+# Based on Z-Image Turbo prompting guide:
+# - No negative prompts (all exclusions via positive description)
+# - Two-pass system: Global style + Local texture
+# - Texture-focused descriptions to prevent hallucination
+# - Hierarchical structure: Subject + Environment + Style + Composition
+
+# PASS 1: Global Style Extraction (run once on full image)
+# Extracts: Environment context + Visual style + Color palette + Lighting
+GLOBAL_STYLE_PROMPT = """Analyze this image for GLOBAL STYLE attributes only.
+
+Extract:
+1. ENVIRONMENT: Interior style (modern, Scandinavian, industrial, etc.)
+2. LIGHTING: Quality and direction (soft diffused daylight, warm spotlights, etc.)
+3. COLOR PALETTE: Dominant tones (muted beige, cool grays, warm earth tones)
+4. PHOTOGRAPHY STYLE: Camera quality descriptors
+
+Output format (single line, comma-separated):
+"[style] interior, [lighting description], [color palette], architectural photography, photorealistic 8k"
+
+Examples:
+- "Modern Japandi interior, soft natural morning light, beige and oak color palette, architectural photography, photorealistic 8k"
+- "Industrial loft space, dramatic side lighting with shadows, raw concrete and steel tones, architectural photography, photorealistic 8k"
+- "Scandinavian minimalist interior, soft diffused daylight, muted white and wood tones, architectural photography, photorealistic 8k"
+
+Output ONLY the style string, nothing else."""
+
+# PASS 2A: Materials Grid Extraction (run once on full image)
+# Identifies surface materials for consistency across tiles
+MATERIALS_GRID_PROMPT = """Analyze this image divided into a {tiles_x}x{tiles_y} grid.
+
+EXTRACT SURFACE MATERIALS (be very specific about textures):
+- Floor: material + texture + finish (e.g., "light oak herringbone wood, visible grain, matte finish")
+- Walls: material + texture (e.g., "white plaster, smooth finish" or "exposed red brick, rough texture")
+- Ceiling: material + features (e.g., "white painted drywall, recessed spotlights")
+
+For each tile, describe ONLY the visible SURFACES (not objects):
+
+Grid positions (row,col starting from 0):
+{grid_positions}
+
+Output format (JSON only):
+{{
+  "materials": {{
+    "floor": "light oak herringbone wood, visible grain, matte finish",
+    "walls": "white smooth plaster with exposed brick accent",
+    "ceiling": "white painted, recessed LED spotlights"
+  }},
+  "tiles": {{
+    "0,0": "white ceiling surface, spotlight fixtures",
+    "0,1": "ceiling-wall corner, white plaster meets brick",
+    "1,0": "oak wood floor, furniture leg shadows",
+    "1,1": "wood floor, fabric texture edge"
+  }}
+}}
+
+IMPORTANT: Describe SURFACES only, not objects. Say "cylindrical black metal leg" not "chair leg".
+Output ONLY valid JSON."""
+
+# ============================================================================
+# USE CASE SPECIFIC PROMPTS (v3.6 Magazine Quality)
+# ============================================================================
+USE_CASE_PROMPTS = {
+    "Interior Design": {
+        "role": "award-winning Interior Design Photographer shooting for Architectural Digest magazine",
+        "objects": "Designer furniture (specify designer/style: Eames lounge, Barcelona chair, Noguchi table, B&B Italia sectional), Luxury lighting fixtures (Flos, Artemide, Louis Poulsen, custom artisan pendants), Curated decor (sculptural vases, artisan ceramics, gallery-quality artwork, designer objects)",
+        "surfaces": "Premium architectural finishes (hand-troweled Venetian plaster, honed Carrara marble, wide-plank European white oak, polished concrete, Calacatta quartzite)",
+        "style_suffix": "award-winning architectural interior photography, Architectural Digest quality, photorealistic 8k",
+    },
+    "Exterior Architecture": {
+        "role": "award-winning Architectural Photographer shooting for Dwell or Dezeen magazine",
+        "objects": "Architectural elements (cantilevered overhangs, floor-to-ceiling glazing, brise-soleil, steel moment frames), Professional landscaping (specimen trees with Latin names, ornamental grasses, drought-tolerant native plantings, professionally maintained lawn), Hardscape (permeable pavers, architectural concrete, natural stone coping, steel edging)",
+        "surfaces": "Exterior architectural finishes (smooth stucco render, corrugated Corten steel, thermally-modified timber cladding, zinc panels), Ground treatments (decomposed granite pathways, Belgian block driveways, manicured Kentucky bluegrass, pea gravel with steel borders)",
+        "style_suffix": "award-winning architectural exterior photography, Dwell magazine quality, photorealistic 8k",
+    },
+    "Product Photography": {
+        "role": "award-winning Commercial Photographer shooting for premium brand campaigns",
+        "objects": "Premium products (packaging with embossed details, luxury materials, artisan craftsmanship), Styled props (marble pedestals, linen backdrops, botanical accents), Professional lighting reflections and highlights",
+        "surfaces": "Studio surfaces (Carrara marble slabs, oiled walnut, Belgian linen, seamless paper), Premium backgrounds (gradient lighting, textured plaster)",
+        "style_suffix": "award-winning commercial product photography, premium brand quality, photorealistic 8k",
+    },
+    "Food & Beverage": {
+        "role": "award-winning Food Photographer shooting for Bon Appétit or Food & Wine magazine",
+        "objects": "Artisan food presentation (farm-to-table ingredients, chef-plated dishes, fresh herb garnishes), Designer tableware (Heath Ceramics, handmade artisan pottery, vintage silver), Styled props (hand-woven linen napkins, reclaimed wood boards)",
+        "surfaces": "Editorial surfaces (live-edge walnut, weathered marble, hand-poured concrete, aged copper), Curated backgrounds (lime-washed plaster, natural linen)",
+        "style_suffix": "award-winning editorial food photography, Bon Appétit quality, photorealistic 8k",
+    },
+    "Fashion & Lifestyle": {
+        "role": "award-winning Fashion Photographer shooting for Vogue or Elle Decor magazine",
+        "objects": "Luxury fashion details (couture fabric textures, hand-stitched details, designer hardware), Premium accessories (fine jewelry, artisan leather goods), Styled environment (designer furniture, curated art pieces)",
+        "surfaces": "Editorial backgrounds (limewashed walls, polished terrazzo, draped silk), Premium flooring (herringbone parquet, honed limestone, hand-knotted rugs)",
+        "style_suffix": "award-winning fashion editorial photography, Vogue quality, photorealistic 8k",
+    },
+}
+
+# PASS 2B: Local Tile Description (run on each tile crop)
+# v3.4: Spatial Context for High Denoise
+# - Spatial anchoring (camera angle, depth layer, perspective) for each tile
+# - Enables higher denoise (0.5-0.8) while maintaining spatial consistency
+# - PRIORITY 1: Foreground objects, PRIORITY 2: Background surfaces
+TEXTURE_TILE_PROMPT = """ROLE: You are an {role}.
+INPUT: You will receive a cropped image tile requiring DETAILED description.
+
+PROFESSIONAL CONTEXT (CRITICAL - Apply to ALL descriptions):
+You are creating descriptions for PROFESSIONAL ARCHITECTURAL PHOTOGRAPHY.
+- This will be printed in an architectural magazine (Architectural Digest, Dwell, Dezeen)
+- Describe everything as a professional architectural photographer would
+- Use industry-standard architectural/design terminology
+- Materials MUST be described in their design context and purpose:
+  - Gravel = "premium pea gravel driveway" or "decorative crushed stone pathway"
+  - Concrete = "precision-poured architectural concrete with smooth board-formed finish"
+  - Plants = species names + design intent ("mature Japanese maple (Acer palmatum) providing shade")
+  - Fixtures = designer terms ("minimalist pendant luminaire" not "hanging light")
+  - Wood = specific species + finish ("wide-plank white oak flooring with matte polyurethane")
+  - Stone = type + finish ("honed Carrara marble countertop" not "white marble surface")
+{user_guidance_section}
+SPATIAL CONTEXT (CRITICAL for high denoise consistency):
+- Camera Angle: {camera_angle}
+- Depth Layer: {depth_layer}
+- Frame Position: {perspective}
+- START your description with this spatial context!
+
+PRIORITY ORDER (CRITICAL - Follow this exact order):
+
+PRIORITY 1 - FOREGROUND OBJECTS (describe FIRST if present):
+{objects}
+- If ANY object is visible, even partially, YOU MUST describe it FIRST with FULL DETAIL
+
+PRIORITY 2 - BACKGROUND SURFACES (describe AFTER objects):
+{surfaces}
+- If the tile is EMPTY (no objects), then describe only the background surface in detail
+
+DETAIL REQUIREMENTS (Be extremely thorough):
+1. MATERIAL: Exact material type (oak wood, brushed brass, Belgian linen, Carrara marble)
+2. TEXTURE: Surface quality (smooth, rough, woven, grained, polished, matte, glossy)
+3. COLOR: Specific tones (warm beige, cool gray, antique gold, ivory white, charcoal)
+4. FINISH: Surface treatment (lacquered, oiled, painted, raw, distressed, polished)
+5. LIGHTING: How light interacts (soft shadows, warm highlights, reflections, ambient glow)
+6. CONDITION: Wear, patina, cleanliness (pristine, weathered, vintage, new)
+
+STRICT RULES (Magazine Quality Required):
+- ALWAYS use professional architectural/design terminology
+- Describe materials with their design PURPOSE: "premium pea gravel driveway" not "gravel"
+- Include designer/manufacturer names when recognizable (Eames, B&B Italia, Flos)
+- Use magazine-quality descriptive language throughout
+- START with spatial anchor: "{spatial_phrase}" then describe content
+- Name objects specifically: "curved cream bouclé dining chair armrest" not "chair"
+- Describe materials professionally: "wide-plank European white oak flooring with matte polyurethane finish"
+- For partial objects: use "detail of," "section of," "close-up of," "edge of"
+- NEVER ignore visible objects - this causes the upscaler to ERASE them
+- Include micro-details: stitching, grain patterns, reflections, shadows, textures
+- Ground materials = always describe with purpose (pathway, driveway, patio, border)
+
+DO NOT:
+- Output conversational text or repeat instructions
+- Skip objects and only describe surfaces (this erases objects!)
+- Use generic terms like "furniture," "decoration," "nice," "beautiful"
+- Forget to include spatial context at the start!
+
+CONTEXT:
+- Global Style: {scene_description}
+- Floor Material: {floor_material}
+- Wall Material: {wall_material}
+- Ceiling Material: {ceiling_material}
+- Tile Position: {position} (row {row}, col {col})
+- Spatial Context: {spatial_phrase}
+- Surface Hint: {tile_label}
+
+OUTPUT FORMAT (80-150 words, comma-separated, highly detailed):
+[Spatial Anchor], [Object + Specific Material + Texture], [Micro-details], [Surface Quality], [Color Tones], [Lighting Interaction], [Background Surface], sharp focus, ultra detailed
+
+EXAMPLES WITH SPATIAL CONTEXT (Magazine Quality - CRITICAL format):
+- "Looking down at ground level, foreground layer, center of frame, meticulously maintained Kentucky bluegrass lawn (Poa pratensis) with golf-course quality cut at 2.5 inches, individual blade definition with morning dew creating prismatic light reflections, healthy deep emerald green coloration with no visible thatch, professionally installed sod with invisible seams, soft directional morning light from east casting gentle blade shadows, Dwell magazine quality, sharp focus, ultra detailed"
+- "Eye-level view, midground layer, left side of frame, mature specimen Japanese maple (Acer palmatum 'Bloodgood') with burgundy-red palmate foliage creating elegant canopy, graceful multi-stem structure with silver-gray bark showing horizontal lenticels, strategically placed as focal point in minimalist landscape design, backlighting creating translucent glow through leaves with dappled shadow pattern on manicured lawn beneath, professional landscape architecture, Architectural Digest quality, sharp focus, ultra detailed"
+- "Looking down, high camera angle, foreground/ground layer, right side of frame, premium Belgian pea gravel driveway with warm honey-beige 10mm aggregate carefully raked into smooth uniform surface, crisp powder-coated steel edging defining clean border against manicured emerald lawn, decorative river stone accent at planting bed transition, soft afternoon light creating gentle texture definition, professionally installed residential hardscape, Dezeen magazine quality, sharp focus, ultra detailed"
+
+EXAMPLES WITH OBJECTS (Interior - Magazine Quality):
+- "Eye-level, midground layer, center of frame, Flos IC pendant luminaire in brushed brass finish with signature sphere design, hand-blown opal glass diffuser creating soft ambient glow, precision mounting hardware with clean ceiling integration, designer lighting against hand-troweled Venetian plaster ceiling with subtle warm undertones, curated interior styling, Architectural Digest quality, sharp focus, ultra detailed"
+- "Eye-level, slight downward tilt, midground to foreground, left side of frame, section of B&B Italia Camaleonda modular sofa in premium bouclé fabric, visible woven texture with luxurious pile depth, soft sculptural armrest with artisan upholstery detail, natural fabric folds creating elegant shadows, resting on wide-plank European white oak flooring with matte polyurethane finish and subtle grain variation, soft northern daylight from floor-to-ceiling glazing, award-winning interior design, sharp focus, ultra detailed"
+
+EXAMPLES WITHOUT OBJECTS (Surfaces - Magazine Quality):
+- "Looking down, high camera angle, foreground/ground layer, center of frame, wide-plank European white oak flooring in chevron pattern with precisely mitered joints, hand-finished matte polyurethane creating subtle satin sheen, warm honey-gold undertones with natural grain character, furniture-grade installation with invisible fasteners, soft ambient light highlighting wood texture, premium residential flooring, Dwell magazine quality, sharp focus, ultra detailed"
+- "Eye-level, straight-on view, midground layer, right side of frame, hand-troweled Venetian plaster wall finish in warm limestone tone with subtle trowel texture creating organic pattern, mineral-based application with slight natural sheen, hairline variations adding artisan character, soft diffused daylight from left creating gentle gradient shadow, museum-quality wall treatment, Architectural Digest quality, sharp focus, ultra detailed"
+
+Output ONLY the description. No explanations."""
+
+# Phrases that indicate instruction leakage (to be cleaned from output)
+# Order matters: longer phrases should come first to avoid partial matches
+INSTRUCTION_LEAKAGE_PHRASES = [
+    # Long phrases first (more specific)
+    "explain the objects, furniture's, material and lights, explain everything very sharp, i need very very sharp image and make it to real photo",
+    "explain the objects, furniture's, material and lights, explain everything very sharp",
+    "furniture's, material and lights, explain everything very sharp",
+    "i need very very sharp image and make it to real photo",
+    "explain everything very sharp",
+    "i need very very sharp image",
+    "make it to real photo",
+    "explain the objects",
+    "furniture's, material and lights",
+    "i need very sharp",
+    "i need sharp",
+    "real photo quality",
+    "here is the description",
+    "i will describe",
+    "this tile shows",
+    "in this tile",
+    "the tile contains",
+    "as requested",
+    "as you asked",
+    "explain everything",
+    # Common trailing artifacts
+    "material detail,",
+    ", ,",
+]
+
+# Legacy prompts kept for backwards compatibility
+SCENE_DESCRIPTION_PROMPT = GLOBAL_STYLE_PROMPT  # Alias for v2.1 compatibility
+TILE_GRID_PROMPT = MATERIALS_GRID_PROMPT  # Alias for v2.1 compatibility
+TILE_PROMPT_TEMPLATE_V21 = TEXTURE_TILE_PROMPT  # Alias for v2.1 compatibility
+
+# ============================================================================
+# LEGACY PROMPTS (kept for reference/advanced use)
 # ============================================================================
 
-# Style guide extraction prompt - optimized for 3-step structure extraction
+# Style guide extraction prompt - detailed version (used internally for style_reference)
 STYLE_GUIDE_PROMPT = """Analyze this image and extract a comprehensive STYLE GUIDE for consistent tile descriptions.
 
 SUBJECTS & OBJECTS:
@@ -193,27 +426,41 @@ def check_server_ready(port):
 
 
 def start_llama_server(model_size, port, gpu_layers=99, context_size=8192):
-    """Start llama-server for the specified model size."""
+    """Start llama-server for the specified model size.
+
+    Returns:
+        tuple: (process, log_file_path) or (None, error_message)
+    """
     model_short = model_size.split()[0]  # "4B" from "4B (Balanced)"
 
     if not SCRIPT_PATH.exists():
-        print(f"[Smart Tile Prompter Turbo] Warning: Server script not found at {SCRIPT_PATH}")
-        return None
+        error_msg = f"Server script not found at {SCRIPT_PATH}"
+        print(f"[Smart Tile Prompter Turbo] Warning: {error_msg}")
+        return None, error_msg
 
     env = os.environ.copy()
     env["CTX"] = str(context_size)
     env["GPU_LAYERS"] = str(gpu_layers)
 
+    # Create log file to capture output for debugging
+    log_dir = Path(__file__).parent.parent.parent / "logs"
+    log_dir.mkdir(exist_ok=True)
+    log_file = log_dir / f"qwenvl_server_{model_short}.log"
+
+    # Open log file for writing (truncate previous content)
+    log_handle = open(log_file, 'w')
+
     process = subprocess.Popen(
         [str(SCRIPT_PATH), model_short],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=log_handle,
+        stderr=subprocess.STDOUT,  # Combine stderr into stdout
         start_new_session=True,
         env=env
     )
     print(f"[Smart Tile Prompter Turbo] Started server for {model_short} on port {port}")
     print(f"  GPU Layers: {gpu_layers}, Context: {context_size}")
-    return process
+    print(f"  Log file: {log_file}")
+    return process, str(log_file)
 
 
 def ensure_server_running(model_size, auto_start=True, gpu_layers=99, context_size=8192):
@@ -239,11 +486,48 @@ def ensure_server_running(model_size, auto_start=True, gpu_layers=99, context_si
 
     # Auto-start the server
     print(f"[Smart Tile Prompter Turbo] Server not running, starting automatically...")
-    start_llama_server(model_size, port, gpu_layers, context_size)
+    result = start_llama_server(model_size, port, gpu_layers, context_size)
+
+    # Check if start_llama_server returned an error
+    if result[0] is None:
+        return False, result[1]
+
+    process, log_file = result
 
     # Wait for server to be ready (up to 60 seconds)
     for i in range(60):
         time.sleep(1)
+
+        # Check if process has exited (indicates startup failure)
+        exit_code = process.poll()
+        if exit_code is not None:
+            # Process exited - read log file for error details
+            error_details = ""
+            try:
+                with open(log_file, 'r') as f:
+                    log_content = f.read()
+                    # Get last 20 lines for error context
+                    log_lines = log_content.strip().split('\n')
+                    error_details = '\n'.join(log_lines[-20:])
+            except Exception as e:
+                error_details = f"Could not read log: {e}"
+
+            # Check for common errors in log
+            if "already running" in error_details.lower() or "✅" in error_details:
+                # Server was already running (script exited with 0)
+                print(f"[Smart Tile Prompter Turbo] Server was already running")
+                time.sleep(2)  # Give it a moment
+                if check_server_ready(port):
+                    return True, None
+
+            error_msg = (
+                f"Server process exited with code {exit_code}\n\n"
+                f"Log output:\n{error_details}\n\n"
+                f"Try manually: ./start_qwenvl_server.sh {model_short}"
+            )
+            print(f"[Smart Tile Prompter Turbo] Server startup failed: exit code {exit_code}")
+            return False, error_msg
+
         if check_server_ready(port):
             # Test with a simple request to verify model is loaded
             try:
@@ -265,7 +549,22 @@ def ensure_server_running(model_size, auto_start=True, gpu_layers=99, context_si
         if i % 10 == 0 and i > 0:
             print(f"[Smart Tile Prompter Turbo] Loading model... ({i}s)")
 
-    return False, f"Server failed to start after 60s. Try: ./start_qwenvl_server.sh {model_short}"
+    # Timeout - read log for debugging
+    log_tail = ""
+    try:
+        with open(log_file, 'r') as f:
+            log_lines = f.read().strip().split('\n')
+            log_tail = '\n'.join(log_lines[-10:])
+    except:
+        pass
+
+    error_msg = (
+        f"Server failed to start after 60s.\n\n"
+        f"Recent log:\n{log_tail}\n\n"
+        f"Full log: {log_file}\n"
+        f"Try manually: ./start_qwenvl_server.sh {model_short}"
+    )
+    return False, error_msg
 
 
 def stop_server(model_size):
@@ -374,6 +673,129 @@ def image_to_base64(image_tensor, index=0, max_size=1024):
     buffer = io.BytesIO()
     pil_img.save(buffer, format='PNG')
     return base64.b64encode(buffer.getvalue()).decode('utf-8')
+
+
+def generate_grid_positions(tiles_x, tiles_y):
+    """Generate grid position string for TILE_GRID_PROMPT.
+
+    Returns a string like:
+    (0,0): top-left, (0,1): top-right
+    (1,0): bottom-left, (1,1): bottom-right
+    """
+    lines = []
+    for y in range(tiles_y):
+        row_items = []
+        for x in range(tiles_x):
+            pos = get_position_name(x, y, tiles_x, tiles_y)
+            row_items.append(f"({y},{x}): {pos}")
+        lines.append(", ".join(row_items))
+    return "\n".join(lines)
+
+
+def get_neighbor_labels(tile_labels, x, y, tiles_x, tiles_y):
+    """Get labels for neighboring tiles.
+
+    Args:
+        tile_labels: Dict mapping "row,col" to label string
+        x, y: Current tile coordinates
+        tiles_x, tiles_y: Grid dimensions
+
+    Returns:
+        Dict with keys: above, below, left, right
+    """
+    def get_label(row, col):
+        if row < 0 or row >= tiles_y or col < 0 or col >= tiles_x:
+            return "edge of image"
+        return tile_labels.get(f"{row},{col}", "unknown")
+
+    return {
+        "above": get_label(y - 1, x),
+        "below": get_label(y + 1, x),
+        "left": get_label(y, x - 1),
+        "right": get_label(y, x + 1),
+    }
+
+
+def parse_grid_json(response_text):
+    """Parse JSON response from TILE_GRID_PROMPT.
+
+    Handles cases where model adds extra text before/after JSON.
+    Returns dict with 'materials' and 'tiles' keys.
+    """
+    # Try to extract JSON from response
+    text = response_text.strip()
+
+    # Find JSON block
+    start = text.find('{')
+    end = text.rfind('}') + 1
+
+    if start == -1 or end == 0:
+        # No JSON found, return defaults
+        print("[Smart Tile Prompter Turbo v2.1] Warning: No JSON in grid response, using defaults")
+        return {
+            "materials": {"floor": "floor", "walls": "walls", "ceiling": "ceiling"},
+            "tiles": {}
+        }
+
+    json_str = text[start:end]
+
+    try:
+        data = json.loads(json_str)
+        # Ensure required keys exist
+        if "materials" not in data:
+            data["materials"] = {"floor": "floor", "walls": "walls", "ceiling": "ceiling"}
+        if "tiles" not in data:
+            data["tiles"] = {}
+        return data
+    except json.JSONDecodeError as e:
+        print(f"[Smart Tile Prompter Turbo v3.4] Warning: JSON parse error: {e}")
+        return {
+            "materials": {"floor": "floor", "walls": "walls", "ceiling": "ceiling"},
+            "tiles": {}
+        }
+
+
+def clean_prompt_output(raw_output):
+    """Clean VLLM output to remove instruction leakage.
+
+    The model sometimes echoes instructions back. This function removes
+    conversational phrases that would confuse the image generator.
+
+    Args:
+        raw_output: Raw text from VLLM
+
+    Returns:
+        Cleaned prompt text safe for Z-Image Turbo
+    """
+    cleaned = raw_output
+
+    # Remove known instruction leakage phrases (case-insensitive)
+    for phrase in INSTRUCTION_LEAKAGE_PHRASES:
+        pattern = re.compile(re.escape(phrase), re.IGNORECASE)
+        cleaned = pattern.sub("", cleaned)
+
+    # Clean up punctuation artifacts using regex for robustness
+    # Fix ", ." or ",  ." -> ". " (comma followed by spaces and period)
+    cleaned = re.sub(r',\s*\.', '.', cleaned)
+    # Fix ", ," or ",   ," -> "," (comma-spaces-comma)
+    cleaned = re.sub(r',\s*,', ',', cleaned)
+    # Remove double/triple periods
+    cleaned = re.sub(r'\.{2,}', '.', cleaned)
+    # Remove double/triple commas
+    cleaned = re.sub(r',{2,}', ',', cleaned)
+    # Fix multiple spaces
+    cleaned = re.sub(r'\s{2,}', ' ', cleaned)
+    # Remove comma before period
+    cleaned = cleaned.replace(',.', '.')
+    # Remove leading/trailing commas and spaces
+    cleaned = cleaned.strip().strip(",").strip()
+
+    # Log if cleaning was needed
+    if cleaned != raw_output:
+        removed_len = len(raw_output) - len(cleaned)
+        print(f"    [Cleaner] Removed {removed_len} chars of instruction leakage")
+
+    return cleaned
 
 
 def call_qwenvl_api(image_b64, prompt, model_size, quality_preset, seed=1, max_retries=3):
@@ -528,6 +950,70 @@ def get_spatial_zone(row, col, tiles_y, tiles_x):
     return v_zone
 
 
+def get_spatial_context(row, col, tiles_y, tiles_x, use_case="Interior Design"):
+    """
+    Derive camera angle, depth layer, and perspective for a tile.
+
+    This enables higher denoise values (0.5-0.8) by giving the diffusion model
+    spatial anchoring information - it knows WHERE in 3D space it's rendering.
+
+    Args:
+        row: Row index (0 = top)
+        col: Column index (0 = left)
+        tiles_y, tiles_x: Total grid dimensions
+        use_case: Photography mode (affects terminology)
+
+    Returns:
+        Dict with camera_angle, depth_layer, perspective, spatial_phrase
+    """
+    # Vertical position ratio (0.0 = top, 1.0 = bottom)
+    v_ratio = row / max(tiles_y - 1, 1) if tiles_y > 1 else 0.5
+
+    # Horizontal position ratio (0.0 = left, 1.0 = right)
+    h_ratio = col / max(tiles_x - 1, 1) if tiles_x > 1 else 0.5
+
+    # Camera angle based on vertical position
+    if v_ratio < 0.25:
+        camera_angle = "looking up, low camera angle"
+        depth_layer = "background/sky layer"
+    elif v_ratio < 0.5:
+        camera_angle = "eye-level, straight-on view"
+        depth_layer = "midground layer"
+    elif v_ratio < 0.75:
+        camera_angle = "eye-level, slight downward tilt"
+        depth_layer = "midground to foreground"
+    else:
+        camera_angle = "looking down, high camera angle"
+        depth_layer = "foreground/ground layer"
+
+    # Perspective based on horizontal position
+    if h_ratio < 0.33:
+        perspective = "left side of frame, off-center composition"
+    elif h_ratio > 0.67:
+        perspective = "right side of frame, off-center composition"
+    else:
+        perspective = "center of frame, balanced composition"
+
+    # Use case specific vocabulary for exteriors
+    if use_case == "Exterior Architecture":
+        if v_ratio < 0.25:
+            depth_layer = "sky and roofline layer"
+        elif v_ratio > 0.75:
+            depth_layer = "ground plane, lawn and hardscape"
+
+    # Build spatial phrase for prompt
+    spatial_phrase = f"{camera_angle}, {depth_layer}, {perspective}"
+
+    return {
+        "camera_angle": camera_angle,
+        "depth_layer": depth_layer,
+        "perspective": perspective,
+        "spatial_phrase": spatial_phrase,
+        "v_ratio": v_ratio,
+        "h_ratio": h_ratio,
+    }
+
+
 def crop_tile(image_tensor, tile_x, tile_y, tiles_x, tiles_y, overlap=0):
     """Extract a tile region from the image tensor.
 
@@ -569,7 +1055,7 @@ def crop_tile(image_tensor, tile_x, tile_y, tiles_x, tiles_y, overlap=0):
     return cropped
 
 
-def compute_cache_key(image_tensor, tiles_x, tiles_y, model_size, quality_preset, consistency_level, user_context, seed):
+def compute_cache_key(image_tensor, tiles_x, tiles_y, model_size, quality_preset, consistency_level, use_case, user_context, vllm_guidance, seed):
     """Create unique hash for caching."""
     hasher = hashlib.md5()
     hasher.update(image_tensor.cpu().numpy().tobytes())
@@ -577,9 +1063,11 @@ def compute_cache_key(image_tensor, tiles_x, tiles_y, model_size, quality_preset
     hasher.update(model_size.encode())
     hasher.update(quality_preset.encode())
     hasher.update(consistency_level.encode())
+    hasher.update(use_case.encode())
     hasher.update(user_context.encode())
+    hasher.update(vllm_guidance.encode())  # v3.5 VLLM guidance
     hasher.update(str(seed).encode())
-    hasher.update(b"turbo")  # Distinguish from regular prompter cache
+    hasher.update(b"turbo_v36_magazine")  # v3.6 Professional Architectural Photography
     return hasher.hexdigest()
 
 
@@ -638,6 +1126,10 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
                     "default": "Balanced",
                     "tooltip": "How strictly to enforce style guide"
                 }),
+                "use_case": (list(USE_CASE_PROMPTS.keys()), {
+                    "default": "Interior Design",
+                    "tooltip": "Photography use case - adjusts vocabulary and focus areas"
+                }),
             },
             "optional": {
                 "bundle": ("SMART_TILE_BUNDLE", {
@@ -646,7 +1138,12 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
                 "user_context": ("STRING", {
                     "default": "",
                     "multiline": True,
-                    "tooltip": "Optional: Your description to include in style guide"
+                    "tooltip": "Optional: Text added directly TO the output prompts (e.g., 'luxury cabin')"
+                }),
+                "vllm_guidance": ("STRING", {
+                    "default": "",
+                    "multiline": True,
+                    "tooltip": "Instructions FOR the VLLM: mood, material preferences, style hints (e.g., 'Describe grass as Kentucky bluegrass with dew')"
                 }),
                 "tile_overlap": ("INT", {
                     "default": 0,
@@ -686,56 +1183,73 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
                     "max": 0xffffffffffffffff,
                     "tooltip": "Random seed for reproducible prompt generation"
                 }),
+                "clear_cache": ("BOOLEAN", {
+                    "default": False,
+                    "tooltip": "Clear ALL cached prompts before running (use if prompts don't match image)"
+                }),
             }
         }
 
     def generate(self, image, tiles_x, tiles_y, model_size, quality_preset,
-                 consistency_level, bundle=None, user_context="", tile_overlap=0, use_cache=True,
-                 auto_start_server=True, gpu_layers=99, context_size=8192,
-                 stop_server_after=False, seed=1):
-        """Generate Z-Image-Turbo optimized prompts for all tiles."""
+                 consistency_level, use_case="Interior Design", bundle=None, user_context="",
+                 vllm_guidance="", tile_overlap=0, use_cache=True, auto_start_server=True,
+                 gpu_layers=99, context_size=8192, stop_server_after=False, seed=1, clear_cache=False):
+        """Generate Z-Image-Turbo optimized prompts for all tiles (v3.6 Magazine Quality)."""
+        global TILE_PROMPTER_TURBO_CACHE
+
+        # Clear cache if requested
+        if clear_cache:
+            old_count = len(TILE_PROMPTER_TURBO_CACHE)
+            TILE_PROMPTER_TURBO_CACHE.clear()
+            print(f"[Smart Tile Prompter Turbo] ⚠️ Cache CLEARED ({old_count} entries removed)")
 
         # If bundle provided, extract values (overrides individual inputs)
         if bundle is not None:
             image = bundle.get("scaled_image", image)
             tiles_x = bundle.get("tiles_x", tiles_x)
             tiles_y = bundle.get("tiles_y", tiles_y)
-            print(f"[Smart Tile Prompter Turbo v1.0.6] Using bundle: {tiles_x}x{tiles_y} tiles")
+            print(f"[Smart Tile Prompter Turbo v2.1] Using bundle: {tiles_x}x{tiles_y} tiles")
 
         start_time = time.time()
         total_tiles = tiles_x * tiles_y
 
-        print(f"\n[Smart Tile Prompter Turbo] Starting {tiles_x}x{tiles_y} = {total_tiles} tiles")
+        print(f"\n[Smart Tile Prompter Turbo v3.6] Starting {tiles_x}x{tiles_y} = {total_tiles} tiles")
         print(f"  Model: {model_size}, Preset: {quality_preset}, Consistency: {consistency_level}")
         print(f"  Seed: {seed}")
-        print(f"  Mode: Z-Image-Turbo optimized (3-step dense paragraphs)")
+        print(f"  Mode: Professional Architectural Photography + Use Case: {use_case} (v3.6 Magazine Quality)")
 
         # ===== CHECK SERVER =====
         server_ok, error_msg = ensure_server_running(
             model_size, auto_start_server, gpu_layers, context_size
         )
         if not server_ok:
-            return (error_msg, error_msg, "{}", "", tiles_x, tiles_y, error_msg)
+            # Return error with all 8 required outputs (including empty bundle)
+            return (error_msg, error_msg, "{}", "", tiles_x, tiles_y, error_msg, {})
 
         # Check cache
         cache_key = None
         if use_cache:
             cache_key = compute_cache_key(
                 image, tiles_x, tiles_y, model_size, quality_preset,
-                consistency_level, user_context, seed
+                consistency_level, use_case, user_context, vllm_guidance, seed
             )
             if cache_key in TILE_PROMPTER_TURBO_CACHE:
-                print("[Smart Tile Prompter Turbo] Cache hit!")
+                print(f"[Smart Tile Prompter Turbo] Cache HIT (key: {cache_key[:12]}...)")
+                print(f"  WARNING: Using cached prompts! Set use_cache=False if image changed.")
                 cached = TILE_PROMPTER_TURBO_CACHE[cache_key]
                 return cached
+            else:
+                print(f"[Smart Tile Prompter Turbo] Cache MISS (key: {cache_key[:12]}..., {len(TILE_PROMPTER_TURBO_CACHE)} cached entries)")
+        else:
+            print(f"[Smart Tile Prompter Turbo] Cache DISABLED - analyzing image fresh")
 
-        # ===== PHASE 1: GLOBAL CONTEXT EXTRACTION =====
-        print("[Smart Tile Prompter Turbo] Phase 1: Extracting global context (Z-Image-Turbo format)...")
+        # ===== PHASE 1A: GLOBAL STYLE EXTRACTION =====
+        print("[Smart Tile Prompter Turbo v3.6] Phase 1A: Extracting global style (environment + lighting + colors)...")
 
         full_image_b64 = image_to_base64(image, max_size=1536)
-        style_guide = call_qwenvl_api(
+        scene_description = call_qwenvl_api(
             full_image_b64,
-            STYLE_GUIDE_PROMPT,
+            SCENE_DESCRIPTION_PROMPT,
             model_size,
             quality_preset,
             seed=seed
@@ -743,40 +1257,101 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
 
         # Add user context if provided
         if user_context and user_context.strip():
-            style_guide = f"USER NOTES: {user_context.strip()}\n\n{style_guide}"
+            scene_description = f"{user_context.strip()}. {scene_description}"
 
-        print(f"[Smart Tile Prompter Turbo] Style guide extracted ({len(style_guide)} chars)")
+        print(f"[Smart Tile Prompter Turbo v3.6] Global Style: {scene_description[:100]}...")
 
-        # ===== PHASE 2: PER-TILE PROMPT GENERATION =====
-        print(f"[Smart Tile Prompter Turbo] Phase 2: Generating {total_tiles} tile prompts (dense paragraphs)...")
+        # ===== PHASE 1B: MATERIALS + SURFACE GRID =====
+        print("[Smart Tile Prompter Turbo v3.6] Phase 1B: Extracting materials + surface grid...")
+
+        grid_positions = generate_grid_positions(tiles_x, tiles_y)
+        grid_prompt = TILE_GRID_PROMPT.format(
+            tiles_x=tiles_x,
+            tiles_y=tiles_y,
+            grid_positions=grid_positions
+        )
+
+        grid_response = call_qwenvl_api(
+            full_image_b64,
+            grid_prompt,
+            model_size,
+            quality_preset,
+            seed=seed + 500
+        )
+
+        # Parse grid JSON response
+        grid_data = parse_grid_json(grid_response)
+        materials = grid_data.get("materials", {})
+        tile_labels = grid_data.get("tiles", {})
+
+        floor_material = materials.get("floor", "floor")
+        wall_material = materials.get("walls", "walls")
+        ceiling_material = materials.get("ceiling", "ceiling")
+
+        print(f"[Smart Tile Prompter Turbo v3.6] Materials: floor={floor_material}, walls={wall_material}")
+        print(f"[Smart Tile Prompter Turbo v3.6] Surface hints: {len(tile_labels)} tiles mapped")
+
+        # ===== BUILD VLLM GUIDANCE SECTION =====
+        # This is instructions FOR the VLLM, not text added to output
+        if vllm_guidance and vllm_guidance.strip():
+            user_guidance_section = f"""
+USER STYLE GUIDANCE (IMPORTANT - follow these instructions):
+{vllm_guidance.strip()}
+- Apply these preferences when describing materials, mood, and style
+- Use the specific terms/names provided above
+"""
+            print(f"[Smart Tile Prompter Turbo v3.6] VLLM Guidance: {vllm_guidance[:80]}...")
+        else:
+            user_guidance_section = ""
+
+        # ===== PHASE 2: LOCAL TEXTURE EXTRACTION (WITH SPATIAL CONTEXT) =====
+        print(f"[Smart Tile Prompter Turbo v3.6] Phase 2: Generating {total_tiles} magazine-quality prompts...")
 
         tile_prompts_list = []
-        consistency_rule = CONSISTENCY_PROMPTS[consistency_level]
 
         for y in range(tiles_y):
             for x in range(tiles_x):
                 tile_num = y * tiles_x + x + 1
                 position = get_position_name(x, y, tiles_x, tiles_y)
 
-                print(f"  Tile {tile_num}/{total_tiles}: {position}...")
+                # NEW v3.4: Get spatial context for this tile
+                spatial = get_spatial_context(y, x, tiles_y, tiles_x, use_case)
+
+                print(f"  Tile {tile_num}/{total_tiles}: {position} ({spatial['depth_layer']})...")
 
                 # Crop tile
                 tile_image = crop_tile(image, x, y, tiles_x, tiles_y, tile_overlap)
                 tile_b64 = image_to_base64(tile_image, max_size=1024)
 
-                # Build tile prompt
-                spatial_zone = get_spatial_zone(y, x, tiles_y, tiles_x)
-                tile_prompt = TILE_PROMPT_TEMPLATE.format(
-                    style_guide=style_guide,
+                # Get surface hint for this tile
+                tile_label = tile_labels.get(f"{y},{x}", "surface detail")
+
+                # Build tile prompt using v3.5 Spatial Context + VLLM Guidance template
+                # Uses use_case specific vocabulary for role, objects, and surfaces
+                use_case_config = USE_CASE_PROMPTS.get(use_case, USE_CASE_PROMPTS["Interior Design"])
+                tile_prompt = TILE_PROMPT_TEMPLATE_V21.format(
+                    role=use_case_config["role"],
+                    objects=use_case_config["objects"],
+                    surfaces=use_case_config["surfaces"],
+                    scene_description=scene_description,
+                    floor_material=floor_material,
+                    wall_material=wall_material,
+                    ceiling_material=ceiling_material,
                     position=position,
                     row=y + 1,
                     col=x + 1,
-                    spatial_zone=spatial_zone,
-                    consistency_rule=consistency_rule
+                    tile_label=tile_label,
+                    # v3.4 spatial context fields:
+                    camera_angle=spatial["camera_angle"],
+                    depth_layer=spatial["depth_layer"],
+                    perspective=spatial["perspective"],
+                    spatial_phrase=spatial["spatial_phrase"],
+                    # v3.5 VLLM guidance section:
+                    user_guidance_section=user_guidance_section,
                 )
 
                 # Call API (use seed + tile_num for reproducible but unique per-tile results)
-                tile_description = call_qwenvl_api(
+                local_texture_raw = call_qwenvl_api(
                     tile_b64,
                     tile_prompt,
                     model_size,
@@ -784,12 +1359,20 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
                     seed=seed + tile_num
                 )
 
+                # Clean instruction leakage from VLLM output
+                local_texture = clean_prompt_output(local_texture_raw)
+
+                # Z-Image Turbo Assembly: [Local Texture] + [Global Style]
+                # This follows the hierarchical structure: Subject + Environment + Style
+                final_prompt = f"{local_texture}, {scene_description}"
+
                 tile_prompts_list.append({
                     "tile": tile_num,
                     "position": position,
                     "x": x,
                     "y": y,
-                    "prompt": tile_description
+                    "prompt": final_prompt,
+                    "local_texture": local_texture  # Store separately for debugging
                 })
 
         # ===== FORMAT OUTPUTS =====
@@ -809,36 +1392,77 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
 
         # Debug info
         elapsed = time.time() - start_time
+        image_hash = hashlib.md5(image.cpu().numpy().tobytes()).hexdigest()[:12]
         debug_lines = [
             "=" * 50,
-            "Smart Tile Prompter Turbo v1.0.6 (Z-Image-Turbo)",
+            "Smart Tile Prompter Turbo v3.6.0 (Professional Architectural Photography)",
             "=" * 50,
+            f"Image Hash: {image_hash} (verify correct image)",
+            f"Image Shape: {list(image.shape)}",
             f"Tiles: {tiles_x}x{tiles_y} = {total_tiles} total",
             f"Model: {model_size}",
             f"Preset: {quality_preset}",
-            f"Consistency: {consistency_level}",
             f"Overlap: {tile_overlap}px",
             f"Seed: {seed}",
+            f"Cache Key: {cache_key[:12] if cache_key else 'N/A'}...",
             "",
-            "Prompt Format: Dense 3-step paragraphs",
-            "  1. Core (Subject & Action)",
-            "  2. Visual Expansion (Style, Lighting, Atmosphere)",
-            "  3. Text Transcription (verbatim in quotes)",
+            f"v3.6 MAGAZINE QUALITY + Use Case: {use_case}",
+            f"  - Professional architectural photography style (Arch Digest, Dwell, Dezeen)",
+            f"  - Materials described with design purpose (pathway, driveway, accent)",
+            f"  - VLLM Guidance: {'[PROVIDED]' if vllm_guidance else '[NONE]'}",
+            "  - Spatial anchoring: camera angle, depth layer, perspective per tile",
             "",
-            f"API Calls: {total_tiles + 1} (1 global + {total_tiles} tiles)",
+        ]
+        # Add VLLM guidance to debug if provided
+        if vllm_guidance and vllm_guidance.strip():
+            debug_lines.extend([
+                "VLLM Guidance (instructions for analysis):",
+                "-" * 40,
+                vllm_guidance.strip(),
+                "-" * 40,
+                "",
+            ])
+        debug_lines.extend([
+            "Spatial Context per Tile:",
+            "-" * 40,
+        ])
+        # Add spatial context for each tile
+        for y in range(tiles_y):
+            for x in range(tiles_x):
+                spatial = get_spatial_context(y, x, tiles_y, tiles_x, use_case)
+                debug_lines.append(f"  [{y},{x}]: {spatial['spatial_phrase']}")
+        debug_lines.extend([
+            "-" * 40,
+            "",
+            f"API Calls: {total_tiles + 2} (1 style + 1 grid + {total_tiles} tiles)",
             f"Total Time: {elapsed:.1f}s",
-            f"Time per tile: {elapsed / (total_tiles + 1):.1f}s",
+            f"Time per call: {elapsed / (total_tiles + 2):.1f}s",
+            "",
+            "Global Style:",
+            "-" * 40,
+            scene_description,
+            "-" * 40,
+            "",
+            "Materials (consistent across all tiles):",
+            f"  Floor: {floor_material}",
+            f"  Walls: {wall_material}",
+            f"  Ceiling: {ceiling_material}",
+            "",
+            "Surface Hints per Tile:",
+            "-" * 40,
+        ])
+        for key, label in tile_labels.items():
+            debug_lines.append(f"  [{key}]: {label}")
+        debug_lines.extend([
+            "-" * 40,
             "",
             "SEGS Integration:",
-            f"  tile_prompts_labels: {len(tile_prompts_labels)} chars (for SEGSLabelAssign)",
-            "",
-            "Style Guide Preview:",
-            style_guide[:300] + "..." if len(style_guide) > 300 else style_guide,
+            f"  tile_prompts_labels: {len(tile_prompts_labels)} chars",
             "=" * 50,
-        ]
+        ])
         debug_info = "\n".join(debug_lines)
 
-        print(f"[Smart Tile Prompter Turbo] Done in {elapsed:.1f}s")
+        print(f"[Smart Tile Prompter Turbo v3.6] Done in {elapsed:.1f}s (Magazine Quality)")
 
         # Create output bundle (pass through input bundle data + add prompts)
         output_bundle = {}
@@ -847,13 +1471,15 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
         # Add/update prompt data
         output_bundle["tile_prompts_labels"] = tile_prompts_labels
         output_bundle["tile_prompts_list"] = tile_prompts_list  # Full list with positions
-        output_bundle["style_guide"] = style_guide
+        output_bundle["scene_description"] = scene_description  # Short scene
+        output_bundle["materials"] = materials  # Material consistency (v2.1)
+        output_bundle["tile_labels"] = tile_labels  # Grid labels (v2.1)
         output_bundle["tiles_x"] = tiles_x
         output_bundle["tiles_y"] = tiles_y
         output_bundle["total_tiles"] = total_tiles
 
-        # Cache result
-        result = (style_guide, tile_prompts_combined, tile_prompts_json,
+        # Cache result - global_context is now scene_description (short, 1-2 sentences)
+        result = (scene_description, tile_prompts_combined, tile_prompts_json,
                   tile_prompts_labels, tiles_x, tiles_y, debug_info, output_bundle)
         if use_cache and cache_key:
             TILE_PROMPTER_TURBO_CACHE[cache_key] = result

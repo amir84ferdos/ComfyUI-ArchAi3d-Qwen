@@ -118,6 +118,11 @@ from .nodes.utils.archai3d_batch_text_encode import (
     ArchAi3D_Batch_Text_Encode_SDXL,
     ArchAi3D_Empty_Latent_Batch,
 )
+from .nodes.utils.archai3d_smart_usdu import (
+    ArchAi3D_Smart_Ultimate_SD_Upscale,
+    ArchAi3D_Smart_Ultimate_SD_Upscale_NoUpscale,
+    ArchAi3D_Smart_Ultimate_SD_Upscale_CustomSample,
+)
 
 # ============================================================================
 # INPUT NODES (Web Interface Integration)
@@ -257,6 +262,9 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_Batch_Text_Encode": ArchAi3D_Batch_Text_Encode,
     "ArchAi3D_Batch_Text_Encode_SDXL": ArchAi3D_Batch_Text_Encode_SDXL,
     "ArchAi3D_Empty_Latent_Batch": ArchAi3D_Empty_Latent_Batch,
+    "ArchAi3D_Smart_Ultimate_SD_Upscale": ArchAi3D_Smart_Ultimate_SD_Upscale,
+    "ArchAi3D_Smart_Ultimate_SD_Upscale_NoUpscale": ArchAi3D_Smart_Ultimate_SD_Upscale_NoUpscale,
+    "ArchAi3D_Smart_Ultimate_SD_Upscale_CustomSample": ArchAi3D_Smart_Ultimate_SD_Upscale_CustomSample,
     "ArchAi3D_Position_Guide_Prompt_Builder": ArchAi3D_Position_Guide_Prompt_Builder,
     "ArchAi3D_Simple_Position_Prompt": ArchAi3D_Simple_Position_Prompt,
     "ArchAi3D_Color_Correction_BT709": ArchAi3D_Color_Correction_BT709,
@@ -397,6 +405,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Batch_Text_Encode": "📦 Batch Text Encode",
     "ArchAi3D_Batch_Text_Encode_SDXL": "📦 Batch Text Encode (SDXL)",
     "ArchAi3D_Empty_Latent_Batch": "📦 Empty Latent (Batch)",
+    "ArchAi3D_Smart_Ultimate_SD_Upscale": "🚀 Smart Ultimate SD Upscale",
+    "ArchAi3D_Smart_Ultimate_SD_Upscale_NoUpscale": "🚀 Smart Ultimate SD Upscale (No Upscale)",
+    "ArchAi3D_Smart_Ultimate_SD_Upscale_CustomSample": "🚀 Smart Ultimate SD Upscale (Custom Sample)",
     "ArchAi3D_Position_Guide_Prompt_Builder": "📝 Position Guide Prompt Builder",
     "ArchAi3D_Simple_Position_Prompt": "📝 Simple Position Prompt",
     "ArchAi3D_Color_Correction_BT709": "🎨 Color Correction BT.709",

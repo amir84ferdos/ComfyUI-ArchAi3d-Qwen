@@ -93,6 +93,12 @@ class ArchAi3D_Batch_Text_Encode:
         if pooled_list:
             batched_pooled = torch.cat(pooled_list, dim=0)
             result_dict["pooled_output"] = batched_pooled
+        else:
+            # Lumina2/Z-Image models require pooled_output even if encoder doesn't provide it
+            # Create a dummy pooled output from the first token of each sequence
+            # Shape: [batch_size, hidden_dim]
+            result_dict["pooled_output"] = batched_cond[:, 0, :].clone()
+            print(f"[Batch Text Encode] Created dummy pooled_output shape: {result_dict['pooled_output'].shape}")
 
         conditioning = [[batched_cond, result_dict]]
 
@@ -245,6 +251,11 @@ class ArchAi3D_Batch_Text_Encode_SDXL:
         if pooled_list:
             batched_pooled = torch.cat(pooled_list, dim=0)
             result_dict["pooled_output"] = batched_pooled
+        else:
+            # Some models require pooled_output even if encoder doesn't provide it
+            # Create from first token of each sequence
+            result_dict["pooled_output"] = batched_cond[:, 0, :].clone()
+            print(f"[Batch Text Encode SDXL] Created dummy pooled_output shape: {result_dict['pooled_output'].shape}")
 
         conditioning = [[batched_cond, result_dict]]
 
