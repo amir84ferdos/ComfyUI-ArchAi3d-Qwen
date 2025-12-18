@@ -1,6 +1,6 @@
 """
 ArchAi3D Qwen Image Scale
-Version: 1.0.0
+Version: 1.1.0
 
 Intelligent image scaling for QwenVL with preferred aspect ratios.
 - Aspect Selection: Snaps to preferred ratios (1:1, 16:9, 3:4, etc.) optimized for QwenVL
@@ -413,15 +413,20 @@ class ArchAi3D_Qwen_Image_Scale:
                     "default": True,
                     "tooltip": "Show detailed info: aspect ratio selection (auto/manual), preferred ratio match quality, dimensions, tolerance checks, and pixel alignment status."
                 }),
+
+                # Optional mask input
+                "mask": ("MASK", {
+                    "tooltip": "Optional mask to scale alongside image_latent. Will be resized to match latent dimensions using bilinear interpolation."
+                }),
             }
         }
 
-    RETURN_TYPES = ("IMAGE", "IMAGE", "STRING")
-    RETURN_NAMES = ("image_vl", "image_latent", "debug_text")
+    RETURN_TYPES = ("IMAGE", "IMAGE", "MASK", "INT", "INT", "STRING")
+    RETURN_NAMES = ("image_vl", "image_latent", "mask", "latent_width", "latent_height", "debug_text")
     FUNCTION = "process"
     CATEGORY = "ArchAi3d/Qwen"
 
-    def process(self, image: torch.Tensor, **kwargs) -> Tuple[torch.Tensor, torch.Tensor, str]:
+    def process(self, image: torch.Tensor, **kwargs) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, int, int, str]:
         """
         Process image using preferred aspect ratios optimized for QwenVL.
         VL calculated with preferred ratio, Latent matches VL aspect.
@@ -445,6 +450,7 @@ class ArchAi3D_Qwen_Image_Scale:
         latent_crop = kwargs.get("latent_crop", "center")
         latent_letterbox = kwargs.get("latent_letterbox", False)
         debug = kwargs.get("debug", True)
+        input_mask = kwargs.get("mask", None)
 
         # Get input dimensions
         batch_size, height, width, channels = image.shape
@@ -546,6 +552,25 @@ class ArchAi3D_Qwen_Image_Scale:
         # Convert back to BHWC
         image_vl = image_vl_bchw.movedim(1, -1).contiguous()
         image_latent = image_latent_bchw.movedim(1, -1).contiguous()
+
+        # =========================================================================
+        # PHASE 5: PROCESS MASK
+        # =========================================================================
+
+        if input_mask is not None:
+            # Mask format in ComfyUI: (B, H, W)
+            # Scale mask to match latent dimensions
+            mask_for_scale = input_mask.unsqueeze(1)  # (B, 1, H, W) for interpolate
+            scaled_mask = torch.nn.functional.interpolate(
+                mask_for_scale,
+                size=(latent_height, latent_width),
+                mode='bilinear',
+                align_corners=True  # Pixel-perfect alignment
+            )
+            output_mask = scaled_mask.squeeze(1)  # Back to (B, H, W)
+        else:
+            # Create all-ones mask (no masking) matching latent dimensions
+            output_mask = torch.ones((batch_size, latent_height, latent_width), dtype=torch.float32, device=image.device)
 
         # Calculate debug information
         debug_text = ""
@@ -679,7 +704,7 @@ class ArchAi3D_Qwen_Image_Scale:
 
             print(debug_text)
 
-        return (image_vl, image_latent, debug_text)
+        return (image_vl, image_latent, output_mask, latent_width, latent_height, debug_text)
 
 
 # ============================================================================

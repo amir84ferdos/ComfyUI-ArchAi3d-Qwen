@@ -21,6 +21,8 @@ from .nodes.core.encoders.archai3d_qwen_encoder_simple_v2 import ArchAi3dQwenEnc
 from .nodes.core.encoders.archai3d_qwen_encoder_v3 import ArchAi3D_Qwen_Encoder_V3
 
 from .nodes.core.utils.archai3d_qwen_image_scale import ArchAi3D_Qwen_Image_Scale
+from .nodes.core.utils.archai3d_qwen_image_scale_v2 import ArchAi3D_Qwen_Image_Scale_V2
+from .nodes.core.utils.archai3d_qwen_image_stitch import ArchAi3D_Qwen_Image_Stitch
 
 from .nodes.core.prompts.archai3d_clean_room_prompt import ArchAi3D_Clean_Room_Prompt
 from .nodes.core.prompts.archai3d_qwen_system_prompt import ArchAi3D_Qwen_System_Prompt
@@ -123,6 +125,39 @@ from .nodes.utils.archai3d_smart_usdu import (
     ArchAi3D_Smart_Ultimate_SD_Upscale_NoUpscale,
     ArchAi3D_Smart_Ultimate_SD_Upscale_CustomSample,
 )
+from .nodes.utils.archai3d_smart_usdu_mask_denoise import ArchAi3D_Smart_USDU_Mask_Denoise
+from .nodes.utils.archai3d_smart_usdu_diffdiff import (
+    ArchAi3D_Smart_USDU_DiffDiffusion,
+    ArchAi3D_Smart_USDU_DiffDiffusion_NoUpscale,
+    ArchAi3D_Smart_USDU_DiffDiffusion_CustomSample,
+)
+from .nodes.utils.archai3d_smart_usdu_diffdiff_controlnet import (
+    ArchAi3D_Smart_USDU_DiffDiff_ControlNet,
+    ArchAi3D_Smart_USDU_DiffDiff_ControlNet_NoUpscale,
+    ArchAi3D_Smart_USDU_DiffDiff_ControlNet_CustomSample,
+)
+from .nodes.utils.archai3d_smart_usdu_universal import (
+    ArchAi3D_Smart_USDU_Universal,
+    ArchAi3D_Smart_USDU_Universal_NoUpscale,
+    ArchAi3D_Smart_USDU_Universal_NoUpscale_V2,
+    ArchAi3D_Smart_USDU_Universal_NoUpscale_V3,
+    ArchAi3D_Smart_USDU_Universal_CustomSample,
+)
+from .nodes.utils.usdu_edge_repair import ArchAi3D_USDU_EdgeRepair
+from .nodes.utils.archai3d_smart_usdu_universal_v3 import (
+    ArchAi3D_Smart_USDU_Universal_NoUpscale_V3 as ArchAi3D_Smart_USDU_V3_Standalone,
+)
+from .nodes.utils.archai3d_smart_usdu_split_latent import ArchAi3D_Smart_USDU_Split_Latent
+from .nodes.utils.archai3d_diffsynth_controlnet import ArchAi3D_DiffSynth_ControlNet
+from .nodes.utils.archai3d_smart_tile_calculator_v3 import ArchAi3D_Smart_Tile_Calculator_V3
+from .nodes.utils.archai3d_smart_tile_calculator_v4 import ArchAi3D_Smart_Tile_Calculator_V4
+from .nodes.utils.archai3d_smart_tile_calculator_v5 import ArchAi3D_Smart_Tile_Calculator_V5
+from .nodes.utils.archai3d_smart_tile_solver_v6 import ArchAi3D_Smart_Tile_Solver_V6
+from .nodes.utils.archai3d_smart_tile_solver_v6_2 import ArchAi3D_Smart_Tile_Solver_V6_2
+
+# Simple USDU - Modular Tile Processing Nodes
+from .nodes.utils.usdu_simple import NODE_CLASS_MAPPINGS as USDU_SIMPLE_NODES
+from .nodes.utils.usdu_simple import NODE_DISPLAY_NAME_MAPPINGS as USDU_SIMPLE_NAMES
 
 # ============================================================================
 # INPUT NODES (Web Interface Integration)
@@ -175,6 +210,8 @@ NODE_CLASS_MAPPINGS = {
 
     # Core - Utils
     "ArchAi3D_Qwen_Image_Scale": ArchAi3D_Qwen_Image_Scale,
+    "ArchAi3D_Qwen_Image_Scale_V2": ArchAi3D_Qwen_Image_Scale_V2,
+    "ArchAi3D_Qwen_Image_Stitch": ArchAi3D_Qwen_Image_Stitch,
     "ArchAi3D_Qwen_System_Prompt": ArchAi3D_Qwen_System_Prompt,
 
     # Core - Prompts
@@ -265,6 +302,27 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_Smart_Ultimate_SD_Upscale": ArchAi3D_Smart_Ultimate_SD_Upscale,
     "ArchAi3D_Smart_Ultimate_SD_Upscale_NoUpscale": ArchAi3D_Smart_Ultimate_SD_Upscale_NoUpscale,
     "ArchAi3D_Smart_Ultimate_SD_Upscale_CustomSample": ArchAi3D_Smart_Ultimate_SD_Upscale_CustomSample,
+    "ArchAi3D_Smart_USDU_Mask_Denoise": ArchAi3D_Smart_USDU_Mask_Denoise,
+    "ArchAi3D_Smart_USDU_DiffDiffusion": ArchAi3D_Smart_USDU_DiffDiffusion,
+    "ArchAi3D_Smart_USDU_DiffDiffusion_NoUpscale": ArchAi3D_Smart_USDU_DiffDiffusion_NoUpscale,
+    "ArchAi3D_Smart_USDU_DiffDiffusion_CustomSample": ArchAi3D_Smart_USDU_DiffDiffusion_CustomSample,
+    "ArchAi3D_Smart_USDU_DiffDiff_ControlNet": ArchAi3D_Smart_USDU_DiffDiff_ControlNet,
+    "ArchAi3D_Smart_USDU_DiffDiff_ControlNet_NoUpscale": ArchAi3D_Smart_USDU_DiffDiff_ControlNet_NoUpscale,
+    "ArchAi3D_Smart_USDU_DiffDiff_ControlNet_CustomSample": ArchAi3D_Smart_USDU_DiffDiff_ControlNet_CustomSample,
+    "ArchAi3D_Smart_USDU_Universal": ArchAi3D_Smart_USDU_Universal,
+    "ArchAi3D_Smart_USDU_Universal_NoUpscale": ArchAi3D_Smart_USDU_Universal_NoUpscale,
+    "ArchAi3D_Smart_USDU_Universal_NoUpscale_V2": ArchAi3D_Smart_USDU_Universal_NoUpscale_V2,
+    "ArchAi3D_Smart_USDU_Universal_NoUpscale_V3": ArchAi3D_Smart_USDU_Universal_NoUpscale_V3,
+    "ArchAi3D_Smart_USDU_V3_Standalone": ArchAi3D_Smart_USDU_V3_Standalone,
+    "ArchAi3D_Smart_USDU_Universal_CustomSample": ArchAi3D_Smart_USDU_Universal_CustomSample,
+    "ArchAi3D_Smart_USDU_Split_Latent": ArchAi3D_Smart_USDU_Split_Latent,
+    "ArchAi3D_USDU_EdgeRepair": ArchAi3D_USDU_EdgeRepair,
+    "ArchAi3D_DiffSynth_ControlNet": ArchAi3D_DiffSynth_ControlNet,
+    "ArchAi3D_Smart_Tile_Calculator_V3": ArchAi3D_Smart_Tile_Calculator_V3,
+    "ArchAi3D_Smart_Tile_Calculator_V4": ArchAi3D_Smart_Tile_Calculator_V4,
+    "ArchAi3D_Smart_Tile_Calculator_V5": ArchAi3D_Smart_Tile_Calculator_V5,
+    "ArchAi3D_Smart_Tile_Solver_V6": ArchAi3D_Smart_Tile_Solver_V6,
+    "ArchAi3D_Smart_Tile_Solver_V6_2": ArchAi3D_Smart_Tile_Solver_V6_2,
     "ArchAi3D_Position_Guide_Prompt_Builder": ArchAi3D_Position_Guide_Prompt_Builder,
     "ArchAi3D_Simple_Position_Prompt": ArchAi3D_Simple_Position_Prompt,
     "ArchAi3D_Color_Correction_BT709": ArchAi3D_Color_Correction_BT709,
@@ -301,6 +359,9 @@ NODE_CLASS_MAPPINGS = {
     # Installer Nodes
     "ArchAi3D_Nunchaku_Installer": ArchAi3D_Nunchaku_Installer,
     "ArchAi3D_Dependency_Installer": ArchAi3D_Dependency_Installer,
+
+    # Simple USDU - Modular Tile Processing (merged from usdu_simple)
+    **USDU_SIMPLE_NODES,
 }
 
 # ============================================================================
@@ -318,6 +379,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
 
     # Core - Utils
     "ArchAi3D_Qwen_Image_Scale": "📏 Qwen Image Scale",
+    "ArchAi3D_Qwen_Image_Scale_V2": "📏 Qwen Image Scale V2",
+    "ArchAi3D_Qwen_Image_Stitch": "🧵 Qwen Image Stitch",
     "ArchAi3D_Qwen_System_Prompt": "💬 Qwen System Prompt",
 
     # Core - Prompts
@@ -408,6 +471,27 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Smart_Ultimate_SD_Upscale": "🚀 Smart Ultimate SD Upscale",
     "ArchAi3D_Smart_Ultimate_SD_Upscale_NoUpscale": "🚀 Smart Ultimate SD Upscale (No Upscale)",
     "ArchAi3D_Smart_Ultimate_SD_Upscale_CustomSample": "🚀 Smart Ultimate SD Upscale (Custom Sample)",
+    "ArchAi3D_Smart_USDU_Mask_Denoise": "🎭 Smart USDU Mask Denoise",
+    "ArchAi3D_Smart_USDU_DiffDiffusion": "🎭 Smart USDU Differential Diffusion",
+    "ArchAi3D_Smart_USDU_DiffDiffusion_NoUpscale": "🎭 Smart USDU DiffDiff (No Upscale)",
+    "ArchAi3D_Smart_USDU_DiffDiffusion_CustomSample": "🎭 Smart USDU DiffDiff (Custom Sample)",
+    "ArchAi3D_Smart_USDU_DiffDiff_ControlNet": "🎮 Smart USDU DiffDiff + ControlNet",
+    "ArchAi3D_Smart_USDU_DiffDiff_ControlNet_NoUpscale": "🎮 Smart USDU DiffDiff + CN (No Upscale)",
+    "ArchAi3D_Smart_USDU_DiffDiff_ControlNet_CustomSample": "🎮 Smart USDU DiffDiff + CN (Custom Sample)",
+    "ArchAi3D_Smart_USDU_Universal": "🎛️ Smart USDU Universal",
+    "ArchAi3D_Smart_USDU_Universal_NoUpscale": "🎛️ Smart USDU Universal (No Upscale)",
+    "ArchAi3D_Smart_USDU_Universal_NoUpscale_V2": "🎛️ Smart USDU Universal (No Upscale) V2",
+    "ArchAi3D_Smart_USDU_Universal_NoUpscale_V3": "🎛️ Smart USDU Universal (No Upscale) V3",
+    "ArchAi3D_Smart_USDU_V3_Standalone": "🎛️ Smart USDU V3 (Standalone - Feather Debug)",
+    "ArchAi3D_Smart_USDU_Universal_CustomSample": "🎛️ Smart USDU Universal (Custom Sample)",
+    "ArchAi3D_Smart_USDU_Split_Latent": "🚀 Smart USDU Split-Latent",
+    "ArchAi3D_USDU_EdgeRepair": "🔧 USDU Edge Repair",
+    "ArchAi3D_DiffSynth_ControlNet": "🔧 DiffSynth ControlNet (Fixed)",
+    "ArchAi3D_Smart_Tile_Calculator_V3": "🧮 Smart Tile Calculator V3 (Flux)",
+    "ArchAi3D_Smart_Tile_Calculator_V4": "🧮 Smart Tile Calculator V4 (Heatmap)",
+    "ArchAi3D_Smart_Tile_Calculator_V5": "🧮 Smart Tile Calculator V5.1 (Vectorized)",
+    "ArchAi3D_Smart_Tile_Solver_V6": "🧩 Smart Tile Solver V6.1 (Grid-Lock)",
+    "ArchAi3D_Smart_Tile_Solver_V6_2": "🧩 Smart Tile Solver V6.2 (Matrix Search)",
     "ArchAi3D_Position_Guide_Prompt_Builder": "📝 Position Guide Prompt Builder",
     "ArchAi3D_Simple_Position_Prompt": "📝 Simple Position Prompt",
     "ArchAi3D_Color_Correction_BT709": "🎨 Color Correction BT.709",
@@ -444,6 +528,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # Installer Nodes
     "ArchAi3D_Nunchaku_Installer": "🔧 Nunchaku Installer",
     "ArchAi3D_Dependency_Installer": "🔧 Dependency Installer",
+
+    # Simple USDU - Modular Tile Processing (merged from usdu_simple)
+    **USDU_SIMPLE_NAMES,
 }
 
 # ============================================================================
@@ -475,9 +562,10 @@ print(f"  🎨 Image Editing: 4 nodes")
 print(f"  🎯 Utils: 11 nodes (Smart Tile Prompter + Color Tools + Low VRAM)")
 print(f"  🌐 Input Nodes: 9 nodes (String, Int, Float, Boolean, Load URL, Save, Conditioning Balance, Gemini)")
 print(f"  🔧 Installer Nodes: 2 nodes (Nunchaku + Dependency)")
+print(f"  🧩 Simple USDU: {len(USDU_SIMPLE_NODES)} nodes (Modular Tile Processing)")
 print(f"  ✅ Total: {len(NODE_CLASS_MAPPINGS)} nodes loaded!")
 print(f"")
-print(f"  ⭐ NEW: Dependency Installer - one-click install for all ArchAi3D deps!")
+print(f"  ⭐ NEW: Simple USDU - Modular tile processing nodes!")
 print(f"  ⭐ RTX 5090 Support: PyTorch 2.8+ and CUDA 12.8+ Blackwell compatibility!")
 print(f"  📚 Documentation: ./docs/")
 print(f"  ⚖️  License: Dual (Free personal, Commercial available)")

@@ -8,7 +8,7 @@
 #   - Hierarchical assembly: [Local Texture] + [Global Style]
 #
 # Author: Amir Ferdos (ArchAi3d)
-# Version: 3.6.0 - Professional Architectural Photography Style
+# Version: 3.9.0 - "Render-to-Real" Strategic Pivot
 #                  Magazine-quality descriptions by default (Arch Digest, Dwell, Dezeen)
 #                  Professional terminology for all materials and finishes
 #                  v3.5.0: VLLM Guidance Instructions
@@ -31,6 +31,7 @@ import re
 import signal
 import subprocess
 import time
+from collections import OrderedDict
 from pathlib import Path
 
 import numpy as np
@@ -185,95 +186,159 @@ USE_CASE_PROMPTS = {
 }
 
 # PASS 2B: Local Tile Description (run on each tile crop)
-# v3.4: Spatial Context for High Denoise
-# - Spatial anchoring (camera angle, depth layer, perspective) for each tile
-# - Enables higher denoise (0.5-0.8) while maintaining spatial consistency
-# - PRIORITY 1: Foreground objects, PRIORITY 2: Background surfaces
-TEXTURE_TILE_PROMPT = """ROLE: You are an {role}.
-INPUT: You will receive a cropped image tile requiring DETAILED description.
+# v3.9: "Render-to-Real" Strategic Pivot
+# - CORE PHILOSOPHY: Describe the INTENDED REALITY, not the low-quality render
+# - MATERIAL UPGRADE RULE: Supply texture the render lacks
+# - CROP BOUNDARY RULE: No hallucinations of off-frame elements
+# - Brand names as style anchors for SD/Flux
+# - Complex color vocabulary (charcoal, cognac, slate)
+TEXTURE_TILE_PROMPT = """ROLE: You are an expert Architectural Visualizer.
+Your job is to analyze low-quality 3D renders and write a prompt that will UPGRADE them into photorealistic, high-end photography.
 
-PROFESSIONAL CONTEXT (CRITICAL - Apply to ALL descriptions):
-You are creating descriptions for PROFESSIONAL ARCHITECTURAL PHOTOGRAPHY.
-- This will be printed in an architectural magazine (Architectural Digest, Dwell, Dezeen)
-- Describe everything as a professional architectural photographer would
-- Use industry-standard architectural/design terminology
-- Materials MUST be described in their design context and purpose:
-  - Gravel = "premium pea gravel driveway" or "decorative crushed stone pathway"
-  - Concrete = "precision-poured architectural concrete with smooth board-formed finish"
-  - Plants = species names + design intent ("mature Japanese maple (Acer palmatum) providing shade")
-  - Fixtures = designer terms ("minimalist pendant luminaire" not "hanging light")
-  - Wood = specific species + finish ("wide-plank white oak flooring with matte polyurethane")
-  - Stone = type + finish ("honed Carrara marble countertop" not "white marble surface")
+CRITICAL PHILOSOPHY: You are NOT describing the render. You are describing the REALITY the render is trying to represent.
 {user_guidance_section}
-SPATIAL CONTEXT (CRITICAL for high denoise consistency):
+============================================================
+THE "MATERIAL UPGRADE" RULE (CRITICAL)
+============================================================
+The input image may lack texture. You MUST supply it.
+
+BAD (preserves low-quality render):
+- "A grey floor"
+- "A brown cabinet"
+- "A blue wall"
+
+GOOD (upgrades to reality):
+- "Polished concrete flooring with subtle aggregate texture and satin finish"
+- "Rift-sawn white oak cabinetry with matte oil finish"
+- "Slate blue Venetian plaster with subtle trowel marks"
+
+RULE: Always interpret the material INTENT. If a surface looks flat or noisy, upgrade it to its premium real-world equivalent. Use specific material names: Walnut, Carrara Marble, Travertine, Bouclé, Belgian Linen, Corten Steel, Honed Limestone.
+
+============================================================
+THE "CROP BOUNDARY" RULE (No Hallucinations)
+============================================================
+You are looking at a TILE - a small slice of a larger image.
+
+STRICT RULES:
+- Describe ONLY what is visible within this crop
+- Do NOT infer roofs, ceilings, or floors if cut off by the frame
+- If the top of a wall is cropped, describe the wall texture ONLY - no "visible roofline"
+- Never use "in the background" or "surrounded by" if those areas are NOT visible
+- If you cannot see the ground, do not mention "gravel driveway" or "lawn"
+- If you cannot see the sky, do not mention "clear blue sky" or "overcast clouds"
+
+This prevents the image generator from trying to squeeze non-existent elements into the frame.
+
+============================================================
+GLOBAL CONSISTENCY (One World Rule)
+============================================================
+These tiles will be stitched together. Your description MUST match:
+
+- Scene Context: {scene_description}
+- Season/Weather: (infer from scene - if winter: snow/bare trees, if summer: green/lush)
+- Lighting: (infer from scene - maintain consistent direction and mood)
+- Materials: Floor={floor_material}, Walls={wall_material}, Ceiling={ceiling_material}
+
+Cross-tile rules:
+- If driveway is "pea gravel" in one tile, it cannot be "concrete" in adjacent tile
+- All shadows must fall in the SAME direction
+- If one tile shows rain/wet surfaces, ALL tiles must show moisture
+
+============================================================
+VOCABULARY GUIDE (Premium Descriptors)
+============================================================
+
+COLORS (use complex names that imply texture):
+- Instead of "grey" → use "charcoal", "slate", "concrete", "graphite", "pewter"
+- Instead of "brown" → use "cognac", "umber", "walnut", "espresso", "caramel"
+- Instead of "blue" → use "slate blue", "navy", "cerulean", "indigo", "cobalt"
+- Instead of "white" → use "ivory", "cream", "alabaster", "bone", "eggshell"
+- Instead of "green" → use "sage", "moss", "olive", "forest", "emerald"
+
+BRAND NAMES (use as style anchors - SD/Flux trained on these):
+- Furniture: "in the style of B&B Italia", "Minotti sectional", "Eames lounge chair", "Noguchi coffee table", "Herman Miller"
+- Lighting: "Flos Arco lamp", "Artemide pendant", "Louis Poulsen fixture", "Tom Dixon pendant"
+- Appliances: "Miele", "Sub-Zero", "Wolf range", "Gaggenau"
+
+These brand names define SHAPE and QUALITY for the image generator.
+
+BANNED WORDS (never use):
+- "render", "3D model", "CGI", "computer generated", "digital"
+- Use instead: "photograph", "built structure", "real", "photorealistic"
+
+============================================================
+DESCRIPTION STRUCTURE (Follow This Order)
+============================================================
+
+1. SUBJECT/MAIN STRUCTURE (What space is this?):
+   - Architectural function: carport, living room, kitchen, terrace, office
+   - Style: modern minimalist, industrial, mid-century, Scandinavian, Mediterranean
+   - Example: "A contemporary open-plan living room..."
+
+2. SPECIFIC MATERIALS & TEXTURES (Upgrade everything):
+   - Apply the Material Upgrade Rule to every surface
+   - Use premium material names with finish details
+   - Example: "...with wide-plank European white oak flooring showing honey-gold grain variation..."
+
+3. OBJECTS WITH STYLE ANCHORS (Brand names for quality):
+   - Identify furniture, fixtures, plants with specific names
+   - Use brand names to define shape and quality
+   - Example: "...a low-profile sectional in the style of Minotti, upholstered in charcoal bouclé..."
+
+4. LIGHTING & ATMOSPHERE:
+   - Light source and direction (match Global Style)
+   - Quality: soft diffused, harsh direct, golden hour, overcast
+   - Example: "...soft northern daylight floods through floor-to-ceiling glazing, creating gentle shadows..."
+
+5. STYLE TAGS (End with these):
+   - Save magazine-quality language for the END only
+   - Example: "...sharp focus, ultra detailed, professional architectural photography, 8K"
+
+SPATIAL CONTEXT (Weave naturally):
 - Camera Angle: {camera_angle}
 - Depth Layer: {depth_layer}
 - Frame Position: {perspective}
-- START your description with this spatial context!
 
-PRIORITY ORDER (CRITICAL - Follow this exact order):
-
-PRIORITY 1 - FOREGROUND OBJECTS (describe FIRST if present):
-{objects}
-- If ANY object is visible, even partially, YOU MUST describe it FIRST with FULL DETAIL
-
-PRIORITY 2 - BACKGROUND SURFACES (describe AFTER objects):
-{surfaces}
-- If the tile is EMPTY (no objects), then describe only the background surface in detail
-
-DETAIL REQUIREMENTS (Be extremely thorough):
-1. MATERIAL: Exact material type (oak wood, brushed brass, Belgian linen, Carrara marble)
-2. TEXTURE: Surface quality (smooth, rough, woven, grained, polished, matte, glossy)
-3. COLOR: Specific tones (warm beige, cool gray, antique gold, ivory white, charcoal)
-4. FINISH: Surface treatment (lacquered, oiled, painted, raw, distressed, polished)
-5. LIGHTING: How light interacts (soft shadows, warm highlights, reflections, ambient glow)
-6. CONDITION: Wear, patina, cleanliness (pristine, weathered, vintage, new)
-
-STRICT RULES (Magazine Quality Required):
-- ALWAYS use professional architectural/design terminology
-- Describe materials with their design PURPOSE: "premium pea gravel driveway" not "gravel"
-- Include designer/manufacturer names when recognizable (Eames, B&B Italia, Flos)
-- Use magazine-quality descriptive language throughout
-- START with spatial anchor: "{spatial_phrase}" then describe content
-- Name objects specifically: "curved cream bouclé dining chair armrest" not "chair"
-- Describe materials professionally: "wide-plank European white oak flooring with matte polyurethane finish"
-- For partial objects: use "detail of," "section of," "close-up of," "edge of"
-- NEVER ignore visible objects - this causes the upscaler to ERASE them
-- Include micro-details: stitching, grain patterns, reflections, shadows, textures
-- Ground materials = always describe with purpose (pathway, driveway, patio, border)
-
-DO NOT:
-- Output conversational text or repeat instructions
-- Skip objects and only describe surfaces (this erases objects!)
-- Use generic terms like "furniture," "decoration," "nice," "beautiful"
-- Forget to include spatial context at the start!
-
-CONTEXT:
-- Global Style: {scene_description}
-- Floor Material: {floor_material}
-- Wall Material: {wall_material}
-- Ceiling Material: {ceiling_material}
-- Tile Position: {position} (row {row}, col {col})
-- Spatial Context: {spatial_phrase}
+TILE INFO:
+- Position: {position} (row {row}, col {col})
 - Surface Hint: {tile_label}
 
-OUTPUT FORMAT (80-150 words, comma-separated, highly detailed):
-[Spatial Anchor], [Object + Specific Material + Texture], [Micro-details], [Surface Quality], [Color Tones], [Lighting Interaction], [Background Surface], sharp focus, ultra detailed
+OBJECTS IN THIS TILE:
+{objects}
 
-EXAMPLES WITH SPATIAL CONTEXT (Magazine Quality - CRITICAL format):
-- "Looking down at ground level, foreground layer, center of frame, meticulously maintained Kentucky bluegrass lawn (Poa pratensis) with golf-course quality cut at 2.5 inches, individual blade definition with morning dew creating prismatic light reflections, healthy deep emerald green coloration with no visible thatch, professionally installed sod with invisible seams, soft directional morning light from east casting gentle blade shadows, Dwell magazine quality, sharp focus, ultra detailed"
-- "Eye-level view, midground layer, left side of frame, mature specimen Japanese maple (Acer palmatum 'Bloodgood') with burgundy-red palmate foliage creating elegant canopy, graceful multi-stem structure with silver-gray bark showing horizontal lenticels, strategically placed as focal point in minimalist landscape design, backlighting creating translucent glow through leaves with dappled shadow pattern on manicured lawn beneath, professional landscape architecture, Architectural Digest quality, sharp focus, ultra detailed"
-- "Looking down, high camera angle, foreground/ground layer, right side of frame, premium Belgian pea gravel driveway with warm honey-beige 10mm aggregate carefully raked into smooth uniform surface, crisp powder-coated steel edging defining clean border against manicured emerald lawn, decorative river stone accent at planting bed transition, soft afternoon light creating gentle texture definition, professionally installed residential hardscape, Dezeen magazine quality, sharp focus, ultra detailed"
+SURFACES IN THIS TILE:
+{surfaces}
 
-EXAMPLES WITH OBJECTS (Interior - Magazine Quality):
-- "Eye-level, midground layer, center of frame, Flos IC pendant luminaire in brushed brass finish with signature sphere design, hand-blown opal glass diffuser creating soft ambient glow, precision mounting hardware with clean ceiling integration, designer lighting against hand-troweled Venetian plaster ceiling with subtle warm undertones, curated interior styling, Architectural Digest quality, sharp focus, ultra detailed"
-- "Eye-level, slight downward tilt, midground to foreground, left side of frame, section of B&B Italia Camaleonda modular sofa in premium bouclé fabric, visible woven texture with luxurious pile depth, soft sculptural armrest with artisan upholstery detail, natural fabric folds creating elegant shadows, resting on wide-plank European white oak flooring with matte polyurethane finish and subtle grain variation, soft northern daylight from floor-to-ceiling glazing, award-winning interior design, sharp focus, ultra detailed"
+============================================================
+DO NOT (Critical Violations)
+============================================================
+- Describe the "low quality" of the input - UPGRADE it instead
+- Use generic colors (grey, brown, blue) - use textured colors (charcoal, cognac, slate)
+- Hallucinate elements cut off by the frame (roofs, floors, sky not visible)
+- Say "render", "CGI", "3D model" - say "photograph", "real", "built"
+- Use "nice", "beautiful", "decoration" - use specific material names
+- Contradict the Global Style or adjacent tiles
+- Put magazine language in the body - save for end tags only
 
-EXAMPLES WITHOUT OBJECTS (Surfaces - Magazine Quality):
-- "Looking down, high camera angle, foreground/ground layer, center of frame, wide-plank European white oak flooring in chevron pattern with precisely mitered joints, hand-finished matte polyurethane creating subtle satin sheen, warm honey-gold undertones with natural grain character, furniture-grade installation with invisible fasteners, soft ambient light highlighting wood texture, premium residential flooring, Dwell magazine quality, sharp focus, ultra detailed"
-- "Eye-level, straight-on view, midground layer, right side of frame, hand-troweled Venetian plaster wall finish in warm limestone tone with subtle trowel texture creating organic pattern, mineral-based application with slight natural sheen, hairline variations adding artisan character, soft diffused daylight from left creating gentle gradient shadow, museum-quality wall treatment, Architectural Digest quality, sharp focus, ultra detailed"
+============================================================
+EXAMPLES - "Render-to-Real" Style
+============================================================
 
-Output ONLY the description. No explanations."""
+Example 1 - Carport (Exterior, Material Upgrade Focus):
+"A modern residential carport with a sleek charcoal SUV parked on premium pea gravel with steel edging. The overhead structure features horizontal Western red cedar slats with clear oil finish, supported by powder-coated black steel columns. A mature Japanese maple provides dappled shade with deep burgundy palmate foliage. The gravel surface shows warm honey-beige 10mm aggregate with crisp borders against emerald lawn. Board-formed concrete walls with visible tie holes add industrial texture. Soft afternoon sunlight filters through cedar creating rhythmic shadows on stone below. Sharp focus, ultra detailed, professional architectural photography, 8K"
+
+Example 2 - Living Room (Interior, Brand Anchors):
+"A contemporary open-plan living room with double-height ceilings. A sectional in the style of B&B Italia in charcoal bouclé anchors the space, paired with a Noguchi coffee table in oiled walnut. A Flos Arco lamp in brushed stainless arcs overhead. Wide-plank European white oak flooring with matte finish shows honey-gold grain variation. The feature wall displays hand-troweled Venetian plaster in warm limestone tones. Floor-to-ceiling glazing reveals a landscaped garden. Soft northern daylight creates gentle shadows highlighting texture interplay. Sharp focus, ultra detailed, professional architectural photography, 8K"
+
+Example 3 - Kitchen (Interior, Material Upgrade):
+"A chef's kitchen with a waterfall-edge island in honed Calacatta marble with dramatic grey veining. Rift-sawn white oak cabinetry with push-latch mechanisms flanks integrated Sub-Zero refrigeration. Tom Dixon Beat pendants in brushed brass hang at varying heights, their hammered finish catching ambient light. A Wolf range with red control knobs sits within a marble alcove. Polished concrete flooring with subtle aggregate texture grounds the space. Warm afternoon light streams through French doors, highlighting natural stone patterns. Sharp focus, ultra detailed, professional architectural photography, 8K"
+
+Example 4 - Cropped Wall Tile (Demonstrating Crop Boundary Rule):
+"Textured board-formed concrete wall section with visible tie holes arranged in grid pattern. The concrete shows subtle grey variation with warm undertones and satin finish from form release. Hairline control joints create geometric divisions. Dappled sunlight from off-frame creates soft diagonal shadows across the surface. Sharp focus, ultra detailed, architectural detail photography, 8K"
+
+(Note: This example does NOT mention roof, ground, or sky because they are not visible in the crop.)
+
+Output ONLY the description. No explanations or preamble."""
 
 # Phrases that indicate instruction leakage (to be cleaned from output)
 # Order matters: longer phrases should come first to avoid partial matches
@@ -405,8 +470,29 @@ Example format (with sharpness + photorealistic style):
 "Sharp focus on a leather armchair in the left foreground, its worn brown surface showing crisp creasing detail at the armrests with clearly defined stitching, photorealistic texture capturing every pore of the leather. Precise natural window light from the upper right creates distinct tonal gradients across the seat cushion, with hard-edged shadows pooling beneath the curved wooden legs. The floor beneath reveals highly detailed oak planks with sharp grain patterns, each plank edge crisply defined, professional photography, 8K resolution, photorealistic."
 """
 
-# Result cache
-TILE_PROMPTER_TURBO_CACHE = {}
+# Result cache (LRU with max size to prevent memory leaks)
+TILE_PROMPTER_TURBO_CACHE = OrderedDict()
+TILE_PROMPTER_TURBO_CACHE_MAX_SIZE = 50  # Max entries (~2-5KB each)
+
+
+def _cache_set(key, value):
+    """Add to cache with LRU eviction."""
+    global TILE_PROMPTER_TURBO_CACHE
+    # Remove oldest if at capacity
+    while len(TILE_PROMPTER_TURBO_CACHE) >= TILE_PROMPTER_TURBO_CACHE_MAX_SIZE:
+        oldest_key = next(iter(TILE_PROMPTER_TURBO_CACHE))
+        del TILE_PROMPTER_TURBO_CACHE[oldest_key]
+        print(f"[Smart Tile Prompter Turbo] Cache full, evicted oldest entry")
+    TILE_PROMPTER_TURBO_CACHE[key] = value
+
+
+def _cache_get(key):
+    """Get from cache with LRU update (move to end)."""
+    global TILE_PROMPTER_TURBO_CACHE
+    if key in TILE_PROMPTER_TURBO_CACHE:
+        TILE_PROMPTER_TURBO_CACHE.move_to_end(key)
+        return TILE_PROMPTER_TURBO_CACHE[key]
+    return None
 
 # Script path for auto-starting server
 SCRIPT_PATH = Path(__file__).parent.parent.parent / "start_qwenvl_server.sh"
@@ -448,15 +534,17 @@ def start_llama_server(model_size, port, gpu_layers=99, context_size=8192):
     log_file = log_dir / f"qwenvl_server_{model_short}.log"
 
     # Open log file for writing (truncate previous content)
-    log_handle = open(log_file, 'w')
-
-    process = subprocess.Popen(
-        [str(SCRIPT_PATH), model_short],
-        stdout=log_handle,
-        stderr=subprocess.STDOUT,  # Combine stderr into stdout
-        start_new_session=True,
-        env=env
-    )
+    # Use 'with' to ensure file handle is closed after process starts
+    # The subprocess inherits the fd, so it can still write to it
+    with open(log_file, 'w') as log_handle:
+        process = subprocess.Popen(
+            [str(SCRIPT_PATH), model_short],
+            stdout=log_handle,
+            stderr=subprocess.STDOUT,  # Combine stderr into stdout
+            start_new_session=True,
+            env=env
+        )
+    # File handle closed here - subprocess keeps its copy of the fd
     print(f"[Smart Tile Prompter Turbo] Started server for {model_short} on port {port}")
     print(f"  GPU Layers: {gpu_layers}, Context: {context_size}")
     print(f"  Log file: {log_file}")
@@ -1067,7 +1155,7 @@ def compute_cache_key(image_tensor, tiles_x, tiles_y, model_size, quality_preset
     hasher.update(user_context.encode())
     hasher.update(vllm_guidance.encode())  # v3.5 VLLM guidance
     hasher.update(str(seed).encode())
-    hasher.update(b"turbo_v36_magazine")  # v3.6 Professional Architectural Photography
+    hasher.update(b"turbo_v39_render_to_real")  # v3.9 Render-to-Real Strategic Pivot
     return hasher.hexdigest()
 
 
@@ -1213,10 +1301,10 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
         start_time = time.time()
         total_tiles = tiles_x * tiles_y
 
-        print(f"\n[Smart Tile Prompter Turbo v3.6] Starting {tiles_x}x{tiles_y} = {total_tiles} tiles")
+        print(f"\n[Smart Tile Prompter Turbo v3.9] Starting {tiles_x}x{tiles_y} = {total_tiles} tiles")
         print(f"  Model: {model_size}, Preset: {quality_preset}, Consistency: {consistency_level}")
         print(f"  Seed: {seed}")
-        print(f"  Mode: Professional Architectural Photography + Use Case: {use_case} (v3.6 Magazine Quality)")
+        print(f"  Mode: Render-to-Real + Use Case: {use_case} (v3.9 Material Upgrade)")
 
         # ===== CHECK SERVER =====
         server_ok, error_msg = ensure_server_running(
@@ -1233,10 +1321,10 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
                 image, tiles_x, tiles_y, model_size, quality_preset,
                 consistency_level, use_case, user_context, vllm_guidance, seed
             )
-            if cache_key in TILE_PROMPTER_TURBO_CACHE:
+            cached = _cache_get(cache_key)
+            if cached is not None:
                 print(f"[Smart Tile Prompter Turbo] Cache HIT (key: {cache_key[:12]}...)")
                 print(f"  WARNING: Using cached prompts! Set use_cache=False if image changed.")
-                cached = TILE_PROMPTER_TURBO_CACHE[cache_key]
                 return cached
             else:
                 print(f"[Smart Tile Prompter Turbo] Cache MISS (key: {cache_key[:12]}..., {len(TILE_PROMPTER_TURBO_CACHE)} cached entries)")
@@ -1244,7 +1332,7 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
             print(f"[Smart Tile Prompter Turbo] Cache DISABLED - analyzing image fresh")
 
         # ===== PHASE 1A: GLOBAL STYLE EXTRACTION =====
-        print("[Smart Tile Prompter Turbo v3.6] Phase 1A: Extracting global style (environment + lighting + colors)...")
+        print("[Smart Tile Prompter Turbo v3.9] Phase 1A: Extracting global style (environment + lighting + colors)...")
 
         full_image_b64 = image_to_base64(image, max_size=1536)
         scene_description = call_qwenvl_api(
@@ -1259,10 +1347,10 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
         if user_context and user_context.strip():
             scene_description = f"{user_context.strip()}. {scene_description}"
 
-        print(f"[Smart Tile Prompter Turbo v3.6] Global Style: {scene_description[:100]}...")
+        print(f"[Smart Tile Prompter Turbo v3.9] Global Style: {scene_description[:100]}...")
 
         # ===== PHASE 1B: MATERIALS + SURFACE GRID =====
-        print("[Smart Tile Prompter Turbo v3.6] Phase 1B: Extracting materials + surface grid...")
+        print("[Smart Tile Prompter Turbo v3.9] Phase 1B: Extracting materials + surface grid...")
 
         grid_positions = generate_grid_positions(tiles_x, tiles_y)
         grid_prompt = TILE_GRID_PROMPT.format(
@@ -1288,8 +1376,8 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
         wall_material = materials.get("walls", "walls")
         ceiling_material = materials.get("ceiling", "ceiling")
 
-        print(f"[Smart Tile Prompter Turbo v3.6] Materials: floor={floor_material}, walls={wall_material}")
-        print(f"[Smart Tile Prompter Turbo v3.6] Surface hints: {len(tile_labels)} tiles mapped")
+        print(f"[Smart Tile Prompter Turbo v3.9] Materials: floor={floor_material}, walls={wall_material}")
+        print(f"[Smart Tile Prompter Turbo v3.9] Surface hints: {len(tile_labels)} tiles mapped")
 
         # ===== BUILD VLLM GUIDANCE SECTION =====
         # This is instructions FOR the VLLM, not text added to output
@@ -1300,12 +1388,12 @@ USER STYLE GUIDANCE (IMPORTANT - follow these instructions):
 - Apply these preferences when describing materials, mood, and style
 - Use the specific terms/names provided above
 """
-            print(f"[Smart Tile Prompter Turbo v3.6] VLLM Guidance: {vllm_guidance[:80]}...")
+            print(f"[Smart Tile Prompter Turbo v3.9] VLLM Guidance: {vllm_guidance[:80]}...")
         else:
             user_guidance_section = ""
 
         # ===== PHASE 2: LOCAL TEXTURE EXTRACTION (WITH SPATIAL CONTEXT) =====
-        print(f"[Smart Tile Prompter Turbo v3.6] Phase 2: Generating {total_tiles} magazine-quality prompts...")
+        print(f"[Smart Tile Prompter Turbo v3.9] Phase 2: Generating {total_tiles} render-to-real prompts...")
 
         tile_prompts_list = []
 
@@ -1395,7 +1483,7 @@ USER STYLE GUIDANCE (IMPORTANT - follow these instructions):
         image_hash = hashlib.md5(image.cpu().numpy().tobytes()).hexdigest()[:12]
         debug_lines = [
             "=" * 50,
-            "Smart Tile Prompter Turbo v3.6.0 (Professional Architectural Photography)",
+            "Smart Tile Prompter Turbo v3.9.0 (Render-to-Real Strategic Pivot)",
             "=" * 50,
             f"Image Hash: {image_hash} (verify correct image)",
             f"Image Shape: {list(image.shape)}",
@@ -1406,11 +1494,12 @@ USER STYLE GUIDANCE (IMPORTANT - follow these instructions):
             f"Seed: {seed}",
             f"Cache Key: {cache_key[:12] if cache_key else 'N/A'}...",
             "",
-            f"v3.6 MAGAZINE QUALITY + Use Case: {use_case}",
-            f"  - Professional architectural photography style (Arch Digest, Dwell, Dezeen)",
-            f"  - Materials described with design purpose (pathway, driveway, accent)",
+            f"v3.9 RENDER-TO-REAL + Use Case: {use_case}",
+            f"  - Material Upgrade Rule: Supply texture the render lacks",
+            f"  - Crop Boundary Rule: No hallucinations of off-frame elements",
+            f"  - Brand names as style anchors (B&B Italia, Minotti, Eames)",
+            f"  - Complex color vocabulary (charcoal, cognac, slate)",
             f"  - VLLM Guidance: {'[PROVIDED]' if vllm_guidance else '[NONE]'}",
-            "  - Spatial anchoring: camera angle, depth layer, perspective per tile",
             "",
         ]
         # Add VLLM guidance to debug if provided
@@ -1462,7 +1551,7 @@ USER STYLE GUIDANCE (IMPORTANT - follow these instructions):
         ])
         debug_info = "\n".join(debug_lines)
 
-        print(f"[Smart Tile Prompter Turbo v3.6] Done in {elapsed:.1f}s (Magazine Quality)")
+        print(f"[Smart Tile Prompter Turbo v3.9] Done in {elapsed:.1f}s (Render-to-Real)")
 
         # Create output bundle (pass through input bundle data + add prompts)
         output_bundle = {}
@@ -1482,13 +1571,16 @@ USER STYLE GUIDANCE (IMPORTANT - follow these instructions):
         result = (scene_description, tile_prompts_combined, tile_prompts_json,
                   tile_prompts_labels, tiles_x, tiles_y, debug_info, output_bundle)
         if use_cache and cache_key:
-            TILE_PROMPTER_TURBO_CACHE[cache_key] = result
-            print(f"[Smart Tile Prompter Turbo] Result cached ({len(TILE_PROMPTER_TURBO_CACHE)} entries)")
+            _cache_set(cache_key, result)
+            print(f"[Smart Tile Prompter Turbo] Result cached ({len(TILE_PROMPTER_TURBO_CACHE)}/{TILE_PROMPTER_TURBO_CACHE_MAX_SIZE} entries)")
 
         # Stop server if requested (frees VRAM for diffusion model)
         if stop_server_after:
             print(f"[Smart Tile Prompter Turbo] Stopping server to free VRAM...")
-            stop_server(model_size)
+            stop_success = stop_server(model_size)
+            if not stop_success:
+                print(f"[Smart Tile Prompter Turbo] WARNING: Server stop failed! VRAM may not be freed.")
+                print(f"  Try manually: pkill -f 'llama-server'")
 
         return result
 
