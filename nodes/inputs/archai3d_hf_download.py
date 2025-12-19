@@ -9,11 +9,10 @@ Description:
     Download models from HuggingFace with maximum speed using huggingface_hub.
     Features parallel downloads, resume support, progress indicator, and custom rename option.
 
-Version: 2.4.0 - Auto-upgrade huggingface_hub for progress bar support
+Version: 2.5.0 - Check version before using tqdm_class (no more error spam)
 """
 
 import os
-import sys
 import shutil
 import folder_paths
 
@@ -38,6 +37,16 @@ except ImportError:
     HAS_TQDM = False
 
 from functools import partial
+
+
+def supports_tqdm_class():
+    """Check if huggingface_hub version supports tqdm_class parameter (>= 0.17.0)."""
+    try:
+        from packaging import version
+        import huggingface_hub
+        return version.parse(huggingface_hub.__version__) >= version.parse("0.17.0")
+    except Exception:
+        return False
 
 
 class ComfyUITqdm(tqdm):
@@ -197,8 +206,8 @@ class ArchAi3D_HF_Download:
             tqdm_cls = partial(ComfyUITqdm, node_id=node_id)
 
             # Download to cache first (fast, parallel, resumable)
-            # Try with tqdm_class first (requires huggingface_hub >= 0.17.0)
-            try:
+            # Check version before using tqdm_class (requires huggingface_hub >= 0.17.0)
+            if supports_tqdm_class():
                 downloaded_path = hf_hub_download(
                     repo_id=repo_id,
                     filename=filename,
@@ -206,37 +215,15 @@ class ArchAi3D_HF_Download:
                     force_download=overwrite,
                     tqdm_class=tqdm_cls,  # Shows progress in ComfyUI!
                 )
-            except TypeError as te:
-                if "tqdm_class" in str(te):
-                    # Auto-upgrade huggingface_hub for progress bar support
-                    print("[ArchAi3D HF Download] Upgrading huggingface_hub for progress bar support...")
-                    import subprocess
-                    try:
-                        subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", "huggingface_hub", "-q"])
-                        print("[ArchAi3D HF Download] Upgrade complete! Retrying with progress bar...")
-                        # Reload the module to get updated function
-                        import importlib
-                        import huggingface_hub
-                        importlib.reload(huggingface_hub)
-                        from huggingface_hub import hf_hub_download as hf_download_new
-                        downloaded_path = hf_download_new(
-                            repo_id=repo_id,
-                            filename=filename,
-                            token=token,
-                            force_download=overwrite,
-                            tqdm_class=tqdm_cls,
-                        )
-                    except Exception as upgrade_error:
-                        # If upgrade fails, continue without progress bar
-                        print(f"[ArchAi3D HF Download] Auto-upgrade failed, continuing without progress bar: {upgrade_error}")
-                        downloaded_path = hf_hub_download(
-                            repo_id=repo_id,
-                            filename=filename,
-                            token=token,
-                            force_download=overwrite,
-                        )
-                else:
-                    raise
+            else:
+                print("[ArchAi3D HF Download] Progress bar requires huggingface_hub >= 0.17.0")
+                print("[ArchAi3D HF Download] Run: pip install -U huggingface_hub")
+                downloaded_path = hf_hub_download(
+                    repo_id=repo_id,
+                    filename=filename,
+                    token=token,
+                    force_download=overwrite,
+                )
 
             # Copy/move to final destination with custom name
             print(f"[ArchAi3D HF Download] Copying to destination...")
