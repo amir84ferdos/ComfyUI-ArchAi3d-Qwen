@@ -8,7 +8,7 @@
 #   - Hierarchical assembly: [Local Texture] + [Global Style]
 #
 # Author: Amir Ferdos (ArchAi3d)
-# Version: 3.9.0 - "Render-to-Real" Strategic Pivot
+# Version: 3.10.0 - Use bash to run script (no execute permission needed)
 #                  Magazine-quality descriptions by default (Arch Digest, Dwell, Dezeen)
 #                  Professional terminology for all materials and finishes
 #                  v3.5.0: VLLM Guidance Instructions
@@ -538,7 +538,7 @@ def start_llama_server(model_size, port, gpu_layers=99, context_size=8192):
     # The subprocess inherits the fd, so it can still write to it
     with open(log_file, 'w') as log_handle:
         process = subprocess.Popen(
-            [str(SCRIPT_PATH), model_short],
+            ["bash", str(SCRIPT_PATH), model_short],
             stdout=log_handle,
             stderr=subprocess.STDOUT,  # Combine stderr into stdout
             start_new_session=True,

@@ -7,7 +7,7 @@
 # Email: Amir84ferdos@gmail.com
 # LinkedIn: https://www.linkedin.com/in/archai3d/
 # GitHub: https://github.com/amir84ferdos
-# Version: 1.4.0 - Added Qwen Official presets with direct parameter settings
+# Version: 1.5.0 - Use bash to run script (no execute permission needed)
 # License: Dual License (Free for personal use, Commercial license required for business use)
 
 import base64
@@ -218,7 +218,7 @@ def start_llama_server(model_size, port):
     env["GPU_LAYERS"] = "99"
 
     process = subprocess.Popen(
-        [str(SCRIPT_PATH), model_short],
+        ["bash", str(SCRIPT_PATH), model_short],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         start_new_session=True,
@@ -762,7 +762,7 @@ class ArchAi3D_QwenVL_Server_Control:
                 return (f"❌ Server script not found at {SCRIPT_PATH}",)
 
             process = subprocess.Popen(
-                [str(SCRIPT_PATH), model_short],
+                ["bash", str(SCRIPT_PATH), model_short],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 start_new_session=True,
@@ -794,7 +794,7 @@ class ArchAi3D_QwenVL_Server_Control:
                 return (f"❌ Server script not found at {SCRIPT_PATH}",)
 
             process = subprocess.Popen(
-                [str(SCRIPT_PATH), model_short],
+                ["bash", str(SCRIPT_PATH), model_short],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 start_new_session=True,

@@ -5,7 +5,7 @@
 # Phase 2: Generate per-tile prompts with style guide context
 #
 # Author: Amir Ferdos (ArchAi3d)
-# Version: 1.6.0 - Added bundle output for one-wire connection to Conditioning
+# Version: 1.7.0 - Use bash to run script (no execute permission needed)
 # License: Dual License (Free for personal use, Commercial license required for business use)
 
 import base64
@@ -150,7 +150,7 @@ def start_llama_server(model_size, port, gpu_layers=99, context_size=8192):
     env["GPU_LAYERS"] = str(gpu_layers)
 
     process = subprocess.Popen(
-        [str(SCRIPT_PATH), model_short],
+        ["bash", str(SCRIPT_PATH), model_short],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         start_new_session=True,
