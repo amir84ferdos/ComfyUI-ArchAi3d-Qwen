@@ -545,7 +545,7 @@ WEB_DIRECTORY = os.path.join(os.path.dirname(__file__), "web")
 # ============================================================================
 
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
-__version__ = "3.1.0"
+__version__ = "3.2.0"
 __author__ = "Amir Ferdos (ArchAi3d)"
 
 # ============================================================================
