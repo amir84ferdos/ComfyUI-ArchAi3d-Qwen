@@ -6,14 +6,16 @@ Email: Amir84ferdos@gmail.com
 LinkedIn: https://www.linkedin.com/in/archai3d/
 
 Description:
-    Download models from HuggingFace with maximum speed using huggingface_hub.
-    Features parallel downloads, resume support, progress indicator, and custom rename option.
+    Download models from HuggingFace with maximum speed using huggingface_hub + hf_transfer.
+    Features multi-connection downloads, resume support, progress indicator, and custom rename option.
 
-Version: 2.5.0 - Check version before using tqdm_class (no more error spam)
+Version: 2.6.0 - Use hf_transfer for maximum speed + reliable progress bar
 """
 
 import os
+import sys
 import shutil
+import subprocess
 import folder_paths
 
 try:
@@ -29,55 +31,30 @@ try:
 except ImportError:
     HAS_HF_HUB = False
 
-# Import tqdm for progress
-try:
-    from tqdm import tqdm
-    HAS_TQDM = True
-except ImportError:
-    HAS_TQDM = False
 
-from functools import partial
-
-
-def supports_tqdm_class():
-    """Check if huggingface_hub version supports tqdm_class parameter (>= 0.17.0)."""
+def ensure_hf_transfer():
+    """Install hf_transfer for maximum download speed if not present."""
     try:
-        from packaging import version
-        import huggingface_hub
-        return version.parse(huggingface_hub.__version__) >= version.parse("0.17.0")
-    except Exception:
-        return False
+        import hf_transfer
+        return True
+    except ImportError:
+        print("[ArchAi3D HF Download] Installing hf_transfer for maximum speed...")
+        try:
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", "-U", "hf_transfer"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+            print("[ArchAi3D HF Download] hf_transfer installed successfully!")
+            return True
+        except Exception as e:
+            print(f"[ArchAi3D HF Download] Could not install hf_transfer: {e}")
+            print("[ArchAi3D HF Download] Downloads will work but may be slower.")
+            return False
 
 
-class ComfyUITqdm(tqdm):
-    """Custom tqdm that sends progress to ComfyUI UI."""
-
-    def __init__(self, *args, node_id=None, **kwargs):
-        self.node_id = node_id
-        self.last_percent = 0
-        super().__init__(*args, **kwargs)
-
-    def update(self, n=1):
-        super().update(n)
-        if self.total and self.total > 0:
-            percent = int((self.n / self.total) * 100)
-            if percent > self.last_percent:
-                self.last_percent = percent
-                # Send progress to ComfyUI UI
-                if HAS_SERVER and self.node_id:
-                    try:
-                        PromptServer.instance.send_sync("progress", {
-                            "node": self.node_id,
-                            "value": percent,
-                            "max": 100
-                        })
-                    except Exception:
-                        pass
-                # Print to console every 10%
-                if percent % 10 == 0:
-                    size_mb = self.n / (1024 * 1024)
-                    total_mb = self.total / (1024 * 1024)
-                    print(f"[HF Download] {percent}% ({size_mb:.1f}/{total_mb:.1f} MB)")
+# Try to ensure hf_transfer is available at module load
+HAS_HF_TRANSFER = ensure_hf_transfer()
 
 
 def get_model_dirs():
@@ -96,9 +73,9 @@ class ArchAi3D_HF_Download:
     """Download models from HuggingFace with maximum speed.
 
     Features:
-    - Uses huggingface_hub for optimized parallel downloads
+    - Uses hf_transfer for multi-connection downloads (auto-installed)
     - Resume interrupted downloads
-    - Progress indicator
+    - Built-in progress bar
     - Custom rename option
     - HF token support for gated models
     """
@@ -193,37 +170,30 @@ class ArchAi3D_HF_Download:
         print(f"[ArchAi3D HF Download] Repo: {repo_id}")
         print(f"[ArchAi3D HF Download] File: {filename}")
         print(f"[ArchAi3D HF Download] Saving as: {final_filename}")
-        print(f"[ArchAi3D HF Download] Using huggingface_hub for maximum speed...")
+
+        # Show download method
+        if HAS_HF_TRANSFER:
+            print(f"[ArchAi3D HF Download] Using hf_transfer for maximum speed (multi-connection)...")
+        else:
+            print(f"[ArchAi3D HF Download] Using huggingface_hub (install hf_transfer for faster downloads)...")
 
         try:
             # Use huggingface_hub for optimized download
             token = hf_token.strip() if hf_token.strip() else None
 
-            # Enable hf_transfer for multi-connection fast downloads
-            os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
-
-            # Create custom tqdm class that sends progress to ComfyUI
-            tqdm_cls = partial(ComfyUITqdm, node_id=node_id)
+            # Enable hf_transfer for multi-connection fast downloads (if available)
+            if HAS_HF_TRANSFER:
+                os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 
             # Download to cache first (fast, parallel, resumable)
-            # Check version before using tqdm_class (requires huggingface_hub >= 0.17.0)
-            if supports_tqdm_class():
-                downloaded_path = hf_hub_download(
-                    repo_id=repo_id,
-                    filename=filename,
-                    token=token,
-                    force_download=overwrite,
-                    tqdm_class=tqdm_cls,  # Shows progress in ComfyUI!
-                )
-            else:
-                print("[ArchAi3D HF Download] Progress bar requires huggingface_hub >= 0.17.0")
-                print("[ArchAi3D HF Download] Run: pip install -U huggingface_hub")
-                downloaded_path = hf_hub_download(
-                    repo_id=repo_id,
-                    filename=filename,
-                    token=token,
-                    force_download=overwrite,
-                )
+            # Use built-in progress bar (works reliably with hf_transfer >= 0.1.4)
+            downloaded_path = hf_hub_download(
+                repo_id=repo_id,
+                filename=filename,
+                token=token,
+                force_download=overwrite,
+                # No tqdm_class - use built-in progress bar for maximum compatibility
+            )
 
             # Copy/move to final destination with custom name
             print(f"[ArchAi3D HF Download] Copying to destination...")
