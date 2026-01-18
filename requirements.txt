@@ -40,3 +40,9 @@ google-genai>=1.0.0
 
 # For Google Drive Download node
 gdown>=5.0.0
+
+# For SPZ export (SaveSplatScene node)
+# Niantic SPZ library (C++ - fastest, requires compiler)
+spz @ git+https://github.com/nianticlabs/spz.git
+# gsconverter as Python fallback
+gsconverter @ git+https://github.com/francescofugazzi/3dgsconverter.git

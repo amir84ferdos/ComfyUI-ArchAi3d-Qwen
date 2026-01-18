@@ -27,6 +27,29 @@
 CTX="${CTX:-8192}"
 GPU_LAYERS="${GPU_LAYERS:-99}"  # 99 for all layers on GPU
 
+# ============================================================================
+# SPEED OPTIMIZATIONS (llama.cpp 2026 improvements)
+# ============================================================================
+# Flash attention - faster GPU attention computation
+FLASH_ATTN="${FLASH_ATTN:-1}"  # 1=enabled (default), 0=disabled
+
+# KV cache quantization - reduces VRAM, slightly faster
+# Options: f16 (default, best quality), q8_0 (good balance), q4_0 (fastest, less quality)
+CACHE_TYPE_K="${CACHE_TYPE_K:-q8_0}"
+CACHE_TYPE_V="${CACHE_TYPE_V:-q8_0}"
+
+# Parallel sequences - number of concurrent requests (1-8)
+PARALLEL="${PARALLEL:-2}"
+
+# Continuous batching - batch multiple requests for throughput
+CONT_BATCHING="${CONT_BATCHING:-1}"  # 1=enabled, 0=disabled
+
+# Tensor split for multi-GPU (comma-separated ratios, e.g., "0.5,0.5" for 2 GPUs)
+TENSOR_SPLIT="${TENSOR_SPLIT:-}"
+
+# CPU threads for non-GPU work
+THREADS="${THREADS:-4}"
+
 # Get script directory for relative paths
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -362,12 +385,52 @@ fi
 echo "Using llama-server: $LLAMA_SERVER"
 echo ""
 
-# Start the server with local model path
-"$LLAMA_SERVER" \
-    --jinja \
-    -c "$CTX" \
-    --port "$PORT" \
-    -m "$MODEL_PATH" \
-    --mmproj "$MMPROJ_PATH" \
-    -ngl "$GPU_LAYERS" \
+# Build server command with optimizations
+SERVER_ARGS=(
+    --jinja
+    -c "$CTX"
+    --port "$PORT"
+    -m "$MODEL_PATH"
+    --mmproj "$MMPROJ_PATH"
+    -ngl "$GPU_LAYERS"
     --host 0.0.0.0
+    -t "$THREADS"
+)
+
+# Flash attention (significant speedup on modern GPUs)
+if [ "$FLASH_ATTN" = "1" ]; then
+    SERVER_ARGS+=(-fa on)
+    echo "✓ Flash attention: ENABLED"
+elif [ "$FLASH_ATTN" = "0" ]; then
+    SERVER_ARGS+=(-fa off)
+    echo "✓ Flash attention: DISABLED"
+fi
+
+# KV cache quantization (reduces VRAM, improves speed)
+if [ -n "$CACHE_TYPE_K" ] && [ "$CACHE_TYPE_K" != "f16" ]; then
+    SERVER_ARGS+=(--cache-type-k "$CACHE_TYPE_K" --cache-type-v "$CACHE_TYPE_V")
+    echo "✓ KV cache quantization: K=$CACHE_TYPE_K, V=$CACHE_TYPE_V"
+fi
+
+# Parallel sequences for concurrent requests
+if [ "$PARALLEL" -gt 1 ]; then
+    SERVER_ARGS+=(-np "$PARALLEL")
+    echo "✓ Parallel sequences: $PARALLEL"
+fi
+
+# Continuous batching
+if [ "$CONT_BATCHING" = "1" ]; then
+    SERVER_ARGS+=(-cb)
+    echo "✓ Continuous batching: ENABLED"
+fi
+
+# Multi-GPU tensor split
+if [ -n "$TENSOR_SPLIT" ]; then
+    SERVER_ARGS+=(--tensor-split "$TENSOR_SPLIT")
+    echo "✓ Tensor split: $TENSOR_SPLIT"
+fi
+
+echo ""
+
+# Start the server with all optimizations
+exec "$LLAMA_SERVER" "${SERVER_ARGS[@]}"

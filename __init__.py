@@ -189,6 +189,12 @@ from .nodes.utils.nunchaku_installer import ArchAi3D_Nunchaku_Installer
 from .nodes.utils.dependency_installer import ArchAi3D_Dependency_Installer
 
 # ============================================================================
+# 3D EXPORT NODES
+# ============================================================================
+
+from .nodes.outputs.save_splat_scene import ArchAi3D_SaveSplatScene
+
+# ============================================================================
 # OPTIMIZED LOW VRAM NODES
 # ============================================================================
 
@@ -355,6 +361,9 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_SAM3_Segment": ArchAi3D_SAM3_Segment,
     "ArchAi3D_Metric3D_Normal": ArchAi3D_Metric3D_Normal,
     "ArchAi3D_Metric3D_Depth": ArchAi3D_Metric3D_Depth,
+
+    # 3D Export Nodes
+    "ArchAi3D_SaveSplatScene": ArchAi3D_SaveSplatScene,
 
     # Installer Nodes
     "ArchAi3D_Nunchaku_Installer": ArchAi3D_Nunchaku_Installer,
@@ -524,6 +533,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_SAM3_Segment": "🎯 SAM3 Segment (Low VRAM)",
     "ArchAi3D_Metric3D_Normal": "🎯 Metric3D Normal (Low VRAM)",
     "ArchAi3D_Metric3D_Depth": "🎯 Metric3D Depth (Low VRAM)",
+
+    # 3D Export Nodes
+    "ArchAi3D_SaveSplatScene": "💾 Save Splat Scene (SPZ + Camera)",
 
     # Installer Nodes
     "ArchAi3D_Nunchaku_Installer": "🔧 Nunchaku Installer",

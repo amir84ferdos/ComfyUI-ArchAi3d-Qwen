@@ -7,7 +7,7 @@
 # Email: Amir84ferdos@gmail.com
 # LinkedIn: https://www.linkedin.com/in/archai3d/
 # GitHub: https://github.com/amir84ferdos
-# Version: 1.5.0 - Use bash to run script (no execute permission needed)
+# Version: 1.6.0 - Speed optimizations (flash attention, KV cache quantization, continuous batching)
 # License: Dual License (Free for personal use, Commercial license required for business use)
 
 import base64
@@ -204,18 +204,34 @@ def kill_llama_server(port):
         return False
 
 
-def start_llama_server(model_size, port):
-    """Start llama-server for the specified model size."""
+def start_llama_server(model_size, port, flash_attn=True, cache_type="q8_0", parallel=2):
+    """Start llama-server for the specified model size with optimizations.
+
+    Args:
+        model_size: Model size string like "4B (Balanced, ~7GB VRAM)"
+        port: Server port
+        flash_attn: Enable flash attention (faster GPU computation)
+        cache_type: KV cache type - "f16", "q8_0", or "q4_0"
+        parallel: Number of parallel sequences (1-8)
+    """
     model_short = model_size.split()[0]  # "4B" from "4B (Balanced, ~7GB VRAM)"
 
     if not SCRIPT_PATH.exists():
         print(f"[QwenVL-GGUF] Warning: Server script not found at {SCRIPT_PATH}")
         return None
 
-    # Start server in background
+    # Start server in background with optimizations
     env = os.environ.copy()
     env["CTX"] = "8192"
     env["GPU_LAYERS"] = "99"
+
+    # Speed optimizations (llama.cpp 2026)
+    env["FLASH_ATTN"] = "1" if flash_attn else "0"
+    env["CACHE_TYPE_K"] = cache_type
+    env["CACHE_TYPE_V"] = cache_type
+    env["PARALLEL"] = str(parallel)
+    env["CONT_BATCHING"] = "1"
+    env["THREADS"] = "4"
 
     process = subprocess.Popen(
         ["bash", str(SCRIPT_PATH), model_short],
@@ -224,7 +240,8 @@ def start_llama_server(model_size, port):
         start_new_session=True,
         env=env
     )
-    print(f"[QwenVL-GGUF] Started server for {model_short} on port {port} (PID: {process.pid})")
+    print(f"[QwenVL-GGUF] Started server for {model_short} on port {port} with optimizations (PID: {process.pid})")
+    print(f"[QwenVL-GGUF] Flash attention: {'ON' if flash_attn else 'OFF'}, KV cache: {cache_type}, Parallel: {parallel}")
     return process
 
 
@@ -239,6 +256,12 @@ class ArchAi3D_QwenVL_GGUF:
     - Lower VRAM usage with Q4_K_M quantization (~7GB)
     - Can hot-swap models by changing server
     - Supports multiple images in a single request
+
+    Speed Optimizations (llama.cpp 2026):
+    - Flash attention: Faster GPU attention computation
+    - KV cache quantization (q8_0): Reduces VRAM, improves speed
+    - Continuous batching: Better throughput for multiple requests
+    - Parallel sequences: Handle concurrent requests
 
     Requirements:
     - llama-server running with Qwen3-VL GGUF model
@@ -657,6 +680,11 @@ class ArchAi3D_QwenVL_Server_Control:
     - Start the server with specific model and settings
     - Check if the server is currently running
 
+    Speed Optimizations (llama.cpp 2026):
+    - Flash attention: Faster GPU attention computation (~35% speedup)
+    - KV cache quantization: Reduces VRAM usage, improves speed
+    - Continuous batching: Better throughput for multiple requests
+
     The server runs on different ports based on model size:
     - 2B: port 8032
     - 4B: port 8033
@@ -693,6 +721,21 @@ class ArchAi3D_QwenVL_Server_Control:
                     "step": 1024,
                     "tooltip": "Context window size in tokens"
                 }),
+                # Speed optimizations
+                "flash_attention": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "Enable flash attention for ~35% faster GPU inference"
+                }),
+                "kv_cache_type": (["q8_0 (Fast)", "f16 (Quality)", "q4_0 (Fastest)"], {
+                    "default": "q8_0 (Fast)",
+                    "tooltip": "KV cache quantization: q8_0=fast+good quality, f16=best quality, q4_0=fastest"
+                }),
+                "parallel_slots": ("INT", {
+                    "default": 2,
+                    "min": 1,
+                    "max": 8,
+                    "tooltip": "Number of parallel request slots (higher=better throughput, more VRAM)"
+                }),
             },
             "optional": {
                 "trigger": ("*", {
@@ -719,14 +762,19 @@ class ArchAi3D_QwenVL_Server_Control:
         except Exception as e:
             return False, str(e)
 
-    def control(self, action, model_size, gpu_layers, context_size, trigger=None):
-        """Control the llama-server."""
+    def control(self, action, model_size, gpu_layers, context_size,
+                flash_attention=True, kv_cache_type="q8_0 (Fast)", parallel_slots=2,
+                trigger=None):
+        """Control the llama-server with speed optimizations."""
         import time
 
         config = MODEL_CONFIGS.get(model_size, MODEL_CONFIGS["4B (Balanced, ~7GB VRAM)"])
         port = config['port']
         model_name = config['name']
         model_short = model_size.split()[0]
+
+        # Parse cache type
+        cache_type = kv_cache_type.split()[0]  # "q8_0" from "q8_0 (Fast)"
 
         if action == "Check Status":
             running, status = self.get_server_status(port)
@@ -753,10 +801,17 @@ class ArchAi3D_QwenVL_Server_Control:
             if running:
                 return (f"ℹ️ {model_name} server is already running on port {port}",)
 
-            # Start with custom settings
+            # Start with custom settings and speed optimizations
             env = os.environ.copy()
             env["CTX"] = str(context_size)
             env["GPU_LAYERS"] = str(gpu_layers)
+            # Speed optimizations (llama.cpp 2026)
+            env["FLASH_ATTN"] = "1" if flash_attention else "0"
+            env["CACHE_TYPE_K"] = cache_type
+            env["CACHE_TYPE_V"] = cache_type
+            env["PARALLEL"] = str(parallel_slots)
+            env["CONT_BATCHING"] = "1"
+            env["THREADS"] = "4"
 
             if not SCRIPT_PATH.exists():
                 return (f"❌ Server script not found at {SCRIPT_PATH}",)
@@ -774,7 +829,8 @@ class ArchAi3D_QwenVL_Server_Control:
                 time.sleep(1)
                 running, _ = self.get_server_status(port)
                 if running:
-                    return (f"✅ {model_name} server STARTED on port {port}\n\nSettings:\n- GPU Layers: {gpu_layers}\n- Context: {context_size} tokens",)
+                    opt_str = f"Flash Attn: {'ON' if flash_attention else 'OFF'}, KV Cache: {cache_type}, Parallel: {parallel_slots}"
+                    return (f"✅ {model_name} server STARTED on port {port}\n\nSettings:\n- GPU Layers: {gpu_layers}\n- Context: {context_size} tokens\n- {opt_str}",)
                 if i % 5 == 0 and i > 0:
                     print(f"[QwenVL-Server] Loading model... ({i}s)")
 
@@ -785,10 +841,17 @@ class ArchAi3D_QwenVL_Server_Control:
             kill_llama_server(port)
             time.sleep(2)
 
-            # Then start
+            # Then start with optimizations
             env = os.environ.copy()
             env["CTX"] = str(context_size)
             env["GPU_LAYERS"] = str(gpu_layers)
+            # Speed optimizations (llama.cpp 2026)
+            env["FLASH_ATTN"] = "1" if flash_attention else "0"
+            env["CACHE_TYPE_K"] = cache_type
+            env["CACHE_TYPE_V"] = cache_type
+            env["PARALLEL"] = str(parallel_slots)
+            env["CONT_BATCHING"] = "1"
+            env["THREADS"] = "4"
 
             if not SCRIPT_PATH.exists():
                 return (f"❌ Server script not found at {SCRIPT_PATH}",)
@@ -806,7 +869,8 @@ class ArchAi3D_QwenVL_Server_Control:
                 time.sleep(1)
                 running, _ = self.get_server_status(port)
                 if running:
-                    return (f"✅ {model_name} server RESTARTED on port {port}\n\nSettings:\n- GPU Layers: {gpu_layers}\n- Context: {context_size} tokens",)
+                    opt_str = f"Flash Attn: {'ON' if flash_attention else 'OFF'}, KV Cache: {cache_type}, Parallel: {parallel_slots}"
+                    return (f"✅ {model_name} server RESTARTED on port {port}\n\nSettings:\n- GPU Layers: {gpu_layers}\n- Context: {context_size} tokens\n- {opt_str}",)
                 if i % 5 == 0 and i > 0:
                     print(f"[QwenVL-Server] Loading model... ({i}s)")
 
