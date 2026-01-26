@@ -96,6 +96,9 @@ def ply_to_spz(ply_path: str, spz_path: str, coordinate_system: str = "RUB") -> 
         print(f"[SaveSplatScene] gsconverter error: {e}")
 
     # Built-in basic SPZ converter (simplified version)
+    # TODO: Pass coordinate_system to _builtin_ply_to_spz and implement
+    # coordinate conversion (flipP, flipQ, flipSh arrays). Currently assumes
+    # input PLY is in RDF (standard 3DGS output) which works for most cases.
     try:
         return _builtin_ply_to_spz(ply_path, spz_path)
     except Exception as e:
@@ -137,103 +140,210 @@ def _read_ply_gaussians(ply_path: str) -> dict:
 
 
 def _builtin_ply_to_spz(ply_path: str, spz_path: str) -> bool:
-    """Built-in PLY to SPZ converter (basic implementation).
+    """Built-in PLY to SPZ v3 converter.
 
-    SPZ format: gzipped stream with 16-byte header + 64 bytes per Gaussian
+    SPZ v3 format: gzipped stream with 16-byte header followed by data organized by attribute:
+    positions, alphas, colors, scales, rotations, spherical harmonics.
+
+    Header structure (16 bytes):
+        uint32_t magic (0x5053474e)
+        uint32_t version (3)
+        uint32_t numPoints
+        uint8_t shDegree (0-3)
+        uint8_t fractionalBits (for fixed-point positions)
+        uint8_t flags
+        uint8_t reserved
+
+    Data layout (by attribute, not per-gaussian):
+        positions: numPoints * 9 bytes (3x 24-bit fixed-point)
+        alphas: numPoints * 1 byte
+        colors: numPoints * 3 bytes (RGB)
+        scales: numPoints * 3 bytes (log-encoded)
+        rotations: numPoints * 4 bytes (2-bit index + 3x 10-bit smallest-three)
+        sh_coeffs: numPoints * (shDegree > 0 ? 3 * ((shDegree+1)^2 - 1) : 0) bytes
     """
     gaussians = _read_ply_gaussians(ply_path)
     data = gaussians['data']
     num_gaussians = gaussians['num_gaussians']
 
-    # SPZ Header (16 bytes)
-    # Magic (4), Version (4), NumGaussians (4), Flags (4)
-    magic = b'SPZ\x00'
-    version = struct.pack('<I', 2)  # Version 2.0
+    # Determine SH degree from available properties
+    sh_degree = 0
+    if 'f_rest_0' in data.dtype.names:
+        # Count f_rest properties to determine SH degree
+        # degree 1: 9 coeffs (3 DC + 6 rest) -> 3 f_rest per channel
+        # degree 2: 24 coeffs -> 21 rest
+        # degree 3: 45 coeffs -> 42 rest
+        f_rest_count = sum(1 for p in data.dtype.names if p.startswith('f_rest_'))
+        if f_rest_count >= 45:
+            sh_degree = 3
+        elif f_rest_count >= 24:
+            sh_degree = 2
+        elif f_rest_count >= 9:
+            sh_degree = 1
+
+    # Calculate fractional bits for position encoding
+    # Find position bounds to determine optimal fractional bits
+    if 'x' in data.dtype.names:
+        positions = np.column_stack([data['x'], data['y'], data['z']])
+        pos_min = positions.min()
+        pos_max = positions.max()
+        pos_range = max(abs(pos_min), abs(pos_max))
+        # 24-bit signed = 23 bits for magnitude, need to fit pos_range
+        # fractional_bits = 23 - ceil(log2(pos_range + 1))
+        if pos_range > 0:
+            int_bits_needed = max(1, int(np.ceil(np.log2(pos_range + 1))))
+            fractional_bits = min(23 - int_bits_needed, 16)  # Cap at 16
+            fractional_bits = max(fractional_bits, 0)
+        else:
+            fractional_bits = 12  # Default
+    else:
+        positions = np.zeros((num_gaussians, 3))
+        fractional_bits = 12
+
+    # SPZ v3 Header (16 bytes)
+    # Magic: 0x5053474e (little-endian: bytes 4e 47 53 50)
+    magic = struct.pack('<I', 0x5053474e)
+    version = struct.pack('<I', 3)
     num_pts = struct.pack('<I', num_gaussians)
-    flags = struct.pack('<I', 0)
+    sh_degree_byte = struct.pack('B', sh_degree)
+    fractional_bits_byte = struct.pack('B', fractional_bits)
+    flags_byte = struct.pack('B', 0)
+    reserved_byte = struct.pack('B', 0)
 
-    header = magic + version + num_pts + flags
+    header = magic + version + num_pts + sh_degree_byte + fractional_bits_byte + flags_byte + reserved_byte
 
-    # Pack Gaussians (64 bytes each)
-    # Position: 3x float16 (6 bytes)
-    # Scale: 3x uint8 (3 bytes)
-    # Rotation: packed 32-bit (4 bytes)
-    # Opacity: uint8 (1 byte)
-    # SH DC: 3x uint8 (3 bytes)
-    # SH Rest: 45x uint8 (45 bytes) - simplified: we'll zero-pad
-    # Padding: 2 bytes
-
+    # Pack data by attribute (not per-gaussian)
     packed_data = bytearray()
 
+    # 1. Positions: 24-bit fixed-point signed integers (3 bytes each, 9 bytes per point)
+    scale_factor = float(1 << fractional_bits)
     for i in range(num_gaussians):
-        # Position (3x float16 = 6 bytes)
-        if 'x' in data.dtype.names:
-            pos = np.array([data['x'][i], data['y'][i], data['z'][i]], dtype=np.float16)
-        else:
-            pos = np.zeros(3, dtype=np.float16)
-        packed_data.extend(pos.tobytes())
+        for axis in range(3):
+            val = positions[i, axis]
+            fixed_val = int(np.clip(val * scale_factor, -8388608, 8388607))  # 24-bit signed range
+            # Pack as 3 bytes, little-endian (handle negative values with 2's complement)
+            if fixed_val < 0:
+                fixed_val = fixed_val & 0xFFFFFF  # Convert to 24-bit unsigned representation
+            packed_data.append(fixed_val & 0xFF)
+            packed_data.append((fixed_val >> 8) & 0xFF)
+            packed_data.append((fixed_val >> 16) & 0xFF)
 
-        # Scale (3x uint8, log-encoded = 3 bytes)
-        if 'scale_0' in data.dtype.names:
-            scales = np.array([data['scale_0'][i], data['scale_1'][i], data['scale_2'][i]])
-            # Quantize log-scale to uint8
-            log_scales = np.log(np.abs(scales) + 1e-8)
-            scale_bytes = np.clip((log_scales + 10) * 12.75, 0, 255).astype(np.uint8)
-        else:
-            scale_bytes = np.array([128, 128, 128], dtype=np.uint8)
-        packed_data.extend(scale_bytes.tobytes())
-
-        # Rotation (quaternion packed into 32 bits = 4 bytes)
-        if 'rot_0' in data.dtype.names:
-            quat = np.array([data['rot_0'][i], data['rot_1'][i], data['rot_2'][i], data['rot_3'][i]])
-            quat = quat / (np.linalg.norm(quat) + 1e-8)  # Normalize
-        else:
-            quat = np.array([1.0, 0.0, 0.0, 0.0])
-
-        # Pack quaternion: find largest component, store 3 smallest as 10-bit signed ints
-        abs_quat = np.abs(quat)
-        largest_idx = np.argmax(abs_quat)
-        sign = 1 if quat[largest_idx] >= 0 else -1
-        quat = quat * sign
-
-        # Get 3 smallest components
-        mask = np.ones(4, dtype=bool)
-        mask[largest_idx] = False
-        smallest_3 = quat[mask]
-
-        # Quantize to 10-bit signed (-512 to 511)
-        quant = np.clip(smallest_3 * 724, -511, 511).astype(np.int16)
-
-        # Pack: 2 bits for index, 3x 10 bits for components
-        packed_rot = (largest_idx & 0x3)
-        packed_rot |= ((quant[0] & 0x3FF) << 2)
-        packed_rot |= ((quant[1] & 0x3FF) << 12)
-        packed_rot |= ((quant[2] & 0x3FF) << 22)
-        packed_data.extend(struct.pack('<I', packed_rot & 0xFFFFFFFF))
-
-        # Opacity (1 byte)
+    # 2. Alphas (opacity): 1 byte per point
+    for i in range(num_gaussians):
         if 'opacity' in data.dtype.names:
-            opacity = 1.0 / (1.0 + np.exp(-data['opacity'][i]))  # Sigmoid
-            opacity_byte = np.clip(opacity * 255, 0, 255).astype(np.uint8)
+            opacity = 1.0 / (1.0 + np.exp(-float(data['opacity'][i])))  # Sigmoid
+            alpha_byte = int(np.clip(opacity * 255, 0, 255))
         else:
-            opacity_byte = np.uint8(255)
-        packed_data.extend(bytes([opacity_byte]))
+            alpha_byte = 255
+        packed_data.append(alpha_byte)
 
-        # SH DC coefficients (RGB, 3 bytes)
+    # 3. Colors (raw SH DC coefficients): 3 bytes per point
+    # SPZ stores raw SH DC values (NOT converted to RGB)
+    # Encoding: byte = shDC * colorScale * 255 + 0.5 * 255, where colorScale = 0.15
+    # This allows representing out-of-range values for SH compensation
+    COLOR_SCALE = 0.15
+    for i in range(num_gaussians):
         if 'f_dc_0' in data.dtype.names:
             sh_dc = np.array([data['f_dc_0'][i], data['f_dc_1'][i], data['f_dc_2'][i]])
-            # Convert SH to RGB and quantize
-            rgb = (sh_dc * 0.28209479177387814 + 0.5)  # C0 coefficient
-            rgb_bytes = np.clip(rgb * 255, 0, 255).astype(np.uint8)
+            # SPZ color encoding: raw SH DC * 0.15 * 255 + 127.5
+            rgb_bytes = np.clip(sh_dc * COLOR_SCALE * 255 + 0.5 * 255, 0, 255).astype(np.uint8)
         else:
             rgb_bytes = np.array([128, 128, 128], dtype=np.uint8)
         packed_data.extend(rgb_bytes.tobytes())
 
-        # SH Rest (45 bytes) - simplified: store zeros
-        packed_data.extend(bytes(45))
+    # 4. Scales: 3 bytes per point (log-encoded)
+    # SPZ encoding: scale_byte = (scale + 10) * 16
+    for i in range(num_gaussians):
+        if 'scale_0' in data.dtype.names:
+            # PLY stores scales as log-scale already
+            scales = np.array([data['scale_0'][i], data['scale_1'][i], data['scale_2'][i]])
+            scale_bytes = np.clip((scales + 10.0) * 16.0, 0, 255).astype(np.uint8)
+        else:
+            scale_bytes = np.array([128, 128, 128], dtype=np.uint8)
+        packed_data.extend(scale_bytes.tobytes())
 
-        # Padding (2 bytes to reach 64 bytes total)
-        packed_data.extend(bytes(2))
+    # 5. Rotations: 4 bytes per point (SPZ v3 smallest-three encoding)
+    # Format: bits 30-31 = largest index, bits 0-29 = 3x 10-bit signed components
+    # Each 10-bit component: 9-bit magnitude + 1 sign bit
+    # Decoder reads components in reverse order (i=3,2,1,0 excluding largest)
+    SQRT1_2 = 0.7071067811865475  # 1/sqrt(2)
+    C_MASK = 511  # (1 << 9) - 1
+    for i in range(num_gaussians):
+        if 'rot_0' in data.dtype.names:
+            quat = np.array([data['rot_0'][i], data['rot_1'][i], data['rot_2'][i], data['rot_3'][i]])
+            norm = np.linalg.norm(quat)
+            if norm > 1e-8:
+                quat = quat / norm
+            else:
+                quat = np.array([1.0, 0.0, 0.0, 0.0])
+        else:
+            quat = np.array([1.0, 0.0, 0.0, 0.0])
+
+        # Find largest component
+        abs_quat = np.abs(quat)
+        largest_idx = int(np.argmax(abs_quat))
+
+        # Ensure largest component is positive (quaternion sign invariance)
+        if quat[largest_idx] < 0:
+            quat = -quat
+
+        # Build packed rotation: largest index in bits 30-31
+        packed_rot = (largest_idx & 0x3) << 30
+
+        # Pack components in reverse order (3,2,1,0 excluding largest)
+        # This matches decoder which reads from LSB first for highest indices
+        bit_offset = 0
+        for j in range(3, -1, -1):  # 3, 2, 1, 0
+            if j == largest_idx:
+                continue
+            val = quat[j]
+            # Quantize: magnitude = C_MASK * (|val| / sqrt(2))
+            magnitude = int(min(C_MASK, abs(val) / SQRT1_2 * C_MASK + 0.5))
+            sign_bit = 1 if val < 0 else 0
+            # Pack: 9-bit magnitude, then 1 sign bit
+            component_10bit = (magnitude & 0x1FF) | (sign_bit << 9)
+            packed_rot |= (component_10bit << bit_offset)
+            bit_offset += 10
+
+        packed_data.extend(struct.pack('<I', packed_rot))
+
+    # 6. Spherical Harmonics (if sh_degree > 0)
+    # PLY stores channel-major: f_rest_0..14 = R, f_rest_15..29 = G, f_rest_30..44 = B
+    # SPZ expects coefficient-major interleaved: [R0, G0, B0, R1, G1, B1, ...]
+    # Quantization: degree 1 uses 5 bits (bucket=8), higher uses 4 bits (bucket=16)
+    if sh_degree > 0:
+        # Number of SH coefficients per channel (excluding DC)
+        # degree 1: 3, degree 2: 8, degree 3: 15
+        num_sh_per_channel = (sh_degree + 1) ** 2 - 1
+
+        # Bucket sizes for quantization
+        SH1_BUCKET = 8    # 5-bit precision for degree 1 (3 coeffs)
+        SH_REST_BUCKET = 16  # 4-bit precision for higher degrees
+
+        def quantize_sh(val, bucket_size):
+            """Quantize SH coefficient with bucket centering."""
+            q = int(round(val * 128.0) + 128.0)
+            q = ((q + bucket_size // 2) // bucket_size) * bucket_size
+            return max(0, min(255, q))
+
+        for i in range(num_gaussians):
+            sh_bytes = []
+            # Reorganize from PLY channel-major to SPZ coefficient-major interleaved
+            for coeff_idx in range(num_sh_per_channel):
+                # Determine bucket size: first 3 coeffs (degree 1) use finer quantization
+                bucket = SH1_BUCKET if coeff_idx < 3 else SH_REST_BUCKET
+
+                for channel in range(3):  # R, G, B
+                    # PLY organization: channel * num_sh_per_channel + coeff_idx
+                    ply_idx = channel * num_sh_per_channel + coeff_idx
+                    prop_name = f'f_rest_{ply_idx}'
+                    if prop_name in data.dtype.names:
+                        val = float(data[prop_name][i])
+                        quant_val = quantize_sh(val, bucket)
+                    else:
+                        quant_val = 128  # Neutral value
+                    sh_bytes.append(quant_val)
+            packed_data.extend(sh_bytes)
 
     # Gzip compress
     full_data = header + bytes(packed_data)
@@ -244,7 +354,8 @@ def _builtin_ply_to_spz(ply_path: str, spz_path: str) -> bool:
     original_size = os.path.getsize(ply_path)
     ratio = original_size / compressed_size if compressed_size > 0 else 0
 
-    print(f"[SaveSplatScene] Built-in SPZ conversion: {original_size/1024/1024:.1f}MB -> {compressed_size/1024/1024:.1f}MB ({ratio:.1f}x compression)")
+    print(f"[SaveSplatScene] Built-in SPZ v3 conversion: {original_size/1024/1024:.1f}MB -> {compressed_size/1024/1024:.1f}MB ({ratio:.1f}x compression)")
+    print(f"[SaveSplatScene] SH degree: {sh_degree}, fractional bits: {fractional_bits}, points: {num_gaussians}")
     return True
 
 
@@ -438,18 +549,36 @@ class ArchAi3D_SaveSplatScene:
         )
 
         # Build scene JSON
+        if output_format == "both":
+            splat_file_info = {
+                "spz": os.path.basename(spz_path),
+                "ply": os.path.basename(ply_copy_path)
+            }
+            splat_format = "both"
+        elif output_format == "spz":
+            splat_file_info = os.path.basename(spz_path)
+            splat_format = "spz"
+        else:
+            splat_file_info = os.path.basename(ply_copy_path)
+            splat_format = "ply"
+
         scene_json = {
             "version": "1.0",
             "generator": "ArchAi3D ComfyUI",
             "timestamp": timestamp,
-            "splat_file": os.path.basename(spz_path if output_format == "spz" else ply_copy_path),
-            "splat_format": "spz" if output_format == "spz" else "ply",
+            "splat_file": splat_file_info,
+            "splat_format": splat_format,
             "coordinate_system": coordinate_system,
             "camera": camera_data,
             "source": {
                 "ply_path": ply_path,
             }
         }
+
+        # Add source image info if provided
+        if include_source_image is not None:
+            scene_json["source"]["has_image"] = True
+            scene_json["source"]["image_shape"] = list(include_source_image.shape) if hasattr(include_source_image, 'shape') else None
 
         # Save JSON
         with open(json_path, 'w') as f:
