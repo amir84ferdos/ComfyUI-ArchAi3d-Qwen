@@ -42,7 +42,7 @@ google-genai>=1.0.0
 gdown>=5.0.0
 
 # For SPZ export (SaveSplatScene node)
-# Niantic SPZ library (C++ - fastest, requires compiler)
-spz @ git+https://github.com/nianticlabs/spz.git
-# gsconverter as Python fallback
-gsconverter @ git+https://github.com/francescofugazzi/3dgsconverter.git
+# These are OPTIONAL - the node has a built-in SPZ v3 converter that works without them
+# Uncomment below for faster conversion (requires ZLIB dev libraries and C++ compiler):
+# spz @ git+https://github.com/nianticlabs/spz.git
+# gsconverter @ git+https://github.com/francescofugazzi/3dgsconverter.git
