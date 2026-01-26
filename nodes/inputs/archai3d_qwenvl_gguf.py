@@ -222,7 +222,7 @@ def start_llama_server(model_size, port, flash_attn=True, cache_type="q8_0", par
 
     # Start server in background with optimizations
     env = os.environ.copy()
-    env["CTX"] = "8192"
+    env["CTX"] = "16384"
     env["GPU_LAYERS"] = "99"
 
     # Speed optimizations (llama.cpp 2026)

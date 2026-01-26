@@ -177,6 +177,7 @@ from .nodes.inputs.archai3d_llama_cpp_installer import ArchAi3D_LlamaCpp_Install
 from .nodes.inputs.archai3d_hf_download import ArchAi3D_HF_Download
 from .nodes.inputs.archai3d_civitai_download import ArchAi3D_CivitAI_Download
 from .nodes.inputs.archai3d_gdrive_download import ArchAi3D_GDrive_Download
+from .nodes.inputs.archai3d_triggered_loaders import ArchAi3D_Load_Diffusion_Model, ArchAi3D_Load_CLIP, ArchAi3D_Load_Dual_CLIP
 from .nodes.utils.archai3d_position_guide_prompt_builder import ArchAi3D_Position_Guide_Prompt_Builder
 from .nodes.utils.archai3d_simple_position_prompt import ArchAi3D_Simple_Position_Prompt
 from .nodes.utils.archai3d_color_correction_bt709 import ArchAi3D_Color_Correction_BT709
@@ -185,6 +186,7 @@ from .nodes.utils.archai3d_average_color import ArchAi3D_Average_Color
 from .nodes.utils.archai3d_solid_color_image import ArchAi3D_Solid_Color_Image
 from .nodes.utils.archai3d_mask_crop_rotate import ArchAi3D_Mask_Crop_Rotate
 from .nodes.utils.archai3d_panorama_offset import ArchAi3D_Panorama_Offset
+from .nodes.utils.archai3d_highpass_blend import ArchAi3D_HighPass_Blend
 from .nodes.utils.nunchaku_installer import ArchAi3D_Nunchaku_Installer
 from .nodes.utils.dependency_installer import ArchAi3D_Dependency_Installer
 
@@ -337,6 +339,7 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_Solid_Color_Image": ArchAi3D_Solid_Color_Image,
     "ArchAi3D_Mask_Crop_Rotate": ArchAi3D_Mask_Crop_Rotate,
     "ArchAi3D_Panorama_Offset": ArchAi3D_Panorama_Offset,
+    "ArchAi3D_HighPass_Blend": ArchAi3D_HighPass_Blend,
 
     # Input Nodes (Web Interface Integration)
     "ArchAi3D_String_Input": ArchAi3D_String_Input,
@@ -356,6 +359,11 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_HF_Download": ArchAi3D_HF_Download,
     "ArchAi3D_CivitAI_Download": ArchAi3D_CivitAI_Download,
     "ArchAi3D_GDrive_Download": ArchAi3D_GDrive_Download,
+
+    # Triggered Loader Nodes
+    "ArchAi3D_Load_Diffusion_Model": ArchAi3D_Load_Diffusion_Model,
+    "ArchAi3D_Load_CLIP": ArchAi3D_Load_CLIP,
+    "ArchAi3D_Load_Dual_CLIP": ArchAi3D_Load_Dual_CLIP,
 
     # Low VRAM Optimized Nodes
     "ArchAi3D_SAM3_Segment": ArchAi3D_SAM3_Segment,
@@ -509,6 +517,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Solid_Color_Image": "🎨 Solid Color Image",
     "ArchAi3D_Mask_Crop_Rotate": "✂️ Mask Crop & Rotate",
     "ArchAi3D_Panorama_Offset": "🔄 Panorama Offset",
+    "ArchAi3D_HighPass_Blend": "✨ High-Pass Filter + Blend",
 
     # Input Nodes (Web Interface Integration)
     "ArchAi3D_String_Input": "📝 String Input",
@@ -528,6 +537,11 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_HF_Download": "📥 HF Download (Rename)",
     "ArchAi3D_CivitAI_Download": "📥 CivitAI Download (Rename)",
     "ArchAi3D_GDrive_Download": "📥 Google Drive Download",
+
+    # Triggered Loader Nodes
+    "ArchAi3D_Load_Diffusion_Model": "📦 Load Diffusion Model (Triggered)",
+    "ArchAi3D_Load_CLIP": "📦 Load CLIP (Triggered)",
+    "ArchAi3D_Load_Dual_CLIP": "📦 Load Dual CLIP (Triggered)",
 
     # Low VRAM Optimized Nodes
     "ArchAi3D_SAM3_Segment": "🎯 SAM3 Segment (Low VRAM)",
