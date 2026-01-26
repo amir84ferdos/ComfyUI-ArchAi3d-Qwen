@@ -11,6 +11,52 @@ Author: Amir Ferdos (ArchAi3d)
 import subprocess
 import sys
 import os
+import platform
+
+def install_system_deps():
+    """Try to install system dependencies required for SPZ compilation."""
+    if platform.system() != "Linux":
+        return False
+
+    print("  Checking system dependencies for SPZ...")
+
+    # Check if zlib is already available
+    try:
+        result = subprocess.run(
+            ["pkg-config", "--exists", "zlib"],
+            capture_output=True, timeout=10
+        )
+        if result.returncode == 0:
+            print("  ZLIB development headers - OK")
+            return True
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+
+    # Try to install zlib1g-dev
+    print("  Installing ZLIB development headers (required for SPZ)...")
+
+    # Try different methods
+    apt_cmds = [
+        ["sudo", "apt-get", "install", "-y", "zlib1g-dev"],  # With sudo
+        ["apt-get", "install", "-y", "zlib1g-dev"],          # As root (RunPod)
+    ]
+
+    for cmd in apt_cmds:
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                timeout=120,
+                text=True
+            )
+            if result.returncode == 0:
+                print("  ZLIB installed successfully!")
+                return True
+        except (subprocess.TimeoutExpired, FileNotFoundError, PermissionError):
+            continue
+
+    print("  Warning: Could not install ZLIB (may need root/sudo)")
+    return False
 
 def pip_install(package, extra_args=None):
     """Install a package using pip.
@@ -81,6 +127,7 @@ def main():
 
     # Special handling for SPZ support (3D Gaussian Splat compression)
     print("\n[3/3] Setting up SPZ support (for SaveSplatScene node)...")
+    print("  Note: Built-in SPZ v3 converter always available as fallback")
 
     # Try Niantic SPZ library first (C++ - fastest, ~1-5 seconds)
     spz_installed = False
@@ -89,8 +136,11 @@ def main():
         print("  Niantic SPZ library - OK (fastest C++ converter)")
         spz_installed = True
     except ImportError:
+        # First, try to install system dependencies (ZLIB)
+        install_system_deps()
+
         print("  Installing Niantic SPZ library (C++ - fastest)...")
-        # Niantic SPZ requires C++ compiler. On RunPod/cloud, this is usually available.
+        # Niantic SPZ requires C++ compiler and ZLIB
         success = pip_install("git+https://github.com/nianticlabs/spz.git")
         if success:
             # Verify it actually works
@@ -101,7 +151,7 @@ def main():
             except ImportError:
                 print("  Niantic SPZ compiled but import failed")
         else:
-            print("  Niantic SPZ library not installed (requires C++ compiler)")
+            print("  Niantic SPZ library not installed (requires C++ compiler + ZLIB)")
 
     # Install gsconverter as fallback (Python/Taichi - slower but always works)
     gsconverter_installed = False
@@ -118,15 +168,16 @@ def main():
             print("  Warning: gsconverter installation failed.")
 
     # Summary
+    print("\n  SPZ converter priority:")
     if spz_installed:
-        print("  SPZ support: Niantic C++ (fast, ~1-5 seconds)")
-    elif gsconverter_installed:
-        print("  SPZ support: gsconverter Python (slower, ~30-100 seconds)")
+        print("  1. Niantic C++ (fast, ~1-5 seconds) - INSTALLED")
     else:
-        print("  Warning: No SPZ converter installed!")
-        print("  SaveSplatScene node will only output PLY format")
-        print("  To fix, manually run:")
-        print(f"    {sys.executable} -m pip install git+https://github.com/nianticlabs/spz.git")
+        print("  1. Niantic C++ (fast) - not available")
+    if gsconverter_installed:
+        print("  2. gsconverter Python (~30-100 seconds) - INSTALLED")
+    else:
+        print("  2. gsconverter Python - not available")
+    print("  3. Built-in SPZ v3 converter (always available) - OK")
 
     print("\n" + "=" * 60)
     print("[ArchAi3D Qwen] Installation complete!")
