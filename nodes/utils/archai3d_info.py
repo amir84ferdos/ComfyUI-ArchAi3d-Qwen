@@ -97,7 +97,7 @@ def get_git_info():
 
 
 # Package version
-PACKAGE_VERSION = "3.0.0"
+PACKAGE_VERSION = "3.4.0"
 PACKAGE_NAME = "ComfyUI-ArchAi3D-Qwen"
 
 
