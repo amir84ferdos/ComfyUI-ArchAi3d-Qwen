@@ -187,6 +187,7 @@ from .nodes.utils.archai3d_solid_color_image import ArchAi3D_Solid_Color_Image
 from .nodes.utils.archai3d_mask_crop_rotate import ArchAi3D_Mask_Crop_Rotate
 from .nodes.utils.archai3d_panorama_offset import ArchAi3D_Panorama_Offset
 from .nodes.utils.archai3d_highpass_blend import ArchAi3D_HighPass_Blend
+from .nodes.utils.archai3d_any_index_switch import ArchAi3D_Any_Index_Switch
 from .nodes.utils.nunchaku_installer import ArchAi3D_Nunchaku_Installer
 from .nodes.utils.dependency_installer import ArchAi3D_Dependency_Installer
 
@@ -340,6 +341,7 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_Mask_Crop_Rotate": ArchAi3D_Mask_Crop_Rotate,
     "ArchAi3D_Panorama_Offset": ArchAi3D_Panorama_Offset,
     "ArchAi3D_HighPass_Blend": ArchAi3D_HighPass_Blend,
+    "ArchAi3D_Any_Index_Switch": ArchAi3D_Any_Index_Switch,
 
     # Input Nodes (Web Interface Integration)
     "ArchAi3D_String_Input": ArchAi3D_String_Input,
@@ -518,6 +520,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Mask_Crop_Rotate": "✂️ Mask Crop & Rotate",
     "ArchAi3D_Panorama_Offset": "🔄 Panorama Offset",
     "ArchAi3D_HighPass_Blend": "✨ High-Pass Filter + Blend",
+    "ArchAi3D_Any_Index_Switch": "🔀 Any Index Switch",
 
     # Input Nodes (Web Interface Integration)
     "ArchAi3D_String_Input": "📝 String Input",
@@ -571,7 +574,7 @@ WEB_DIRECTORY = os.path.join(os.path.dirname(__file__), "web")
 # ============================================================================
 
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
-__version__ = "3.4.0"
+__version__ = "3.41"
 __author__ = "Amir Ferdos (ArchAi3d)"
 
 # ============================================================================
