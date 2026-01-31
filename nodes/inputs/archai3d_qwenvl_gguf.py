@@ -19,9 +19,13 @@ import signal
 import subprocess
 from pathlib import Path
 
+import gc
+
 import numpy as np
 import requests
 from PIL import Image
+
+import comfy.model_management
 
 # Load preset prompts from config.json
 CONFIG_PATH = Path(__file__).parent.parent.parent / "config.json"
@@ -161,11 +165,11 @@ def creativity_to_params(creativity: float) -> dict:
     }
 
 
-# Available model sizes with their ports
+# Available model sizes with their ports and VRAM requirements
 MODEL_CONFIGS = {
-    "2B (Fast, ~4GB VRAM)": {"port": 8032, "name": "Qwen3-VL-2B"},
-    "4B (Balanced, ~7GB VRAM)": {"port": 8033, "name": "Qwen3-VL-4B"},
-    "8B (Best Quality, ~12GB VRAM)": {"port": 8034, "name": "Qwen3-VL-8B"},
+    "2B (Fast, ~4GB VRAM)": {"port": 8032, "name": "Qwen3-VL-2B", "vram_gb": 7},
+    "4B (Balanced, ~7GB VRAM)": {"port": 8033, "name": "Qwen3-VL-4B", "vram_gb": 11},
+    "8B (Best Quality, ~12GB VRAM)": {"port": 8034, "name": "Qwen3-VL-8B", "vram_gb": 18},
 }
 MODEL_SIZES = list(MODEL_CONFIGS.keys())
 
@@ -202,6 +206,61 @@ def kill_llama_server(port):
     except Exception as e:
         print(f"[QwenVL-GGUF] Error killing server: {e}")
         return False
+
+
+def check_and_free_vram(required_gb, auto_clear=True):
+    """Check available VRAM and free memory if needed.
+
+    Uses torch.cuda.mem_get_info() to get ACTUAL GPU free memory (not ComfyUI's view).
+    If free VRAM is less than required, clears ComfyUI models to free memory.
+
+    Args:
+        required_gb: VRAM needed in GB
+        auto_clear: If True, unload ComfyUI models when VRAM is insufficient
+
+    Returns:
+        (success: bool, message: str, free_gb: float)
+    """
+    import torch
+
+    if not torch.cuda.is_available():
+        return (True, "No CUDA device, using CPU", 0)
+
+    # Get ACTUAL free GPU memory (not ComfyUI's view)
+    # torch.cuda.mem_get_info() returns (free, total) bytes
+    free_bytes, total_bytes = torch.cuda.mem_get_info()
+    free_gb = free_bytes / (1024**3)
+    total_gb = total_bytes / (1024**3)
+
+    print(f"[QwenVL-GGUF] GPU VRAM: {free_gb:.1f}GB free / {total_gb:.1f}GB total")
+
+    # Check if we have enough VRAM
+    if free_gb >= required_gb:
+        return (True, f"Sufficient VRAM: {free_gb:.1f}GB free (need {required_gb}GB)", free_gb)
+
+    # Not enough VRAM - try to clear if auto_clear is enabled
+    if not auto_clear:
+        return (False, f"Insufficient VRAM: {free_gb:.1f}GB free, need {required_gb}GB (enable auto_clear_vram to free memory)", free_gb)
+
+    # Clear VRAM
+    print(f"[QwenVL-GGUF] Insufficient VRAM ({free_gb:.1f}GB < {required_gb}GB), clearing ComfyUI models...")
+
+    # Unload all ComfyUI models
+    comfy.model_management.unload_all_models()
+    comfy.model_management.soft_empty_cache()
+    gc.collect()
+
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()
+
+    # Check again after clearing
+    free_bytes, _ = torch.cuda.mem_get_info()
+    free_gb = free_bytes / (1024**3)
+
+    if free_gb >= required_gb:
+        return (True, f"VRAM cleared: {free_gb:.1f}GB now free (need {required_gb}GB)", free_gb)
+    else:
+        return (False, f"Still insufficient after clearing: {free_gb:.1f}GB free, need {required_gb}GB", free_gb)
 
 
 def start_llama_server(model_size, port, flash_attn=True, cache_type="q8_0", parallel=2):
@@ -388,6 +447,10 @@ class ArchAi3D_QwenVL_GGUF:
                     "default": True,
                     "tooltip": "Automatically start server if not running"
                 }),
+                "auto_clear_vram": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "Automatically unload ComfyUI models to free VRAM if needed"
+                }),
             }
         }
 
@@ -450,7 +513,8 @@ class ArchAi3D_QwenVL_GGUF:
                  custom_prompt="", system_prompt="",
                  max_tokens=2048, max_image_size="1536",
                  temperature=0.3, top_p=0.9, top_k=40, min_p=0.05, repeat_penalty=1.1,
-                 use_cache=True, keep_server_running=True, auto_start_server=True):
+                 use_cache=True, keep_server_running=True, auto_start_server=True,
+                 auto_clear_vram=True):
         """Generate text from image(s) using llama-server API. Images are optional for text-only prompts."""
 
         # ===== APPLY QUALITY PRESET =====
@@ -513,6 +577,14 @@ class ArchAi3D_QwenVL_GGUF:
 
         if not check_server_ready():
             if auto_start_server:
+                # Check VRAM before starting server
+                vram_required = config.get('vram_gb', 11)  # Default to 4B requirement
+                success, message, free_gb = check_and_free_vram(vram_required, auto_clear_vram)
+                print(f"[QwenVL-GGUF] {message}")
+
+                if not success:
+                    return (f"ERROR: {message}\n\nTry:\n- Use smaller model (2B or 4B)\n- Close other GPU applications\n- Reduce context_size in Server Control node",)
+
                 print(f"[QwenVL-GGUF] Server not running, starting automatically...")
                 start_llama_server(model_size, port)
                 server_was_started = True
