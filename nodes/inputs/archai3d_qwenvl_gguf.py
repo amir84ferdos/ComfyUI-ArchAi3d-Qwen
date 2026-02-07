@@ -844,7 +844,7 @@ class ArchAi3D_QwenVL_Server_Control:
                     "tooltip": "GPU layers (99=all on GPU, lower values use more CPU to save VRAM)"
                 }),
                 "context_size": ("INT", {
-                    "default": 8192,
+                    "default": 16384,
                     "min": 1024,
                     "max": 32768,
                     "step": 1024,
@@ -900,7 +900,7 @@ class ArchAi3D_QwenVL_Server_Control:
             return False, str(e)
 
     def control(self, action, model_size, quantization="Q4_K_M (Smaller, ~5GB)",
-                gpu_layers=99, context_size=8192,
+                gpu_layers=99, context_size=16384,
                 flash_attention="auto (Recommended)", kv_cache_type="f16 (Best Quality)",
                 parallel_slots=2, trigger=None, cache_to_local_ssd=True):
         """Control the llama-server with quality and speed optimizations."""
