@@ -511,7 +511,7 @@ def check_server_ready(port):
         return False
 
 
-def start_llama_server(model_size, port, gpu_layers=99, context_size=16384):
+def start_llama_server(model_size, port, gpu_layers=99, context_size=32000):
     """Start llama-server for the specified model size.
 
     Returns:
@@ -551,7 +551,7 @@ def start_llama_server(model_size, port, gpu_layers=99, context_size=16384):
     return process, str(log_file)
 
 
-def ensure_server_running(model_size, auto_start=True, gpu_layers=99, context_size=16384):
+def ensure_server_running(model_size, auto_start=True, gpu_layers=99, context_size=32000):
     """Ensure the QwenVL server is running. Returns (success, error_message)."""
     config = MODEL_CONFIGS.get(model_size, MODEL_CONFIGS["4B (Balanced)"])
     port = config['port']
@@ -1255,7 +1255,7 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
                     "tooltip": "GPU layers for server (99=all on GPU)"
                 }),
                 "context_size": ("INT", {
-                    "default": 16384,
+                    "default": 32000,
                     "min": 1024,
                     "max": 32768,
                     "step": 1024,
@@ -1281,7 +1281,7 @@ class ArchAi3D_Smart_Tile_Prompter_Turbo:
     def generate(self, image, tiles_x, tiles_y, model_size, quality_preset,
                  consistency_level, use_case="Interior Design", bundle=None, user_context="",
                  vllm_guidance="", tile_overlap=0, use_cache=True, auto_start_server=True,
-                 gpu_layers=99, context_size=16384, stop_server_after=False, seed=1, clear_cache=False):
+                 gpu_layers=99, context_size=32000, stop_server_after=False, seed=1, clear_cache=False):
         """Generate Z-Image-Turbo optimized prompts for all tiles (v3.6 Magazine Quality)."""
         global TILE_PROMPTER_TURBO_CACHE
 

@@ -294,7 +294,8 @@ def check_and_free_vram(required_gb, auto_clear=True):
 
 
 def start_llama_server(model_size, port, flash_attn="auto", cache_type="f16",
-                       parallel=2, quantization="Q4_K_M", cache_to_local_ssd=True):
+                       parallel=2, quantization="Q4_K_M", cache_to_local_ssd=True,
+                       context_size=32000):
     """Start llama-server for the specified model size with optimizations.
 
     Args:
@@ -305,6 +306,7 @@ def start_llama_server(model_size, port, flash_attn="auto", cache_type="f16",
         parallel: Number of parallel sequences (1-8)
         quantization: Model quantization - "Q4_K_M" or "Q8_0"
         cache_to_local_ssd: Copy model to local SSD on RunPod for faster loading
+        context_size: Context window size in tokens
     """
     model_short = model_size.split()[0]  # "4B" from "4B (Balanced, ~7GB VRAM)"
 
@@ -314,7 +316,7 @@ def start_llama_server(model_size, port, flash_attn="auto", cache_type="f16",
 
     # Start server in background with optimizations
     env = os.environ.copy()
-    env["CTX"] = "16384"
+    env["CTX"] = str(context_size)
     env["GPU_LAYERS"] = "99"
 
     # Quality and speed settings
@@ -327,15 +329,22 @@ def start_llama_server(model_size, port, flash_attn="auto", cache_type="f16",
     env["MODEL_QUANT"] = quantization
     env["CACHE_TO_LOCAL"] = "1" if cache_to_local_ssd else "0"
 
-    process = subprocess.Popen(
-        ["bash", str(SCRIPT_PATH), model_short],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        start_new_session=True,
-        env=env
-    )
+    # Log to file for debugging (not DEVNULL)
+    log_dir = Path(__file__).parent.parent.parent / "logs"
+    log_dir.mkdir(exist_ok=True)
+    log_file = log_dir / f"qwenvl_server_{model_short}.log"
+
+    with open(log_file, 'w') as log_handle:
+        process = subprocess.Popen(
+            ["bash", str(SCRIPT_PATH), model_short],
+            stdout=log_handle,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+            env=env
+        )
     print(f"[QwenVL-GGUF] Started server for {model_short} ({quantization}) on port {port} (PID: {process.pid})")
-    print(f"[QwenVL-GGUF] Flash attention: {flash_attn}, KV cache: {cache_type}, Parallel: {parallel}")
+    print(f"[QwenVL-GGUF] Context: {context_size}, Flash attention: {flash_attn}, KV cache: {cache_type}, Parallel: {parallel}")
+    print(f"[QwenVL-GGUF] Log file: {log_file}")
     return process
 
 
@@ -429,7 +438,7 @@ class ArchAi3D_QwenVL_GGUF:
                 "max_tokens": ("INT", {
                     "default": 2048,
                     "min": 64,
-                    "max": 16384,
+                    "max": 32000,
                     "tooltip": "Maximum tokens (only used with Custom quality preset)"
                 }),
                 "max_image_size": (["Original", "512", "768", "1024", "1536", "2048"], {
@@ -496,6 +505,13 @@ class ArchAi3D_QwenVL_GGUF:
                     "default": True,
                     "tooltip": "RunPod: copy model to local SSD for faster loading. No effect on local PC."
                 }),
+                "context_size": ("INT", {
+                    "default": 32000,
+                    "min": 1024,
+                    "max": 131072,
+                    "step": 1024,
+                    "tooltip": "Context window size in tokens for auto-starting the server (input + output combined)"
+                }),
             }
         }
 
@@ -560,7 +576,7 @@ class ArchAi3D_QwenVL_GGUF:
                  max_tokens=2048, max_image_size="1536",
                  temperature=0.3, top_p=0.9, top_k=40, min_p=0.05, repeat_penalty=1.1,
                  use_cache=True, keep_server_running=True, auto_start_server=True,
-                 auto_clear_vram=True, cache_to_local_ssd=True):
+                 auto_clear_vram=True, cache_to_local_ssd=True, context_size=32000):
         """Generate text from image(s) using llama-server API. Images are optional for text-only prompts."""
 
         # ===== APPLY QUALITY PRESET =====
@@ -643,7 +659,8 @@ class ArchAi3D_QwenVL_GGUF:
                 print(f"[QwenVL-GGUF] Server not running, starting automatically...")
                 start_llama_server(model_size, port, flash_attn="auto",
                                    cache_type="f16", quantization=quant_key,
-                                   cache_to_local_ssd=cache_to_local_ssd)
+                                   cache_to_local_ssd=cache_to_local_ssd,
+                                   context_size=context_size)
                 server_was_started = True
 
                 # Wait for server to be fully ready (health check + model loaded)
@@ -844,11 +861,11 @@ class ArchAi3D_QwenVL_Server_Control:
                     "tooltip": "GPU layers (99=all on GPU, lower values use more CPU to save VRAM)"
                 }),
                 "context_size": ("INT", {
-                    "default": 16384,
+                    "default": 32000,
                     "min": 1024,
-                    "max": 32768,
+                    "max": 131072,
                     "step": 1024,
-                    "tooltip": "Context window size in tokens"
+                    "tooltip": "Context window size in tokens (input + output combined)"
                 }),
                 # Speed optimizations
                 "flash_attention": (["auto (Recommended)", "on (Force)", "off (Disable)"], {
@@ -900,7 +917,7 @@ class ArchAi3D_QwenVL_Server_Control:
             return False, str(e)
 
     def control(self, action, model_size, quantization="Q4_K_M (Smaller, ~5GB)",
-                gpu_layers=99, context_size=16384,
+                gpu_layers=99, context_size=32000,
                 flash_attention="auto (Recommended)", kv_cache_type="f16 (Best Quality)",
                 parallel_slots=2, trigger=None, cache_to_local_ssd=True):
         """Control the llama-server with quality and speed optimizations."""
