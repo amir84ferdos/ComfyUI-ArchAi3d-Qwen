@@ -163,6 +163,12 @@ elif [ "$1" = "8B" ]; then
     SUBDIR="qwen3-vl-8b"
     MODEL_NAME="Qwen3-VL-8B-Instruct (${MODEL_QUANT})"
     DEFAULT_PORT=8034
+elif [ "$1" = "8B-Thinking" ]; then
+    MODEL_FILE="Qwen3VL-8B-Thinking-${MODEL_QUANT}.gguf"
+    MMPROJ_FILE="mmproj-Qwen3VL-8B-Thinking-F16.gguf"
+    SUBDIR="qwen3-vl-8b-thinking"
+    MODEL_NAME="Qwen3-VL-8B-Thinking (${MODEL_QUANT})"
+    DEFAULT_PORT=8035
 else
     # Default to 4B
     MODEL_FILE="Qwen3VL-4B-Instruct-${MODEL_QUANT}.gguf"
@@ -378,6 +384,8 @@ if [ -z "$MODEL_PATH" ] || [ -z "$MMPROJ_PATH" ]; then
         HF_REPO="Qwen/Qwen3-VL-2B-Instruct-GGUF"
     elif [ "$1" = "8B" ]; then
         HF_REPO="Qwen/Qwen3-VL-8B-Instruct-GGUF"
+    elif [ "$1" = "8B-Thinking" ]; then
+        HF_REPO="Qwen/Qwen3-VL-8B-Thinking-GGUF"
     else
         HF_REPO="Qwen/Qwen3-VL-4B-Instruct-GGUF"
     fi

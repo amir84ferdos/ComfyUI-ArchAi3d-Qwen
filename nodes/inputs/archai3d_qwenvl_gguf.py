@@ -200,6 +200,10 @@ MODEL_CONFIGS = {
         "port": 8034, "name": "Qwen3-VL-8B",
         "vram_gb": {"Q4_K_M": 18, "Q8_0": 22},
     },
+    "8B-Thinking (Best + Reasoning)": {
+        "port": 8035, "name": "Qwen3-VL-8B-Thinking",
+        "vram_gb": {"Q4_K_M": 18, "Q8_0": 22},
+    },
 }
 MODEL_SIZES = list(MODEL_CONFIGS.keys())
 
