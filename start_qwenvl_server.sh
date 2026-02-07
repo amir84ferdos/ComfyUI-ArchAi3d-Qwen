@@ -224,11 +224,14 @@ MODEL_PATH=$(find_model "$MODEL_FILE" "$SUBDIR")
 MMPROJ_PATH=$(find_model "$MMPROJ_FILE" "$SUBDIR")
 
 # Copy to local SSD if on RunPod network mount (much faster loading)
-if [ -n "$MODEL_PATH" ]; then
-    MODEL_PATH=$(copy_to_local "$MODEL_PATH")
-fi
-if [ -n "$MMPROJ_PATH" ]; then
-    MMPROJ_PATH=$(copy_to_local "$MMPROJ_PATH")
+# Can be disabled via CACHE_TO_LOCAL=0 env var
+if [ "${CACHE_TO_LOCAL:-1}" != "0" ]; then
+    if [ -n "$MODEL_PATH" ]; then
+        MODEL_PATH=$(copy_to_local "$MODEL_PATH")
+    fi
+    if [ -n "$MMPROJ_PATH" ]; then
+        MMPROJ_PATH=$(copy_to_local "$MMPROJ_PATH")
+    fi
 fi
 
 # Allow port override via environment

@@ -294,7 +294,7 @@ def check_and_free_vram(required_gb, auto_clear=True):
 
 
 def start_llama_server(model_size, port, flash_attn="auto", cache_type="f16",
-                       parallel=2, quantization="Q4_K_M"):
+                       parallel=2, quantization="Q4_K_M", cache_to_local_ssd=True):
     """Start llama-server for the specified model size with optimizations.
 
     Args:
@@ -304,6 +304,7 @@ def start_llama_server(model_size, port, flash_attn="auto", cache_type="f16",
         cache_type: KV cache type - "f16", "q8_0", or "q4_0"
         parallel: Number of parallel sequences (1-8)
         quantization: Model quantization - "Q4_K_M" or "Q8_0"
+        cache_to_local_ssd: Copy model to local SSD on RunPod for faster loading
     """
     model_short = model_size.split()[0]  # "4B" from "4B (Balanced, ~7GB VRAM)"
 
@@ -324,6 +325,7 @@ def start_llama_server(model_size, port, flash_attn="auto", cache_type="f16",
     env["CONT_BATCHING"] = "1"
     env["THREADS"] = "4"
     env["MODEL_QUANT"] = quantization
+    env["CACHE_TO_LOCAL"] = "1" if cache_to_local_ssd else "0"
 
     process = subprocess.Popen(
         ["bash", str(SCRIPT_PATH), model_short],
@@ -490,6 +492,10 @@ class ArchAi3D_QwenVL_GGUF:
                     "default": "Q4_K_M (Smaller, ~5GB)",
                     "tooltip": "Model quantization. Q4_K_M=smaller/faster, Q8_0=best quality (needs more VRAM)"
                 }),
+                "cache_to_local_ssd": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "RunPod: copy model to local SSD for faster loading. No effect on local PC."
+                }),
             }
         }
 
@@ -554,7 +560,7 @@ class ArchAi3D_QwenVL_GGUF:
                  max_tokens=2048, max_image_size="1536",
                  temperature=0.3, top_p=0.9, top_k=40, min_p=0.05, repeat_penalty=1.1,
                  use_cache=True, keep_server_running=True, auto_start_server=True,
-                 auto_clear_vram=True):
+                 auto_clear_vram=True, cache_to_local_ssd=True):
         """Generate text from image(s) using llama-server API. Images are optional for text-only prompts."""
 
         # ===== APPLY QUALITY PRESET =====
@@ -636,7 +642,8 @@ class ArchAi3D_QwenVL_GGUF:
 
                 print(f"[QwenVL-GGUF] Server not running, starting automatically...")
                 start_llama_server(model_size, port, flash_attn="auto",
-                                   cache_type="f16", quantization=quant_key)
+                                   cache_type="f16", quantization=quant_key,
+                                   cache_to_local_ssd=cache_to_local_ssd)
                 server_was_started = True
 
                 # Wait for server to be fully ready (health check + model loaded)
@@ -867,6 +874,10 @@ class ArchAi3D_QwenVL_Server_Control:
                 "trigger": ("*", {
                     "tooltip": "Optional input to trigger this node in a workflow"
                 }),
+                "cache_to_local_ssd": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "RunPod: copy model to local SSD for faster loading. No effect on local PC."
+                }),
             }
         }
 
@@ -891,7 +902,7 @@ class ArchAi3D_QwenVL_Server_Control:
     def control(self, action, model_size, quantization="Q4_K_M (Smaller, ~5GB)",
                 gpu_layers=99, context_size=8192,
                 flash_attention="auto (Recommended)", kv_cache_type="f16 (Best Quality)",
-                parallel_slots=2, trigger=None):
+                parallel_slots=2, trigger=None, cache_to_local_ssd=True):
         """Control the llama-server with quality and speed optimizations."""
         import time
 
@@ -943,6 +954,7 @@ class ArchAi3D_QwenVL_Server_Control:
             env["CONT_BATCHING"] = "1"
             env["THREADS"] = "4"
             env["MODEL_QUANT"] = quant_key
+            env["CACHE_TO_LOCAL"] = "1" if cache_to_local_ssd else "0"
 
             if not SCRIPT_PATH.exists():
                 return (f"❌ Server script not found at {SCRIPT_PATH}",)
@@ -983,6 +995,7 @@ class ArchAi3D_QwenVL_Server_Control:
             env["CONT_BATCHING"] = "1"
             env["THREADS"] = "4"
             env["MODEL_QUANT"] = quant_key
+            env["CACHE_TO_LOCAL"] = "1" if cache_to_local_ssd else "0"
 
             if not SCRIPT_PATH.exists():
                 return (f"❌ Server script not found at {SCRIPT_PATH}",)
