@@ -31,12 +31,13 @@ GPU_LAYERS="${GPU_LAYERS:-99}"  # 99 for all layers on GPU
 # SPEED OPTIMIZATIONS (llama.cpp 2026 improvements)
 # ============================================================================
 # Flash attention - faster GPU attention computation
-FLASH_ATTN="${FLASH_ATTN:-1}"  # 1=enabled (default), 0=disabled
+# Options: auto (let llama.cpp decide), on (force enable), off (force disable)
+FLASH_ATTN="${FLASH_ATTN:-auto}"
 
-# KV cache quantization - reduces VRAM, slightly faster
-# Options: f16 (default, best quality), q8_0 (good balance), q4_0 (fastest, less quality)
-CACHE_TYPE_K="${CACHE_TYPE_K:-q8_0}"
-CACHE_TYPE_V="${CACHE_TYPE_V:-q8_0}"
+# KV cache type - affects quality and VRAM usage
+# Options: f16 (best quality), q8_0 (good balance), q4_0 (fastest, less quality)
+CACHE_TYPE_K="${CACHE_TYPE_K:-f16}"
+CACHE_TYPE_V="${CACHE_TYPE_V:-f16}"
 
 # Parallel sequences - number of concurrent requests (1-8)
 PARALLEL="${PARALLEL:-2}"
@@ -46,6 +47,9 @@ CONT_BATCHING="${CONT_BATCHING:-1}"  # 1=enabled, 0=disabled
 
 # Tensor split for multi-GPU (comma-separated ratios, e.g., "0.5,0.5" for 2 GPUs)
 TENSOR_SPLIT="${TENSOR_SPLIT:-}"
+
+# Model quantization selection (Q4_K_M or Q8_0)
+MODEL_QUANT="${MODEL_QUANT:-Q4_K_M}"
 
 # CPU threads for non-GPU work
 THREADS="${THREADS:-4}"
@@ -143,23 +147,23 @@ find_model() {
 
 # Model selection with automatic port assignment
 if [ "$1" = "2B" ]; then
-    MODEL_FILE="Qwen3VL-2B-Instruct-Q4_K_M.gguf"
+    MODEL_FILE="Qwen3VL-2B-Instruct-${MODEL_QUANT}.gguf"
     MMPROJ_FILE="mmproj-Qwen3VL-2B-Instruct-F16.gguf"
     SUBDIR="qwen3-vl-2b"
-    MODEL_NAME="Qwen3-VL-2B-Instruct"
+    MODEL_NAME="Qwen3-VL-2B-Instruct (${MODEL_QUANT})"
     DEFAULT_PORT=8032
 elif [ "$1" = "8B" ]; then
-    MODEL_FILE="Qwen3VL-8B-Instruct-Q4_K_M.gguf"
+    MODEL_FILE="Qwen3VL-8B-Instruct-${MODEL_QUANT}.gguf"
     MMPROJ_FILE="mmproj-Qwen3VL-8B-Instruct-F16.gguf"
     SUBDIR="qwen3-vl-8b"
-    MODEL_NAME="Qwen3-VL-8B-Instruct"
+    MODEL_NAME="Qwen3-VL-8B-Instruct (${MODEL_QUANT})"
     DEFAULT_PORT=8034
 else
     # Default to 4B
-    MODEL_FILE="Qwen3VL-4B-Instruct-Q4_K_M.gguf"
+    MODEL_FILE="Qwen3VL-4B-Instruct-${MODEL_QUANT}.gguf"
     MMPROJ_FILE="mmproj-Qwen3VL-4B-Instruct-F16.gguf"
     SUBDIR="qwen3-vl-4b"
-    MODEL_NAME="Qwen3-VL-4B-Instruct"
+    MODEL_NAME="Qwen3-VL-4B-Instruct (${MODEL_QUANT})"
     DEFAULT_PORT=8033
 fi
 
@@ -245,6 +249,7 @@ echo "=============================================="
 echo "QwenVL GGUF Server for ComfyUI"
 echo "=============================================="
 echo "Model:      $MODEL_NAME"
+echo "Quant:      $MODEL_QUANT"
 echo "Model Path: $MODEL_PATH"
 echo "mmproj:     $MMPROJ_PATH"
 echo "Port:       $PORT"
@@ -398,18 +403,21 @@ SERVER_ARGS=(
 )
 
 # Flash attention (significant speedup on modern GPUs)
-if [ "$FLASH_ATTN" = "1" ]; then
+if [ "$FLASH_ATTN" = "auto" ]; then
+    # Don't pass -fa flag; let llama.cpp use its default (auto)
+    echo "✓ Flash attention: AUTO (llama.cpp default)"
+elif [ "$FLASH_ATTN" = "on" ] || [ "$FLASH_ATTN" = "1" ]; then
     SERVER_ARGS+=(-fa on)
     echo "✓ Flash attention: ENABLED"
-elif [ "$FLASH_ATTN" = "0" ]; then
+elif [ "$FLASH_ATTN" = "off" ] || [ "$FLASH_ATTN" = "0" ]; then
     SERVER_ARGS+=(-fa off)
     echo "✓ Flash attention: DISABLED"
 fi
 
-# KV cache quantization (reduces VRAM, improves speed)
-if [ -n "$CACHE_TYPE_K" ] && [ "$CACHE_TYPE_K" != "f16" ]; then
+# KV cache type (best quality = f16, balanced = q8_0, fastest = q4_0)
+if [ -n "$CACHE_TYPE_K" ]; then
     SERVER_ARGS+=(--cache-type-k "$CACHE_TYPE_K" --cache-type-v "$CACHE_TYPE_V")
-    echo "✓ KV cache quantization: K=$CACHE_TYPE_K, V=$CACHE_TYPE_V"
+    echo "✓ KV cache: K=$CACHE_TYPE_K, V=$CACHE_TYPE_V"
 fi
 
 # Parallel sequences for concurrent requests

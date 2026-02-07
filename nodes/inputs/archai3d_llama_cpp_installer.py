@@ -62,6 +62,10 @@ class ArchAi3D_LlamaCpp_Installer:
                     "default": "4B (Recommended)",
                     "tooltip": "2B: ~4GB VRAM, 4B: ~7GB VRAM, 8B: ~12GB VRAM"
                 }),
+                "quantization": (["Q4_K_M (Smaller, Faster)", "Q8_0 (Best Quality)"], {
+                    "default": "Q4_K_M (Smaller, Faster)",
+                    "tooltip": "Model quantization. Q4_K_M=~5GB, Q8_0=~9GB (best quality, needs more VRAM)"
+                }),
             },
             "optional": {
                 "force_rebuild": ("BOOLEAN", {
@@ -95,7 +99,7 @@ class ArchAi3D_LlamaCpp_Installer:
         return {
             "llama_cpp_dir": os.path.join(node_dir, "llama_cpp"),
             "llama_server": os.path.join(node_dir, "bin", "llama-server"),
-            "models_dir": os.path.join(comfyui_dir, "models", "llama-models"),
+            "models_dir": os.path.join(comfyui_dir, "models", "LLM", "GGUF"),
             "node_dir": node_dir,
             "comfyui_dir": comfyui_dir,
         }
@@ -108,6 +112,7 @@ class ArchAi3D_LlamaCpp_Installer:
         cuda_paths = [
             "/usr/local/cuda",
             "/usr/local/cuda-12",
+            "/usr/local/cuda-12.8",
             "/usr/local/cuda-12.4",
             "/usr/local/cuda-12.1",
             "/usr/local/cuda-11.8",
@@ -412,26 +417,45 @@ class ArchAi3D_LlamaCpp_Installer:
                 status_lines.append(f"❌ cuBLAS: NOT FOUND")
                 status_lines.append(f"   Use 'install_cublas' action to install & persist")
 
-        # Check models
+        # Check models - search in both new and legacy paths
         status_lines.append("\n📦 MODELS:")
-        for model in ["qwen3-vl-2b", "qwen3-vl-4b", "qwen3-vl-8b"]:
-            model_dir = os.path.join(paths["models_dir"], model)
-            if os.path.exists(model_dir):
-                files = os.listdir(model_dir)
-                gguf_files = [f for f in files if f.endswith('.gguf')]
-                if len(gguf_files) >= 2:
-                    status_lines.append(f"  ✅ {model}: Ready ({len(gguf_files)} files)")
-                else:
-                    status_lines.append(f"  ⚠️ {model}: Incomplete ({len(gguf_files)} files)")
+        model_search_dirs = [
+            paths["models_dir"],  # models/LLM/GGUF/
+            os.path.join(paths["comfyui_dir"], "models", "llama-models"),  # legacy
+        ]
+        for size_label, prefix in [("2B", "Qwen3VL-2B"), ("4B", "Qwen3VL-4B"), ("8B", "Qwen3VL-8B")]:
+            found_files = []
+            for search_dir in model_search_dirs:
+                if not os.path.exists(search_dir):
+                    continue
+                # Check flat structure and subdirectories
+                for root, dirs, files in os.walk(search_dir):
+                    for f in files:
+                        if f.startswith(prefix) and f.endswith('.gguf'):
+                            found_files.append(f)
+                    break  # Only top level + one level deep
+                for subdir in [f"qwen3-vl-{size_label.lower()}"]:
+                    sub_path = os.path.join(search_dir, subdir)
+                    if os.path.exists(sub_path):
+                        for f in os.listdir(sub_path):
+                            if f.startswith(prefix) and f.endswith('.gguf'):
+                                found_files.append(f)
+            if found_files:
+                quants = [f.split('-')[-1].replace('.gguf', '') for f in found_files if 'mmproj' not in f]
+                status_lines.append(f"  ✅ {size_label}: {', '.join(quants)} ({len(found_files)} files)")
             else:
-                status_lines.append(f"  ❌ {model}: Not downloaded")
+                status_lines.append(f"  ❌ {size_label}: Not downloaded")
 
-        # Check if server is running
-        success, _ = self.run_command("curl -s http://localhost:8033/health")
-        if success:
-            status_lines.append("\n🟢 Server: RUNNING on port 8033")
-        else:
-            status_lines.append("\n🔴 Server: NOT RUNNING")
+        # Check if servers are running (all ports)
+        server_ports = {"2B": 8032, "4B": 8033, "8B": 8034}
+        any_running = False
+        for name, port in server_ports.items():
+            success, _ = self.run_command(f"curl -s -o /dev/null -w '%{{http_code}}' --connect-timeout 1 http://localhost:{port}/health")
+            if success:
+                status_lines.append(f"\n🟢 Server {name}: RUNNING on port {port}")
+                any_running = True
+        if not any_running:
+            status_lines.append("\n🔴 No servers running (ports 8032/8033/8034)")
 
         status_lines.append("=" * 50)
         return "\n".join(status_lines)
@@ -657,29 +681,27 @@ class ArchAi3D_LlamaCpp_Installer:
         status_lines.append("=" * 50)
         return "\n".join(status_lines)
 
-    def download_model(self, model_size):
+    def download_model(self, model_size, quantization="Q4_K_M (Smaller, Faster)"):
         """Download QwenVL GGUF model."""
         paths = self.get_paths()
-        status_lines = ["=" * 50, f"📥 DOWNLOADING MODEL: {model_size}", "=" * 50]
+        quant_key = quantization.split()[0]  # "Q4_K_M" or "Q8_0"
+        status_lines = ["=" * 50, f"📥 DOWNLOADING MODEL: {model_size} ({quant_key})", "=" * 50]
 
         # Parse model size
         if "2B" in model_size:
-            model_name = "qwen3-vl-2b"
             repo = "Qwen/Qwen3-VL-2B-Instruct-GGUF"
-            model_file = "Qwen3VL-2B-Instruct-Q4_K_M.gguf"
+            model_file = f"Qwen3VL-2B-Instruct-{quant_key}.gguf"
             mmproj_file = "mmproj-Qwen3VL-2B-Instruct-F16.gguf"
         elif "8B" in model_size:
-            model_name = "qwen3-vl-8b"
             repo = "Qwen/Qwen3-VL-8B-Instruct-GGUF"
-            model_file = "Qwen3VL-8B-Instruct-Q4_K_M.gguf"
+            model_file = f"Qwen3VL-8B-Instruct-{quant_key}.gguf"
             mmproj_file = "mmproj-Qwen3VL-8B-Instruct-F16.gguf"
         else:  # 4B default
-            model_name = "qwen3-vl-4b"
             repo = "Qwen/Qwen3-VL-4B-Instruct-GGUF"
-            model_file = "Qwen3VL-4B-Instruct-Q4_K_M.gguf"
+            model_file = f"Qwen3VL-4B-Instruct-{quant_key}.gguf"
             mmproj_file = "mmproj-Qwen3VL-4B-Instruct-F16.gguf"
 
-        model_dir = os.path.join(paths["models_dir"], model_name)
+        model_dir = paths["models_dir"]
         os.makedirs(model_dir, exist_ok=True)
 
         # Check if already downloaded
@@ -731,7 +753,8 @@ print("Download complete!")
         status_lines.append("=" * 50)
         return "\n".join(status_lines)
 
-    def execute(self, action, model_size, force_rebuild=False):
+    def execute(self, action, model_size, quantization="Q4_K_M (Smaller, Faster)",
+                force_rebuild=False):
         """Execute the installer action."""
 
         if action == "check_status":
@@ -741,14 +764,14 @@ print("Download complete!")
             status = self.install_llama_cpp(force_rebuild)
 
         elif action == "download_model":
-            status = self.download_model(model_size)
+            status = self.download_model(model_size, quantization)
 
         elif action == "full_install":
             # Do everything
             status_parts = []
             status_parts.append(self.install_llama_cpp(force_rebuild))
             status_parts.append("\n\n")
-            status_parts.append(self.download_model(model_size))
+            status_parts.append(self.download_model(model_size, quantization))
             status_parts.append("\n\n")
             status_parts.append(self.check_status())
             status = "".join(status_parts)

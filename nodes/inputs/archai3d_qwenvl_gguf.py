@@ -117,12 +117,33 @@ QUALITY_PRESETS = {
         },
         "description": "Qwen settings with lower temp for accuracy"
     },
+    "💎 Q8 Maximum Quality": {
+        "max_tokens": 16384,
+        "max_image_size": "Original",
+        "params": {
+            "temperature": 0.7,
+            "top_p": 0.8,
+            "top_k": 20,
+            "min_p": 0.0,
+            "repeat_penalty": 1.0
+        },
+        "description": "Maximum quality for Q8_0 models with f16 KV cache - Qwen official params"
+    },
+    "💎 Q8 Focused": {
+        "max_tokens": 16384,
+        "max_image_size": "Original",
+        "creativity": 0.2,
+        "description": "Q8_0 with low creativity for precise, accurate descriptions"
+    },
     "⚙️ Custom": {
         "max_tokens": None,  # Use manual settings
         "max_image_size": None,
         "description": "Use manual max_tokens and max_image_size settings"
     }
 }
+# Quantization options for model selection
+QUANTIZATION_OPTIONS = ["Q4_K_M (Smaller, ~5GB)", "Q8_0 (Best Quality, ~9GB)"]
+
 QUALITY_PRESET_NAMES = list(QUALITY_PRESETS.keys())
 
 
@@ -167,9 +188,18 @@ def creativity_to_params(creativity: float) -> dict:
 
 # Available model sizes with their ports and VRAM requirements
 MODEL_CONFIGS = {
-    "2B (Fast, ~4GB VRAM)": {"port": 8032, "name": "Qwen3-VL-2B", "vram_gb": 7},
-    "4B (Balanced, ~7GB VRAM)": {"port": 8033, "name": "Qwen3-VL-4B", "vram_gb": 11},
-    "8B (Best Quality, ~12GB VRAM)": {"port": 8034, "name": "Qwen3-VL-8B", "vram_gb": 18},
+    "2B (Fast, ~4GB VRAM)": {
+        "port": 8032, "name": "Qwen3-VL-2B",
+        "vram_gb": {"Q4_K_M": 7, "Q8_0": 10},
+    },
+    "4B (Balanced, ~7GB VRAM)": {
+        "port": 8033, "name": "Qwen3-VL-4B",
+        "vram_gb": {"Q4_K_M": 11, "Q8_0": 15},
+    },
+    "8B (Best Quality, ~12GB VRAM)": {
+        "port": 8034, "name": "Qwen3-VL-8B",
+        "vram_gb": {"Q4_K_M": 18, "Q8_0": 22},
+    },
 }
 MODEL_SIZES = list(MODEL_CONFIGS.keys())
 
@@ -263,15 +293,17 @@ def check_and_free_vram(required_gb, auto_clear=True):
         return (False, f"Still insufficient after clearing: {free_gb:.1f}GB free, need {required_gb}GB", free_gb)
 
 
-def start_llama_server(model_size, port, flash_attn=True, cache_type="q8_0", parallel=2):
+def start_llama_server(model_size, port, flash_attn="auto", cache_type="f16",
+                       parallel=2, quantization="Q4_K_M"):
     """Start llama-server for the specified model size with optimizations.
 
     Args:
         model_size: Model size string like "4B (Balanced, ~7GB VRAM)"
         port: Server port
-        flash_attn: Enable flash attention (faster GPU computation)
+        flash_attn: Flash attention mode - "auto", "on", or "off"
         cache_type: KV cache type - "f16", "q8_0", or "q4_0"
         parallel: Number of parallel sequences (1-8)
+        quantization: Model quantization - "Q4_K_M" or "Q8_0"
     """
     model_short = model_size.split()[0]  # "4B" from "4B (Balanced, ~7GB VRAM)"
 
@@ -284,13 +316,14 @@ def start_llama_server(model_size, port, flash_attn=True, cache_type="q8_0", par
     env["CTX"] = "16384"
     env["GPU_LAYERS"] = "99"
 
-    # Speed optimizations (llama.cpp 2026)
-    env["FLASH_ATTN"] = "1" if flash_attn else "0"
+    # Quality and speed settings
+    env["FLASH_ATTN"] = flash_attn  # "auto", "on", or "off"
     env["CACHE_TYPE_K"] = cache_type
     env["CACHE_TYPE_V"] = cache_type
     env["PARALLEL"] = str(parallel)
     env["CONT_BATCHING"] = "1"
     env["THREADS"] = "4"
+    env["MODEL_QUANT"] = quantization
 
     process = subprocess.Popen(
         ["bash", str(SCRIPT_PATH), model_short],
@@ -299,8 +332,8 @@ def start_llama_server(model_size, port, flash_attn=True, cache_type="q8_0", par
         start_new_session=True,
         env=env
     )
-    print(f"[QwenVL-GGUF] Started server for {model_short} on port {port} with optimizations (PID: {process.pid})")
-    print(f"[QwenVL-GGUF] Flash attention: {'ON' if flash_attn else 'OFF'}, KV cache: {cache_type}, Parallel: {parallel}")
+    print(f"[QwenVL-GGUF] Started server for {model_short} ({quantization}) on port {port} (PID: {process.pid})")
+    print(f"[QwenVL-GGUF] Flash attention: {flash_attn}, KV cache: {cache_type}, Parallel: {parallel}")
     return process
 
 
@@ -340,6 +373,10 @@ class ArchAi3D_QwenVL_GGUF:
                 "model_size": (MODEL_SIZES, {
                     "default": "4B (Balanced, ~7GB VRAM)",
                     "tooltip": "Select model size. 2B=Fast, 4B=Balanced, 8B=Best quality"
+                }),
+                "quantization": (QUANTIZATION_OPTIONS, {
+                    "default": "Q4_K_M (Smaller, ~5GB)",
+                    "tooltip": "Model quantization. Q4_K_M=smaller/faster, Q8_0=best quality (needs more VRAM)"
                 }),
                 "preset_prompt": (PRESET_PROMPTS, {
                     "default": PRESET_PROMPTS[0] if PRESET_PROMPTS else "🖼️ Tags",
@@ -508,7 +545,7 @@ class ArchAi3D_QwenVL_GGUF:
         hasher.update(server_url.encode())
         return hasher.hexdigest()
 
-    def generate(self, model_size, preset_prompt, quality_preset, creativity, seed,
+    def generate(self, model_size, quantization, preset_prompt, quality_preset, creativity, seed,
                  image=None, image2=None, image3=None, image4=None,
                  custom_prompt="", system_prompt="",
                  max_tokens=2048, max_image_size="1536",
@@ -575,18 +612,26 @@ class ArchAi3D_QwenVL_GGUF:
             except requests.exceptions.ConnectionError:
                 return False
 
+        # Parse quantization option
+        quant_key = quantization.split()[0]  # "Q4_K_M" from "Q4_K_M (Smaller, ~5GB)"
+
         if not check_server_ready():
             if auto_start_server:
-                # Check VRAM before starting server
-                vram_required = config.get('vram_gb', 11)  # Default to 4B requirement
+                # Check VRAM before starting server (use per-quantization requirement)
+                vram_map = config.get('vram_gb', {"Q4_K_M": 11, "Q8_0": 15})
+                if isinstance(vram_map, dict):
+                    vram_required = vram_map.get(quant_key, 11)
+                else:
+                    vram_required = vram_map
                 success, message, free_gb = check_and_free_vram(vram_required, auto_clear_vram)
                 print(f"[QwenVL-GGUF] {message}")
 
                 if not success:
-                    return (f"ERROR: {message}\n\nTry:\n- Use smaller model (2B or 4B)\n- Close other GPU applications\n- Reduce context_size in Server Control node",)
+                    return (f"ERROR: {message}\n\nTry:\n- Use smaller model (2B or 4B)\n- Use Q4_K_M quantization\n- Close other GPU applications\n- Reduce context_size in Server Control node",)
 
                 print(f"[QwenVL-GGUF] Server not running, starting automatically...")
-                start_llama_server(model_size, port)
+                start_llama_server(model_size, port, flash_attn="auto",
+                                   cache_type="f16", quantization=quant_key)
                 server_was_started = True
 
                 # Wait for server to be fully ready (health check + model loaded)
@@ -780,6 +825,10 @@ class ArchAi3D_QwenVL_Server_Control:
                     "default": "4B (Balanced, ~7GB VRAM)",
                     "tooltip": "Model size determines which port to use"
                 }),
+                "quantization": (QUANTIZATION_OPTIONS, {
+                    "default": "Q4_K_M (Smaller, ~5GB)",
+                    "tooltip": "Model quantization. Q4_K_M=smaller/faster, Q8_0=best quality"
+                }),
                 "gpu_layers": ("INT", {
                     "default": 99,
                     "min": 0,
@@ -794,13 +843,13 @@ class ArchAi3D_QwenVL_Server_Control:
                     "tooltip": "Context window size in tokens"
                 }),
                 # Speed optimizations
-                "flash_attention": ("BOOLEAN", {
-                    "default": True,
-                    "tooltip": "Enable flash attention for ~35% faster GPU inference"
+                "flash_attention": (["auto (Recommended)", "on (Force)", "off (Disable)"], {
+                    "default": "auto (Recommended)",
+                    "tooltip": "Flash attention mode. 'auto' lets llama.cpp decide (recommended for latest builds)"
                 }),
-                "kv_cache_type": (["q8_0 (Fast)", "f16 (Quality)", "q4_0 (Fastest)"], {
-                    "default": "q8_0 (Fast)",
-                    "tooltip": "KV cache quantization: q8_0=fast+good quality, f16=best quality, q4_0=fastest"
+                "kv_cache_type": (["f16 (Best Quality)", "q8_0 (Good Balance)", "q4_0 (Fastest)"], {
+                    "default": "f16 (Best Quality)",
+                    "tooltip": "KV cache type: f16=maximum quality (recommended for Q8_0), q8_0=balanced, q4_0=fastest"
                 }),
                 "parallel_slots": ("INT", {
                     "default": 2,
@@ -834,10 +883,11 @@ class ArchAi3D_QwenVL_Server_Control:
         except Exception as e:
             return False, str(e)
 
-    def control(self, action, model_size, gpu_layers, context_size,
-                flash_attention=True, kv_cache_type="q8_0 (Fast)", parallel_slots=2,
-                trigger=None):
-        """Control the llama-server with speed optimizations."""
+    def control(self, action, model_size, quantization="Q4_K_M (Smaller, ~5GB)",
+                gpu_layers=99, context_size=8192,
+                flash_attention="auto (Recommended)", kv_cache_type="f16 (Best Quality)",
+                parallel_slots=2, trigger=None):
+        """Control the llama-server with quality and speed optimizations."""
         import time
 
         config = MODEL_CONFIGS.get(model_size, MODEL_CONFIGS["4B (Balanced, ~7GB VRAM)"])
@@ -845,8 +895,10 @@ class ArchAi3D_QwenVL_Server_Control:
         model_name = config['name']
         model_short = model_size.split()[0]
 
-        # Parse cache type
-        cache_type = kv_cache_type.split()[0]  # "q8_0" from "q8_0 (Fast)"
+        # Parse options
+        cache_type = kv_cache_type.split()[0]  # "f16" from "f16 (Best Quality)"
+        fa_mode = flash_attention.split()[0]    # "auto" from "auto (Recommended)"
+        quant_key = quantization.split()[0]     # "Q4_K_M" from "Q4_K_M (Smaller, ~5GB)"
 
         if action == "Check Status":
             running, status = self.get_server_status(port)
@@ -873,17 +925,17 @@ class ArchAi3D_QwenVL_Server_Control:
             if running:
                 return (f"ℹ️ {model_name} server is already running on port {port}",)
 
-            # Start with custom settings and speed optimizations
+            # Start with custom settings and quality optimizations
             env = os.environ.copy()
             env["CTX"] = str(context_size)
             env["GPU_LAYERS"] = str(gpu_layers)
-            # Speed optimizations (llama.cpp 2026)
-            env["FLASH_ATTN"] = "1" if flash_attention else "0"
+            env["FLASH_ATTN"] = fa_mode
             env["CACHE_TYPE_K"] = cache_type
             env["CACHE_TYPE_V"] = cache_type
             env["PARALLEL"] = str(parallel_slots)
             env["CONT_BATCHING"] = "1"
             env["THREADS"] = "4"
+            env["MODEL_QUANT"] = quant_key
 
             if not SCRIPT_PATH.exists():
                 return (f"❌ Server script not found at {SCRIPT_PATH}",)
@@ -901,7 +953,7 @@ class ArchAi3D_QwenVL_Server_Control:
                 time.sleep(1)
                 running, _ = self.get_server_status(port)
                 if running:
-                    opt_str = f"Flash Attn: {'ON' if flash_attention else 'OFF'}, KV Cache: {cache_type}, Parallel: {parallel_slots}"
+                    opt_str = f"Flash Attn: {fa_mode}, KV Cache: {cache_type}, Quant: {quant_key}, Parallel: {parallel_slots}"
                     return (f"✅ {model_name} server STARTED on port {port}\n\nSettings:\n- GPU Layers: {gpu_layers}\n- Context: {context_size} tokens\n- {opt_str}",)
                 if i % 5 == 0 and i > 0:
                     print(f"[QwenVL-Server] Loading model... ({i}s)")
@@ -913,17 +965,17 @@ class ArchAi3D_QwenVL_Server_Control:
             kill_llama_server(port)
             time.sleep(2)
 
-            # Then start with optimizations
+            # Then start with quality optimizations
             env = os.environ.copy()
             env["CTX"] = str(context_size)
             env["GPU_LAYERS"] = str(gpu_layers)
-            # Speed optimizations (llama.cpp 2026)
-            env["FLASH_ATTN"] = "1" if flash_attention else "0"
+            env["FLASH_ATTN"] = fa_mode
             env["CACHE_TYPE_K"] = cache_type
             env["CACHE_TYPE_V"] = cache_type
             env["PARALLEL"] = str(parallel_slots)
             env["CONT_BATCHING"] = "1"
             env["THREADS"] = "4"
+            env["MODEL_QUANT"] = quant_key
 
             if not SCRIPT_PATH.exists():
                 return (f"❌ Server script not found at {SCRIPT_PATH}",)
@@ -941,7 +993,7 @@ class ArchAi3D_QwenVL_Server_Control:
                 time.sleep(1)
                 running, _ = self.get_server_status(port)
                 if running:
-                    opt_str = f"Flash Attn: {'ON' if flash_attention else 'OFF'}, KV Cache: {cache_type}, Parallel: {parallel_slots}"
+                    opt_str = f"Flash Attn: {fa_mode}, KV Cache: {cache_type}, Quant: {quant_key}, Parallel: {parallel_slots}"
                     return (f"✅ {model_name} server RESTARTED on port {port}\n\nSettings:\n- GPU Layers: {gpu_layers}\n- Context: {context_size} tokens\n- {opt_str}",)
                 if i % 5 == 0 and i > 0:
                     print(f"[QwenVL-Server] Loading model... ({i}s)")
