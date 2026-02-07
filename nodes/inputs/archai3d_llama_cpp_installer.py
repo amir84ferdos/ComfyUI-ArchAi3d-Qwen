@@ -62,12 +62,12 @@ class ArchAi3D_LlamaCpp_Installer:
                     "default": "4B (Recommended)",
                     "tooltip": "2B: ~4GB VRAM, 4B: ~7GB VRAM, 8B: ~12GB VRAM"
                 }),
+            },
+            "optional": {
                 "quantization": (["Q4_K_M (Smaller, Faster)", "Q8_0 (Best Quality)"], {
                     "default": "Q4_K_M (Smaller, Faster)",
                     "tooltip": "Model quantization. Q4_K_M=~5GB, Q8_0=~9GB (best quality, needs more VRAM)"
                 }),
-            },
-            "optional": {
                 "force_rebuild": ("BOOLEAN", {
                     "default": False,
                     "tooltip": "Force rebuild llama.cpp even if already installed"

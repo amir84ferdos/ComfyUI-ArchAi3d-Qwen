@@ -374,10 +374,6 @@ class ArchAi3D_QwenVL_GGUF:
                     "default": "4B (Balanced, ~7GB VRAM)",
                     "tooltip": "Select model size. 2B=Fast, 4B=Balanced, 8B=Best quality"
                 }),
-                "quantization": (QUANTIZATION_OPTIONS, {
-                    "default": "Q4_K_M (Smaller, ~5GB)",
-                    "tooltip": "Model quantization. Q4_K_M=smaller/faster, Q8_0=best quality (needs more VRAM)"
-                }),
                 "preset_prompt": (PRESET_PROMPTS, {
                     "default": PRESET_PROMPTS[0] if PRESET_PROMPTS else "🖼️ Tags",
                     "tooltip": "Select a preset prompt for image analysis"
@@ -401,6 +397,11 @@ class ArchAi3D_QwenVL_GGUF:
                 }),
             },
             "optional": {
+                # ===== QUANTIZATION (optional for backward compatibility) =====
+                "quantization": (QUANTIZATION_OPTIONS, {
+                    "default": "Q4_K_M (Smaller, ~5GB)",
+                    "tooltip": "Model quantization. Q4_K_M=smaller/faster, Q8_0=best quality (needs more VRAM)"
+                }),
                 # ===== IMAGES =====
                 "image": ("IMAGE", {
                     "tooltip": "Primary image for analysis"
@@ -545,7 +546,8 @@ class ArchAi3D_QwenVL_GGUF:
         hasher.update(server_url.encode())
         return hasher.hexdigest()
 
-    def generate(self, model_size, quantization, preset_prompt, quality_preset, creativity, seed,
+    def generate(self, model_size, preset_prompt, quality_preset, creativity, seed,
+                 quantization="Q4_K_M (Smaller, ~5GB)",
                  image=None, image2=None, image3=None, image4=None,
                  custom_prompt="", system_prompt="",
                  max_tokens=2048, max_image_size="1536",
@@ -825,10 +827,6 @@ class ArchAi3D_QwenVL_Server_Control:
                     "default": "4B (Balanced, ~7GB VRAM)",
                     "tooltip": "Model size determines which port to use"
                 }),
-                "quantization": (QUANTIZATION_OPTIONS, {
-                    "default": "Q4_K_M (Smaller, ~5GB)",
-                    "tooltip": "Model quantization. Q4_K_M=smaller/faster, Q8_0=best quality"
-                }),
                 "gpu_layers": ("INT", {
                     "default": 99,
                     "min": 0,
@@ -859,6 +857,10 @@ class ArchAi3D_QwenVL_Server_Control:
                 }),
             },
             "optional": {
+                "quantization": (QUANTIZATION_OPTIONS, {
+                    "default": "Q4_K_M (Smaller, ~5GB)",
+                    "tooltip": "Model quantization. Q4_K_M=smaller/faster, Q8_0=best quality"
+                }),
                 "trigger": ("*", {
                     "tooltip": "Optional input to trigger this node in a workflow"
                 }),
