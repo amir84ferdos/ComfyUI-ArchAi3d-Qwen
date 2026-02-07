@@ -393,6 +393,7 @@ class ArchAi3D_QwenVL_GGUF:
                     "default": 1,
                     "min": 1,
                     "max": 2**32 - 1,
+                    "control_after_generate": True,
                     "tooltip": "Random seed for reproducibility"
                 }),
             },
@@ -614,7 +615,9 @@ class ArchAi3D_QwenVL_GGUF:
             except requests.exceptions.ConnectionError:
                 return False
 
-        # Parse quantization option
+        # Parse quantization option (handle old workflows that may pass bool/None)
+        if not isinstance(quantization, str) or quantization not in QUANTIZATION_OPTIONS:
+            quantization = "Q4_K_M (Smaller, ~5GB)"
         quant_key = quantization.split()[0]  # "Q4_K_M" from "Q4_K_M (Smaller, ~5GB)"
 
         if not check_server_ready():
@@ -900,6 +903,8 @@ class ArchAi3D_QwenVL_Server_Control:
         # Parse options
         cache_type = kv_cache_type.split()[0]  # "f16" from "f16 (Best Quality)"
         fa_mode = flash_attention.split()[0]    # "auto" from "auto (Recommended)"
+        if not isinstance(quantization, str) or quantization not in QUANTIZATION_OPTIONS:
+            quantization = "Q4_K_M (Smaller, ~5GB)"
         quant_key = quantization.split()[0]     # "Q4_K_M" from "Q4_K_M (Smaller, ~5GB)"
 
         if action == "Check Status":
