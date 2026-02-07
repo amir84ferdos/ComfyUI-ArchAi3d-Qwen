@@ -512,6 +512,9 @@ class ArchAi3D_QwenVL_GGUF:
                     "step": 1024,
                     "tooltip": "Context window size in tokens for auto-starting the server (input + output combined)"
                 }),
+                "trigger": ("*", {
+                    "tooltip": "Connect to any output to ensure this node runs after that node completes"
+                }),
             }
         }
 
@@ -576,7 +579,8 @@ class ArchAi3D_QwenVL_GGUF:
                  max_tokens=2048, max_image_size="1536",
                  temperature=0.3, top_p=0.9, top_k=40, min_p=0.05, repeat_penalty=1.1,
                  use_cache=True, keep_server_running=True, auto_start_server=True,
-                 auto_clear_vram=True, cache_to_local_ssd=True, context_size=32000):
+                 auto_clear_vram=True, cache_to_local_ssd=True, context_size=32000,
+                 trigger=None):
         """Generate text from image(s) using llama-server API. Images are optional for text-only prompts."""
 
         # ===== APPLY QUALITY PRESET =====
