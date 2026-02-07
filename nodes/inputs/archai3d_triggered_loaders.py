@@ -8,6 +8,7 @@ Author: Amir Ferdos (ArchAi3d)
 import torch
 import folder_paths
 import comfy.sd
+from ..utils.local_model_cache import copy_to_local
 
 
 class ArchAi3D_Load_Diffusion_Model:
@@ -28,6 +29,10 @@ class ArchAi3D_Load_Diffusion_Model:
                 "trigger": ("*", {
                     "tooltip": "Connect to any output to ensure this node runs after that node completes"
                 }),
+                "cache_to_local_ssd": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "RunPod: copy model to local SSD for faster loading. No effect on local PC."
+                }),
             }
         }
 
@@ -37,7 +42,7 @@ class ArchAi3D_Load_Diffusion_Model:
     CATEGORY = "ArchAi3D/Loaders"
     DESCRIPTION = "Load a diffusion model (UNET) with optional trigger for execution order control."
 
-    def load_unet(self, unet_name, weight_dtype, trigger=None):
+    def load_unet(self, unet_name, weight_dtype, trigger=None, cache_to_local_ssd=True):
         # Trigger is ignored - it only creates execution dependency
         model_options = {}
 
@@ -50,6 +55,7 @@ class ArchAi3D_Load_Diffusion_Model:
             model_options["dtype"] = torch.float8_e5m2
 
         unet_path = folder_paths.get_full_path_or_raise("diffusion_models", unet_name)
+        unet_path = copy_to_local(unet_path, enabled=cache_to_local_ssd)
         model = comfy.sd.load_diffusion_model(unet_path, model_options=model_options)
         return (model,)
 
@@ -106,6 +112,10 @@ class ArchAi3D_Load_CLIP:
                 "device": (["default", "cpu"], {
                     "tooltip": "Device to load CLIP on. Use 'cpu' to save VRAM."
                 }),
+                "cache_to_local_ssd": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "RunPod: copy model to local SSD for faster loading. No effect on local PC."
+                }),
             }
         }
 
@@ -128,7 +138,7 @@ hidream: llama-3.1 or t5
 omnigen2: qwen vl 2.5 3B
 qwen_image: Qwen VL models"""
 
-    def load_clip(self, clip_name, type, trigger=None, device="default"):
+    def load_clip(self, clip_name, type, trigger=None, device="default", cache_to_local_ssd=True):
         # Trigger is ignored - it only creates execution dependency
         # Use getattr for dynamic enum lookup (matches original ComfyUI)
         clip_type = getattr(comfy.sd.CLIPType, type.upper(), comfy.sd.CLIPType.STABLE_DIFFUSION)
@@ -138,6 +148,7 @@ qwen_image: Qwen VL models"""
             model_options["load_device"] = model_options["offload_device"] = torch.device("cpu")
 
         clip_path = folder_paths.get_full_path_or_raise("text_encoders", clip_name)
+        clip_path = copy_to_local(clip_path, enabled=cache_to_local_ssd)
         clip = comfy.sd.load_clip(
             ckpt_paths=[clip_path],
             embedding_directory=folder_paths.get_folder_paths("embeddings"),
@@ -192,6 +203,10 @@ class ArchAi3D_Load_Dual_CLIP:
                 "device": (["default", "cpu"], {
                     "tooltip": "Device to load CLIP on. Use 'cpu' to save VRAM."
                 }),
+                "cache_to_local_ssd": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "RunPod: copy model to local SSD for faster loading. No effect on local PC."
+                }),
             }
         }
 
@@ -209,12 +224,14 @@ hidream: t5 + llama (recommended)
 hunyuan_image: qwen2.5vl 7b, byt5 small
 newbie: gemma-3-4b-it, jina clip v2"""
 
-    def load_clip(self, clip_name1, clip_name2, type, trigger=None, device="default"):
+    def load_clip(self, clip_name1, clip_name2, type, trigger=None, device="default", cache_to_local_ssd=True):
         # Trigger is ignored - it only creates execution dependency
         clip_type = getattr(comfy.sd.CLIPType, type.upper(), comfy.sd.CLIPType.STABLE_DIFFUSION)
 
         clip_path1 = folder_paths.get_full_path_or_raise("text_encoders", clip_name1)
         clip_path2 = folder_paths.get_full_path_or_raise("text_encoders", clip_name2)
+        clip_path1 = copy_to_local(clip_path1, enabled=cache_to_local_ssd)
+        clip_path2 = copy_to_local(clip_path2, enabled=cache_to_local_ssd)
 
         model_options = {}
         if device == "cpu":

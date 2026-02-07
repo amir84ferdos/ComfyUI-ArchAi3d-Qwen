@@ -105,12 +105,17 @@ setup_cuda_libs() {
 
 setup_cuda_libs
 
+# Local SSD cache for RunPod (models copied here load much faster)
+LOCAL_CACHE="/tmp/comfyui-local-models"
+
 # Multiple search paths for models (in priority order)
+# 0. Local SSD cache (RunPod optimization - fastest)
 # 1. Environment variable MODEL_DIR
 # 2. ComfyUI models/LLM/GGUF folder (preferred - organized with other LLM models)
 # 3. ComfyUI models/llama-models folder (legacy)
 # 4. Default cache location (fallback - not persistent on RunPod!)
 SEARCH_PATHS=(
+    "$LOCAL_CACHE"
     "${MODEL_DIR:-}"
     "$SCRIPT_DIR/../../models/LLM/GGUF"
     "$SCRIPT_DIR/../../models/LLM"
@@ -167,9 +172,64 @@ else
     DEFAULT_PORT=8033
 fi
 
+# Copy file from /workspace/ to local SSD cache for faster loading
+copy_to_local() {
+    local src="$1"
+    [ -z "$src" ] && return
+    # Only copy files from network /workspace/ mount
+    case "$src" in /workspace/*) ;; *) echo "$src"; return ;; esac
+
+    local rel="${src#/workspace/}"
+    local dst="$LOCAL_CACHE/$rel"
+
+    # Already cached? (check file size matches)
+    if [ -f "$dst" ]; then
+        local src_size dst_size
+        src_size=$(stat -c%s "$src" 2>/dev/null)
+        dst_size=$(stat -c%s "$dst" 2>/dev/null)
+        if [ "$src_size" = "$dst_size" ]; then
+            echo "[LocalCache] Using cached: $(basename "$dst")" >&2
+            echo "$dst"
+            return
+        fi
+    fi
+
+    # Check disk space (keep 20GB headroom)
+    local free_kb file_kb
+    free_kb=$(df --output=avail /tmp 2>/dev/null | tail -1)
+    file_kb=$(du -k "$src" 2>/dev/null | cut -f1)
+    local headroom_kb=$((20 * 1024 * 1024))  # 20GB in KB
+    if [ -n "$free_kb" ] && [ -n "$file_kb" ] && [ $((free_kb - file_kb)) -lt "$headroom_kb" ]; then
+        echo "[LocalCache] Not enough space, loading from network" >&2
+        echo "$src"
+        return
+    fi
+
+    # Copy to local SSD
+    mkdir -p "$(dirname "$dst")"
+    local file_mb=$((file_kb / 1024))
+    echo "[LocalCache] Copying $(basename "$src") (${file_mb}MB) to local SSD..." >&2
+    if cp "$src" "$dst" 2>/dev/null; then
+        echo "[LocalCache] Done." >&2
+        echo "$dst"
+    else
+        echo "[LocalCache] Copy failed, loading from network" >&2
+        rm -f "$dst" 2>/dev/null
+        echo "$src"
+    fi
+}
+
 # Find model files in search paths
 MODEL_PATH=$(find_model "$MODEL_FILE" "$SUBDIR")
 MMPROJ_PATH=$(find_model "$MMPROJ_FILE" "$SUBDIR")
+
+# Copy to local SSD if on RunPod network mount (much faster loading)
+if [ -n "$MODEL_PATH" ]; then
+    MODEL_PATH=$(copy_to_local "$MODEL_PATH")
+fi
+if [ -n "$MMPROJ_PATH" ]; then
+    MMPROJ_PATH=$(copy_to_local "$MMPROJ_PATH")
+fi
 
 # Allow port override via environment
 PORT="${PORT:-$DEFAULT_PORT}"
