@@ -397,11 +397,6 @@ class ArchAi3D_QwenVL_GGUF:
                 }),
             },
             "optional": {
-                # ===== QUANTIZATION (optional for backward compatibility) =====
-                "quantization": (QUANTIZATION_OPTIONS, {
-                    "default": "Q4_K_M (Smaller, ~5GB)",
-                    "tooltip": "Model quantization. Q4_K_M=smaller/faster, Q8_0=best quality (needs more VRAM)"
-                }),
                 # ===== IMAGES =====
                 "image": ("IMAGE", {
                     "tooltip": "Primary image for analysis"
@@ -488,6 +483,11 @@ class ArchAi3D_QwenVL_GGUF:
                 "auto_clear_vram": ("BOOLEAN", {
                     "default": True,
                     "tooltip": "Automatically unload ComfyUI models to free VRAM if needed"
+                }),
+                # ===== QUANTIZATION (at end for backward compatibility) =====
+                "quantization": (QUANTIZATION_OPTIONS, {
+                    "default": "Q4_K_M (Smaller, ~5GB)",
+                    "tooltip": "Model quantization. Q4_K_M=smaller/faster, Q8_0=best quality (needs more VRAM)"
                 }),
             }
         }
