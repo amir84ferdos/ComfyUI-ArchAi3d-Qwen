@@ -105,6 +105,12 @@ setup_cuda_libs() {
 
 setup_cuda_libs
 
+# Add bin/ to library path for llama.cpp shared libs (libmtmd, libllama, libggml, etc.)
+BIN_DIR="$SCRIPT_DIR/bin"
+if [ -d "$BIN_DIR" ]; then
+    export LD_LIBRARY_PATH="$BIN_DIR:${LD_LIBRARY_PATH:-}"
+fi
+
 # Local SSD cache for RunPod (models copied here load much faster)
 LOCAL_CACHE="/tmp/comfyui-local-models"
 
