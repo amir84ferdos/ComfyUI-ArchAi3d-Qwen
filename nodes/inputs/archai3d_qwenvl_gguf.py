@@ -214,8 +214,6 @@ SCRIPT_PATH = Path(__file__).parent.parent.parent / "start_qwenvl_server.sh"
 def kill_llama_server(port):
     """Kill llama-server process running on specific port."""
     try:
-        # Find llama-server process specifically using the port
-        # Use pgrep to find llama-server processes, then check which one uses this port
         result = subprocess.run(
             ["pgrep", "-f", "llama-server"],
             capture_output=True, text=True
@@ -225,7 +223,6 @@ def kill_llama_server(port):
             for pid in pids:
                 try:
                     pid_int = int(pid)
-                    # Verify this process is using our port by checking its command line
                     cmdline_path = f"/proc/{pid}/cmdline"
                     if os.path.exists(cmdline_path):
                         with open(cmdline_path, 'r') as f:
@@ -240,6 +237,78 @@ def kill_llama_server(port):
     except Exception as e:
         print(f"[QwenVL-GGUF] Error killing server: {e}")
         return False
+
+
+def kill_all_llama_servers():
+    """Kill ALL llama-server processes to free all GPU VRAM.
+
+    Sends SIGTERM first, waits up to 5 seconds, then SIGKILL for any survivors.
+    Returns number of processes killed.
+    """
+    import time
+
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", "llama-server"],
+            capture_output=True, text=True
+        )
+        if not result.stdout.strip():
+            print("[QwenVL-GGUF] No llama-server processes found")
+            return 0
+
+        pids = []
+        for pid_str in result.stdout.strip().split('\n'):
+            try:
+                pid_int = int(pid_str)
+                # Verify it's actually a llama-server (not pgrep itself)
+                cmdline_path = f"/proc/{pid_int}/cmdline"
+                if os.path.exists(cmdline_path):
+                    with open(cmdline_path, 'r') as f:
+                        cmdline = f.read()
+                    if "llama-server" in cmdline and "pgrep" not in cmdline:
+                        pids.append(pid_int)
+            except (ValueError, FileNotFoundError, PermissionError):
+                pass
+
+        if not pids:
+            return 0
+
+        # Send SIGTERM to all
+        for pid in pids:
+            try:
+                os.kill(pid, signal.SIGTERM)
+                print(f"[QwenVL-GGUF] Sent SIGTERM to llama-server PID {pid}")
+            except ProcessLookupError:
+                pass
+
+        # Wait up to 5 seconds for all to die
+        for _ in range(10):
+            time.sleep(0.5)
+            alive = []
+            for pid in pids:
+                try:
+                    os.kill(pid, 0)  # Check if still alive
+                    alive.append(pid)
+                except ProcessLookupError:
+                    pass
+            if not alive:
+                break
+            pids = alive
+
+        # SIGKILL any survivors
+        for pid in pids:
+            try:
+                os.kill(pid, signal.SIGKILL)
+                print(f"[QwenVL-GGUF] Force-killed llama-server PID {pid}")
+            except ProcessLookupError:
+                pass
+
+        killed = len(pids)
+        print(f"[QwenVL-GGUF] Killed {killed} llama-server process(es)")
+        return killed
+    except Exception as e:
+        print(f"[QwenVL-GGUF] Error killing servers: {e}")
+        return 0
 
 
 def check_and_free_vram(required_gb, auto_clear=True):
@@ -791,10 +860,15 @@ class ArchAi3D_QwenVL_GGUF:
                 GGUF_RESULT_CACHE[cache_key] = text
                 print(f"[QwenVL-GGUF] Result cached (total: {len(GGUF_RESULT_CACHE)} entries)")
 
-            # Kill server after inference if not keeping it running
+            # Kill ALL llama-servers after inference if not keeping them running
             if not keep_server_running:
-                print(f"[QwenVL-GGUF] Stopping server to free GPU VRAM...")
-                kill_llama_server(port)
+                print(f"[QwenVL-GGUF] Stopping ALL llama-servers to free GPU VRAM...")
+                killed = kill_all_llama_servers()
+                if killed > 0:
+                    import torch
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                    print(f"[QwenVL-GGUF] GPU VRAM freed ({killed} server(s) stopped)")
 
             return (text,)
 
