@@ -188,6 +188,7 @@ from .nodes.utils.archai3d_mask_crop_rotate import ArchAi3D_Mask_Crop_Rotate
 from .nodes.utils.archai3d_panorama_offset import ArchAi3D_Panorama_Offset
 from .nodes.utils.archai3d_highpass_blend import ArchAi3D_HighPass_Blend
 from .nodes.utils.archai3d_any_index_switch import ArchAi3D_Any_Index_Switch
+from .nodes.utils.archai3d_extract_region_text import ArchAi3D_Extract_Region_Text
 from .nodes.utils.nunchaku_installer import ArchAi3D_Nunchaku_Installer
 from .nodes.utils.dependency_installer import ArchAi3D_Dependency_Installer
 
@@ -342,6 +343,7 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_Panorama_Offset": ArchAi3D_Panorama_Offset,
     "ArchAi3D_HighPass_Blend": ArchAi3D_HighPass_Blend,
     "ArchAi3D_Any_Index_Switch": ArchAi3D_Any_Index_Switch,
+    "ArchAi3D_Extract_Region_Text": ArchAi3D_Extract_Region_Text,
 
     # Input Nodes (Web Interface Integration)
     "ArchAi3D_String_Input": ArchAi3D_String_Input,
@@ -521,6 +523,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Panorama_Offset": "🔄 Panorama Offset",
     "ArchAi3D_HighPass_Blend": "✨ High-Pass Filter + Blend",
     "ArchAi3D_Any_Index_Switch": "🔀 Any Index Switch",
+    "ArchAi3D_Extract_Region_Text": "📝 Extract Region Text",
 
     # Input Nodes (Web Interface Integration)
     "ArchAi3D_String_Input": "📝 String Input",
