@@ -2,27 +2,24 @@
 ArchAi3D Gemini Model Selector Node
 A model selector node for Gemini API with name field for web interface integration.
 
-Updated November 2025 with latest Gemini models.
+Updated February 2026 with latest Gemini models.
 """
 
 
-# Available Gemini Models (Updated November 2025)
+# Available Gemini Models (Updated February 2026)
 GEMINI_MODELS = [
-    # Gemini 3 (Latest - Released Nov 18, 2025)
-    "gemini-3.0-pro",
-    "gemini-3.0-flash",
-    # Gemini 2.5 Models
+    # Gemini 3 (Preview)
+    "gemini-3-pro-preview",
+    "gemini-3-pro-image-preview",
+    "gemini-3-flash-preview",
+    # Gemini 2.5 (Stable GA)
     "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash-image",
     "gemini-2.5-pro",
-    "gemini-2.5-flash-preview-05-20",
-    "gemini-2.5-pro-preview-05-06",
-    # Gemini 2.0 Models
+    # Gemini 2.0 (Retiring March 31, 2026)
     "gemini-2.0-flash",
     "gemini-2.0-flash-lite",
-    # Gemini 1.5 Models (Legacy)
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
-    "gemini-1.5-pro",
 ]
 
 
@@ -46,7 +43,7 @@ class ArchAi3D_Gemini_Model:
                     "tooltip": "Identifier name for this input (used by web interface)"
                 }),
                 "model": (GEMINI_MODELS, {
-                    "default": "gemini-3.0-flash",
+                    "default": "gemini-2.5-flash",
                     "tooltip": "Select Gemini model to use"
                 }),
             },
