@@ -291,7 +291,7 @@ class ArchAi3D_Gemini:
                 "seed": ("INT", {
                     "default": 0,
                     "min": 0,
-                    "max": 0xffffffff,
+                    "max": 0x7fffffff,
                     "tooltip": "Random seed for reproducibility (0 = random)"
                 }),
                 "thinking_budget": ("INT", {
