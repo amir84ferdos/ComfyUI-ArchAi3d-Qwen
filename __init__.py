@@ -171,7 +171,10 @@ from .nodes.inputs.archai3d_load_image_url import ArchAi3D_Load_Image_URL
 from .nodes.inputs.archai3d_save_image import ArchAi3D_Save_Image
 from .nodes.inputs.archai3d_conditioning_balance import ArchAi3D_Conditioning_Balance
 from .nodes.inputs.archai3d_gemini_model import ArchAi3D_Gemini_Model
-from .nodes.inputs.archai3d_gemini import ArchAi3D_Gemini
+try:
+    from .nodes.inputs.archai3d_gemini import ArchAi3D_Gemini, GEMINI_AVAILABLE
+except Exception:
+    GEMINI_AVAILABLE = False
 from .nodes.inputs.archai3d_qwenvl_gguf import ArchAi3D_QwenVL_GGUF, ArchAi3D_QwenVL_Server_Control
 from .nodes.inputs.archai3d_llama_cpp_installer import ArchAi3D_LlamaCpp_Installer
 from .nodes.inputs.archai3d_hf_download import ArchAi3D_HF_Download
@@ -354,7 +357,6 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_Save_Image": ArchAi3D_Save_Image,
     "ArchAi3D_Conditioning_Balance": ArchAi3D_Conditioning_Balance,
     "ArchAi3D_Gemini_Model": ArchAi3D_Gemini_Model,
-    "ArchAi3D_Gemini": ArchAi3D_Gemini,
     "ArchAi3D_QwenVL_GGUF": ArchAi3D_QwenVL_GGUF,
     "ArchAi3D_QwenVL_Server_Control": ArchAi3D_QwenVL_Server_Control,
     "ArchAi3D_LlamaCpp_Installer": ArchAi3D_LlamaCpp_Installer,
@@ -384,6 +386,10 @@ NODE_CLASS_MAPPINGS = {
     # Simple USDU - Modular Tile Processing (merged from usdu_simple)
     **USDU_SIMPLE_NODES,
 }
+
+# Conditionally register Gemini node (requires google-genai SDK)
+if GEMINI_AVAILABLE:
+    NODE_CLASS_MAPPINGS["ArchAi3D_Gemini"] = ArchAi3D_Gemini
 
 # ============================================================================
 # DISPLAY NAMES
@@ -534,7 +540,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Save_Image": "💾 Save Image",
     "ArchAi3D_Conditioning_Balance": "⚖️ Conditioning Balance",
     "ArchAi3D_Gemini_Model": "🤖 Gemini Model Selector",
-    "ArchAi3D_Gemini": "🤖 Gemini API",
     "ArchAi3D_QwenVL_GGUF": "🚀 QwenVL GGUF (Fast)",
     "ArchAi3D_QwenVL_Server_Control": "🎛️ QwenVL Server Control",
     "ArchAi3D_LlamaCpp_Installer": "⚙️ Llama.cpp Installer",
@@ -564,6 +569,10 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # Simple USDU - Modular Tile Processing (merged from usdu_simple)
     **USDU_SIMPLE_NAMES,
 }
+
+# Conditionally register Gemini display name
+if GEMINI_AVAILABLE:
+    NODE_DISPLAY_NAME_MAPPINGS["ArchAi3D_Gemini"] = "🤖 Gemini API"
 
 # ============================================================================
 # WEB DIRECTORY (for custom UI elements)

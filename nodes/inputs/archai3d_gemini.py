@@ -19,6 +19,7 @@ import hashlib
 import gc
 
 # Try to import the new SDK first, fall back to old if not available
+GEMINI_AVAILABLE = True
 try:
     from google import genai
     from google.genai import types
@@ -29,10 +30,10 @@ except ImportError:
         import google.generativeai as genai_old
         USE_NEW_SDK = False
     except ImportError:
-        raise ImportError(
-            "Please install google-genai: pip install google-genai\n"
-            "Or the legacy SDK: pip install google-generativeai"
-        )
+        GEMINI_AVAILABLE = False
+        USE_NEW_SDK = None
+        print("[ArchAi3D Gemini] WARNING: google-genai not installed. "
+              "Install with: pip install google-genai")
 
 
 # Available Gemini Models (Updated February 2026)
@@ -293,6 +294,13 @@ class ArchAi3D_Gemini:
                     "max": 0xffffffff,
                     "tooltip": "Random seed for reproducibility (0 = random)"
                 }),
+                "thinking_budget": ("INT", {
+                    "default": 0,
+                    "min": 0,
+                    "max": 24576,
+                    "step": 1024,
+                    "tooltip": "Thinking token budget for Gemini 2.5/3 models (0=off, 1024-24576=on). Model uses these tokens to reason before responding."
+                }),
                 "use_cache": ("BOOLEAN", {
                     "default": True,
                     "tooltip": "Use cached response if inputs haven't changed (saves API calls)"
@@ -388,7 +396,7 @@ class ArchAi3D_Gemini:
     def execute(self, name, prompt, model, model_override="", system_prompt="",
                 api_key="", image1=None, image2=None, image3=None, image4=None,
                 temperature=1.0, top_p=0.95, top_k=40, max_tokens=8192, seed=0,
-                use_cache=True):
+                thinking_budget=0, use_cache=True):
         try:
             # Handle API Key
             if api_key and api_key.strip():
@@ -464,6 +472,13 @@ class ArchAi3D_Gemini:
                         # Add seed if specified (for reproducibility)
                         if seed > 0:
                             config_params['seed'] = seed
+
+                        # Add thinking config for Gemini 2.5/3 models
+                        if thinking_budget > 0:
+                            config_params['thinking_config'] = types.ThinkingConfig(
+                                thinking_budget=thinking_budget
+                            )
+                            print(f"[ArchAi3D Gemini] Thinking enabled: {thinking_budget} token budget")
 
                         # Add system instruction if provided
                         if system_prompt and system_prompt.strip():
