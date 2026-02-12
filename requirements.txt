@@ -38,6 +38,9 @@ colour-science
 # For Gemini API node
 google-genai>=1.0.0
 
+# For Panorama Conversion nodes
+py360convert
+
 # For Google Drive Download node
 gdown>=5.0.0
 

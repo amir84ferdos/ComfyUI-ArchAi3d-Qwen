@@ -196,7 +196,7 @@ class ArchAi3D_Mask_Crop_Rotate(io.ComfyNode):
                     "padding",
                     default=0,
                     min=0,
-                    max=200,
+                    max=1000,
                     tooltip="Padding around mask region in pixels"
                 ),
                 io.Combo.Input(
@@ -225,6 +225,10 @@ class ArchAi3D_Mask_Crop_Rotate(io.ComfyNode):
                 io.Image.Output(
                     "cropped_image",
                     tooltip="Cropped and rotated image"
+                ),
+                io.Mask.Output(
+                    "cropped_mask",
+                    tooltip="Mask cropped to the same bounding box (and rotated if applicable)"
                 ),
                 io.Int.Output(
                     "crop_width",
@@ -265,11 +269,15 @@ class ArchAi3D_Mask_Crop_Rotate(io.ComfyNode):
         mask_pil = mask_to_pil(mask)
         bbox = get_mask_bbox(mask_pil, padding=padding)
 
+        batch_size = image.shape[0]
+
         if bbox is None:
             # No region found in mask - return empty/error
             print("Warning: No region found in mask. Returning original image.")
+            empty_mask = torch.zeros(1, image.shape[1], image.shape[2])
             return io.NodeOutput(
                 image,
+                empty_mask,
                 image.shape[2],  # width
                 image.shape[1],  # height
                 "No region found"
@@ -277,18 +285,49 @@ class ArchAi3D_Mask_Crop_Rotate(io.ComfyNode):
 
         x1, y1, x2, y2 = bbox
 
-        # Step 2: Convert image to PIL and crop
-        img_pil = image_to_pil(image)
-        cropped_pil = img_pil.crop((x1, y1, x2, y2))
+        # Ensure crop dimensions are divisible by 16 (required by diffusion models)
+        img_h, img_w = image.shape[1], image.shape[2]
+        crop_width = x2 - x1
+        crop_height = y2 - y1
+
+        # Round up to nearest multiple of 16
+        target_w = ((crop_width + 15) // 16) * 16
+        target_h = ((crop_height + 15) // 16) * 16
+
+        # Expand bbox symmetrically to reach target dimensions
+        if target_w != crop_width:
+            extra_w = target_w - crop_width
+            left_add = extra_w // 2
+            right_add = extra_w - left_add
+            x1 = max(0, x1 - left_add)
+            x2 = min(img_w, x2 + right_add)
+            # If clamped, shift the other side
+            if x2 - x1 < target_w:
+                if x1 == 0:
+                    x2 = min(img_w, x1 + target_w)
+                else:
+                    x1 = max(0, x2 - target_w)
+
+        if target_h != crop_height:
+            extra_h = target_h - crop_height
+            top_add = extra_h // 2
+            bottom_add = extra_h - top_add
+            y1 = max(0, y1 - top_add)
+            y2 = min(img_h, y2 + bottom_add)
+            # If clamped, shift the other side
+            if y2 - y1 < target_h:
+                if y1 == 0:
+                    y2 = min(img_h, y1 + target_h)
+                else:
+                    y1 = max(0, y2 - target_h)
 
         crop_width = x2 - x1
         crop_height = y2 - y1
 
-        # Step 3: Rotate if angle is not zero
+        # Resolve background color once (for rotation)
+        bg_color = (0, 0, 0)
         if rotation_angle != 0:
-            # Get background color
             if background_color == "custom_hex":
-                # Convert hex to RGB
                 hex_color = bg_hex_color.lstrip('#')
                 try:
                     r = int(hex_color[0:2], 16)
@@ -297,32 +336,52 @@ class ArchAi3D_Mask_Crop_Rotate(io.ComfyNode):
                     bg_color = (r, g, b)
                 except (ValueError, IndexError):
                     print(f"Warning: Invalid hex color '{bg_hex_color}', using black")
-                    bg_color = (0, 0, 0)
             elif background_color == "white":
                 bg_color = (255, 255, 255)
-            else:  # black
-                bg_color = (0, 0, 0)
 
-            # Rotate
-            expand = (expand_canvas == "yes")
-            cropped_pil = rotate_image(
-                cropped_pil,
-                angle=rotation_angle,
-                expand=expand,
-                fill_color=bg_color
+        expand = (expand_canvas == "yes")
+
+        # Step 2: Process each image in the batch
+        cropped_tensors = []
+        for b in range(batch_size):
+            # Convert single image to PIL (H, W, C)
+            img_np = (image[b].cpu().numpy() * 255).astype(np.uint8)
+            img_pil = Image.fromarray(img_np, mode='RGB')
+
+            # Crop to bbox
+            cropped_pil = img_pil.crop((x1, y1, x2, y2))
+
+            # Rotate if needed
+            if rotation_angle != 0:
+                cropped_pil = rotate_image(
+                    cropped_pil, angle=rotation_angle,
+                    expand=expand, fill_color=bg_color
+                )
+
+            cropped_tensors.append(pil_to_tensor(cropped_pil))
+
+        # Stack batch: each is (1, H, W, 3) -> (B, H, W, 3)
+        output_tensor = torch.cat(cropped_tensors, dim=0)
+
+        # Step 3: Crop and rotate the mask (single, not batched)
+        cropped_mask_pil = mask_pil.crop((x1, y1, x2, y2))
+        if rotation_angle != 0:
+            cropped_mask_pil = cropped_mask_pil.rotate(
+                rotation_angle, expand=expand, fillcolor=0, resample=Image.BICUBIC
             )
 
-        # Step 4: Convert back to tensor
-        output_tensor = pil_to_tensor(cropped_pil)
+        cropped_mask_np = np.array(cropped_mask_pil).astype(np.float32) / 255.0
+        cropped_mask_tensor = torch.from_numpy(cropped_mask_np)[None,]
 
         # Prepare bbox string
         bbox_str = f"[{x1}, {y1}, {x2}, {y2}]"
 
         # Debug output
         print("\n" + "="*70)
-        print("✂️ ArchAi3D Mask Crop & Rotate - v1.0.0")
+        print("✂️ ArchAi3D Mask Crop & Rotate - v1.1.0")
         print("="*70)
-        print(f"Original image size: {img_pil.width}x{img_pil.height}")
+        print(f"Batch size: {batch_size}")
+        print(f"Original image size: {image.shape[2]}x{image.shape[1]}")
         print(f"Crop bounding box: {bbox_str}")
         print(f"Crop size (before rotation): {crop_width}x{crop_height}")
         print(f"Padding: {padding}px")
@@ -332,10 +391,10 @@ class ArchAi3D_Mask_Crop_Rotate(io.ComfyNode):
             print(f"Background color: {background_color}")
             if background_color == "custom_hex":
                 print(f"  Hex: #{bg_hex_color} = RGB{bg_color}")
-        print(f"Output size: {cropped_pil.width}x{cropped_pil.height}")
+        print(f"Output shape: {output_tensor.shape}")
         print("="*70 + "\n")
 
-        return io.NodeOutput(output_tensor, crop_width, crop_height, bbox_str)
+        return io.NodeOutput(output_tensor, cropped_mask_tensor, crop_width, crop_height, bbox_str)
 
 
 # ============================================================================

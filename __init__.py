@@ -188,10 +188,24 @@ from .nodes.utils.archai3d_color_correction_advanced import ArchAi3D_Color_Corre
 from .nodes.utils.archai3d_average_color import ArchAi3D_Average_Color
 from .nodes.utils.archai3d_solid_color_image import ArchAi3D_Solid_Color_Image
 from .nodes.utils.archai3d_mask_crop_rotate import ArchAi3D_Mask_Crop_Rotate
+from .nodes.utils.archai3d_mask_uncrop import ArchAi3D_Mask_Uncrop
 from .nodes.utils.archai3d_panorama_offset import ArchAi3D_Panorama_Offset
 from .nodes.utils.archai3d_highpass_blend import ArchAi3D_HighPass_Blend
 from .nodes.utils.archai3d_any_index_switch import ArchAi3D_Any_Index_Switch
 from .nodes.utils.archai3d_extract_region_text import ArchAi3D_Extract_Region_Text
+
+# Panorama Conversion Nodes (optional - requires py360convert)
+try:
+    from .nodes.utils.archai3d_panorama_conversion import ArchAi3D_PanoramaToCubemap, ArchAi3D_CubemapToPanorama
+    PY360_AVAILABLE = True
+except ImportError:
+    PY360_AVAILABLE = False
+    print("[ArchAi3d] py360convert not installed. Panorama conversion nodes disabled.")
+
+from .nodes.utils.archai3d_batch_split_merge import ArchAi3D_BatchToSixImages, ArchAi3D_SixImagesToBatch
+from .nodes.utils.archai3d_circle_mask import ArchAi3D_CircleMask
+from .nodes.utils.archai3d_multi_prompt import ArchAi3D_PromptLine
+
 from .nodes.utils.nunchaku_installer import ArchAi3D_Nunchaku_Installer
 from .nodes.utils.dependency_installer import ArchAi3D_Dependency_Installer
 
@@ -343,6 +357,7 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_Average_Color": ArchAi3D_Average_Color,
     "ArchAi3D_Solid_Color_Image": ArchAi3D_Solid_Color_Image,
     "ArchAi3D_Mask_Crop_Rotate": ArchAi3D_Mask_Crop_Rotate,
+    "ArchAi3D_Mask_Uncrop": ArchAi3D_Mask_Uncrop,
     "ArchAi3D_Panorama_Offset": ArchAi3D_Panorama_Offset,
     "ArchAi3D_HighPass_Blend": ArchAi3D_HighPass_Blend,
     "ArchAi3D_Any_Index_Switch": ArchAi3D_Any_Index_Switch,
@@ -390,6 +405,17 @@ NODE_CLASS_MAPPINGS = {
 # Conditionally register Gemini node (requires google-genai SDK)
 if GEMINI_AVAILABLE:
     NODE_CLASS_MAPPINGS["ArchAi3D_Gemini"] = ArchAi3D_Gemini
+
+# Conditionally register Panorama nodes (requires py360convert)
+if PY360_AVAILABLE:
+    NODE_CLASS_MAPPINGS["ArchAi3D_PanoramaToCubemap"] = ArchAi3D_PanoramaToCubemap
+    NODE_CLASS_MAPPINGS["ArchAi3D_CubemapToPanorama"] = ArchAi3D_CubemapToPanorama
+
+# Batch Split/Merge nodes (no extra dependencies)
+NODE_CLASS_MAPPINGS["ArchAi3D_BatchToSixImages"] = ArchAi3D_BatchToSixImages
+NODE_CLASS_MAPPINGS["ArchAi3D_SixImagesToBatch"] = ArchAi3D_SixImagesToBatch
+NODE_CLASS_MAPPINGS["ArchAi3D_CircleMask"] = ArchAi3D_CircleMask
+NODE_CLASS_MAPPINGS["ArchAi3D_PromptLine"] = ArchAi3D_PromptLine
 
 # ============================================================================
 # DISPLAY NAMES
@@ -526,6 +552,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Average_Color": "🎨 Average Color",
     "ArchAi3D_Solid_Color_Image": "🎨 Solid Color Image",
     "ArchAi3D_Mask_Crop_Rotate": "✂️ Mask Crop & Rotate",
+    "ArchAi3D_Mask_Uncrop": "🔙 Mask Uncrop (Stitch-Back)",
     "ArchAi3D_Panorama_Offset": "🔄 Panorama Offset",
     "ArchAi3D_HighPass_Blend": "✨ High-Pass Filter + Blend",
     "ArchAi3D_Any_Index_Switch": "🔀 Any Index Switch",
@@ -573,6 +600,16 @@ NODE_DISPLAY_NAME_MAPPINGS = {
 # Conditionally register Gemini display name
 if GEMINI_AVAILABLE:
     NODE_DISPLAY_NAME_MAPPINGS["ArchAi3D_Gemini"] = "🤖 Gemini API"
+
+# Conditionally register Panorama display names
+if PY360_AVAILABLE:
+    NODE_DISPLAY_NAME_MAPPINGS["ArchAi3D_PanoramaToCubemap"] = "🌐 Panorama to Cubemap"
+    NODE_DISPLAY_NAME_MAPPINGS["ArchAi3D_CubemapToPanorama"] = "🌐 Cubemap to Panorama"
+
+NODE_DISPLAY_NAME_MAPPINGS["ArchAi3D_BatchToSixImages"] = "🌐 Batch to 6 Images"
+NODE_DISPLAY_NAME_MAPPINGS["ArchAi3D_SixImagesToBatch"] = "🌐 6 Images to Batch"
+NODE_DISPLAY_NAME_MAPPINGS["ArchAi3D_CircleMask"] = "🌐 Circle Mask"
+NODE_DISPLAY_NAME_MAPPINGS["ArchAi3D_PromptLine"] = "🌐 Prompt Line"
 
 # ============================================================================
 # WEB DIRECTORY (for custom UI elements)
