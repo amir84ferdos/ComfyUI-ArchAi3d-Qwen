@@ -5,6 +5,124 @@ All notable changes to the ArchAi3D Qwen ComfyUI Custom Nodes project will be do
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.42] - 2026-02-17
+
+### Added — VRAM Pinning, Auto-Free Memory, Loader Enhancements
+
+#### VRAM Pin System (`dram_cache.py`)
+
+- **Pin models to GPU VRAM** — protected from ComfyUI's auto-eviction under `--normalvram`
+- Monkey-patches `mm.free_memory()` to inject pinned models into `keep_loaded` list
+- Lazy patch installation — zero overhead if `keep_on_vram` is never used
+- `WeakSet` tracking — pins auto-clean when models are garbage collected
+- Functions: `pin_model()`, `unpin_model()`, `is_pinned()`, `unpin_all()`, `get_pinned_count()`
+
+#### Auto-Free Memory System (`dram_cache.py`)
+
+- **`ensure_free_memory()`** — threshold-based cleanup before loading new models
+- Checks free VRAM and/or free RAM against user-defined thresholds
+- If VRAM low: unpins all models, asks ComfyUI to evict, clears CUDA cache
+- If RAM low: clears all DRAM cache entries
+- Only triggers when loading a DIFFERENT model (same model reuses cache)
+- Solves RunPod serverless orphaned model problem without handler modifications
+
+#### Loader Node Enhancements (all 3 loaders)
+
+- **`keep_on_vram` toggle** — pin model to GPU permanently, smart detection:
+  - Same model already pinned → returns cached instantly (no disk I/O)
+  - Model name changed → unpins old, loads + pins new
+  - Toggle switched to DRAM mode → unpins and enters DRAM path
+- **`auto_free_vram` toggle + `min_free_vram_gb` threshold** — auto-cleanup VRAM before disk load
+- **`auto_free_dram` toggle + `min_free_dram_gb` threshold** — auto-cleanup RAM before disk load
+- Full parameter descriptions in node DESCRIPTION field
+
+#### Memory Cleanup Node Enhancement
+
+- Added `unpin_all_vram` toggle (default: True) — removes all VRAM pins on cleanup
+
+### Changed
+
+- `get_memory_stats()` now shows `[PINNED]` tag on pinned models and pinned count
+- DRAM_CACHE_GUIDE.md updated to v1.5.0 with new sections for VRAM pinning and auto-free
+
+### Removed — Research Docs (moved to private repo)
+
+- Moved 6 internal research/dev note files to `runpod-comfyui-worker` repo
+- Added `.gitignore` entries to prevent re-addition
+- Deleted `.bak` backup files
+
+---
+
+## [3.41] - 2026-02-17
+
+### Added — DRAM Cache Memory Management System
+
+#### New Nodes (3)
+
+- **Offload Model to DRAM** (`nodes/utils/archai3d_offload_model.py`):
+  - Moves diffusion model weights from VRAM to CPU RAM
+  - Passthrough output: connects KSampler LATENT → VAE Decode
+  - Outputs: memory_stats (STRING), dram_id (STRING), passthrough (*)
+
+- **Offload CLIP to DRAM** (`nodes/utils/archai3d_offload_clip.py`):
+  - Moves CLIP text encoder weights from VRAM to CPU RAM
+  - Passthrough output: connects CLIPTextEncode CONDITIONING → KSampler
+  - Outputs: memory_stats (STRING), dram_id (STRING), passthrough (*)
+
+- **Memory Cleanup** (`nodes/utils/archai3d_memory_cleanup.py`):
+  - Three toggles: clear DRAM cache, clear VRAM, clear CUDA cache
+  - Use when switching between workflows or freeing system RAM
+
+#### New Module
+
+- **dram_cache.py** (`nodes/utils/dram_cache.py`):
+  - Core shared DRAM cache module — persistent CPU RAM model storage
+  - Module-level `_cache` dict with strong references preventing GC
+  - VRAM state safety check warns about conflicting ComfyUI modes
+  - Functions: `store()`, `get()`, `remove()`, `clear()`, `list_cached()`, `get_memory_stats()`
+
+- **local_model_cache.py** (`nodes/utils/local_model_cache.py`):
+  - RunPod SSD optimization — copies network models to local /tmp/ SSD
+  - No-op on local PCs (only activates for /workspace/ paths)
+  - Independent from DRAM cache, both can be active simultaneously
+
+### Changed — Triggered Loaders (DRAM Integration)
+
+- **Load Diffusion Model, Load CLIP, Load Dual CLIP**:
+  - Added `use_dram` toggle (default: True) — check DRAM cache before disk load
+  - Added `cache_to_local_ssd` toggle (default: True) — RunPod SSD optimization
+  - Added `memory_stats` STRING output (backwards compatible extra output)
+  - Added dynamic `IS_CHANGED` — returns `time.time()` when use_dram=True (forces DRAM check every run)
+  - Cache key attached to model as `._dram_cache_key` for offload node to read
+  - DRAM hit = ~1s reload from CPU RAM vs ~8s from disk
+
+### Documentation
+
+- **DRAM_CACHE_GUIDE.md**: Comprehensive developer & maintenance guide
+  - Full ComfyUI API dependency reference (15 APIs documented)
+  - Step-by-step upgrade procedure for new ComfyUI versions
+  - Common breaking changes table with fixes
+  - Linux swap prevention guide (vm.swappiness)
+  - Troubleshooting section
+
+### Added — Utility Nodes (earlier in v3.x)
+
+- **Mask Uncrop** — stitch cropped/rotated region back into original image
+- **Batch Split/Merge** — split batch to 6 images and back (cubemap workflows)
+- **Circle Mask** — generate circular/elliptical masks
+- **Prompt Line** — extract specific line from multiline text
+- **Panorama Conversion** — equirectangular ↔ cubemap conversion (requires py360convert)
+- **Extract Region Text** — extract text within bounding box coordinates
+
+### Technical Notes
+
+- **Tested on:** ComfyUI v0.14.0, RTX 3090 Ti (24GB), 64GB RAM
+- **Startup flags required:** `--normalvram --cache-classic`
+- **Linux:** Set `vm.swappiness=10` to prevent model pages being swapped to disk
+- **Reference workflow:** `workflows/DRAM_qwen_image_edit_2511.json`
+
+---
+
 ## [2.4.0] - 2025-01-07
 
 ### Added - Cinematography Prompt Builder Enhancements ⭐

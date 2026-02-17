@@ -1,75 +1,101 @@
 # ComfyUI-ArchAi3d-Qwen - Folder Structure
 
-**Version:** 3.0.0
-**Date:** 2025-10-15
-**Status:** ✅ Reorganized and Optimized
+**Version:** 3.41
+**Date:** 2026-02-17
+**Status:** ✅ Active Development
 
 ---
 
-## 📁 New Folder Structure
+## 📁 Folder Structure
 
 ```
 ComfyUI-ArchAi3d-Qwen/
-├── __init__.py                          # Main registration file (18 nodes)
-├── LICENSE
-├── license_file.txt
+├── __init__.py                          # Main registration (100+ nodes)
+├── LICENSE / license_file.txt
+├── CHANGELOG.md                         # Version history
+├── DRAM_CACHE_GUIDE.md                  # ★ DRAM cache developer & upgrade guide
+├── STRUCTURE.md                         # This file
 │
 ├── nodes/                               # All node files (organized)
 │   ├── __init__.py
 │   │
-│   ├── core/                            # Core encoding nodes (7 nodes)
-│   │   ├── __init__.py
-│   │   │
-│   │   ├── encoders/                    # Encoder nodes (4 nodes)
-│   │   │   ├── __init__.py
+│   ├── core/                            # Core encoding nodes
+│   │   ├── encoders/                    # 5 Qwen encoder variants
 │   │   │   ├── archai3d_qwen_encoder.py
 │   │   │   ├── archai3d_qwen_encoder_v2.py
 │   │   │   ├── archai3d_qwen_encoder_simple.py
-│   │   │   └── archai3d_qwen_encoder_simple_v2.py
+│   │   │   ├── archai3d_qwen_encoder_simple_v2.py
+│   │   │   └── archai3d_qwen_encoder_v3.py
 │   │   │
-│   │   ├── utils/                       # Utility nodes (2 nodes)
-│   │   │   ├── __init__.py
+│   │   ├── utils/                       # Image scale, stitch
 │   │   │   ├── archai3d_qwen_image_scale.py
-│   │   │   └── archai3d_qwen_system_prompt.py
+│   │   │   ├── archai3d_qwen_image_scale_v2.py
+│   │   │   ├── archai3d_qwen_image_stitch.py
+│   │   │   └── archai3d_qwen_system_prompt.py (moved here)
 │   │   │
-│   │   └── prompts/                     # Prompt builder nodes (1 node)
-│   │       ├── __init__.py
+│   │   └── prompts/                     # Prompt builders
 │   │       └── archai3d_clean_room_prompt.py
 │   │
-│   ├── camera/                          # Camera control nodes (7 nodes)
-│   │   ├── __init__.py
-│   │   ├── archai3d_qwen_camera_view.py
-│   │   ├── archai3d_qwen_object_rotation.py
-│   │   ├── archai3d_qwen_object_rotation_v2.py
-│   │   ├── archai3d_qwen_person_perspective.py
-│   │   ├── archai3d_qwen_scene_photographer.py ⭐ NEW
-│   │   ├── archai3d_qwen_camera_view_selector.py ⭐ NEW
-│   │   └── archai3d_qwen_environment_navigator.py ⭐ NEW
+│   ├── camera/                          # Camera control (28 nodes)
+│   │   ├── object_focus_camera_v1-v7.py # 7 versions
+│   │   ├── simple_camera_control.py
+│   │   ├── cinematography_prompt_builder.py
+│   │   ├── dx8152_camera_lora.py
+│   │   ├── archai3d_qwen_exterior_*.py  # 3 exterior nodes
+│   │   ├── archai3d_qwen_interior_*.py  # 3 interior nodes
+│   │   ├── archai3d_qwen_object_*.py    # 3 object control nodes
+│   │   ├── archai3d_qwen_person_*.py    # 5 person control nodes
+│   │   └── archai3d_qwen_scene_photographer.py
 │   │
-│   └── editing/                         # Image editing nodes (4 nodes)
-│       ├── __init__.py
-│       ├── archai3d_qwen_material_changer.py ⭐ NEW
-│       ├── archai3d_qwen_watermark_removal.py ⭐ NEW
-│       ├── archai3d_qwen_colorization.py ⭐ NEW
-│       └── archai3d_qwen_style_transfer.py ⭐ NEW
+│   ├── editing/                         # Image editing (4 nodes)
+│   │   ├── archai3d_qwen_material_changer.py
+│   │   ├── archai3d_qwen_watermark_removal.py
+│   │   ├── archai3d_qwen_colorization.py
+│   │   └── archai3d_qwen_style_transfer.py
+│   │
+│   ├── inputs/                          # Input & loader nodes
+│   │   ├── archai3d_triggered_loaders.py # ★ Load Model/CLIP/DualCLIP + DRAM
+│   │   ├── archai3d_qwenvl_gguf.py      # QwenVL GGUF inference
+│   │   ├── archai3d_gemini.py           # Gemini API
+│   │   ├── archai3d_*_input.py          # String, Int, Float, Boolean inputs
+│   │   ├── archai3d_load_image_url.py
+│   │   ├── archai3d_save_image.py
+│   │   ├── archai3d_conditioning_balance.py
+│   │   ├── archai3d_*_download.py       # HF, CivitAI, GDrive downloaders
+│   │   └── archai3d_llama_cpp_installer.py
+│   │
+│   ├── utils/                           # Utility nodes (50+ nodes)
+│   │   ├── dram_cache.py                # ★ DRAM cache core module
+│   │   ├── archai3d_offload_model.py    # ★ Offload Model to DRAM
+│   │   ├── archai3d_offload_clip.py     # ★ Offload CLIP to DRAM
+│   │   ├── archai3d_memory_cleanup.py   # ★ Memory Cleanup
+│   │   ├── local_model_cache.py         # RunPod SSD optimization
+│   │   ├── archai3d_smart_usdu*.py      # Smart USDU variants
+│   │   ├── archai3d_smart_tile_*.py     # Smart Tile system
+│   │   ├── archai3d_color_*.py          # Color correction tools
+│   │   ├── archai3d_mask_*.py           # Mask tools
+│   │   ├── archai3d_panorama_*.py       # Panorama tools
+│   │   ├── archai3d_batch_*.py          # Batch processing
+│   │   ├── sam3/                         # SAM3 segmentation library
+│   │   ├── metric3d_lib/                 # Metric3D depth/normal library
+│   │   ├── smart_usdu/                   # Smart USDU shared library
+│   │   └── usdu_simple/                  # Modular tile processing
+│   │
+│   └── outputs/                         # Output/export nodes
+│       └── save_splat_scene.py          # SPZ + camera export
 │
-├── docs/                                # All documentation (clean!)
-│   ├── README.md                        # Main documentation (updated)
-│   ├── NEW_NODES_README.md              # Quick reference for 7 new nodes
-│   ├── QWEN_PROMPT_GUIDE.md             # Complete prompt engineering guide
-│   ├── CAMERA_CONTROL_GUIDE.md          # Camera control guide
-│   ├── OBJECT_ROTATION_V2_GUIDE.md      # Object rotation guide
-│   ├── PERSON_PERSPECTIVE_GUIDE.md      # Person perspective guide
-│   ├── CINEMATOGRAPHY_PRESETS_GUIDE.md  # Cinematography presets
-│   ├── CAMERA_SYSTEM_PROMPTS.md         # System prompts
-│   ├── PROMPT_REFERENCE.md              # Quick prompt reference
-│   └── ROADMAP.md                       # Development roadmap
+├── workflows/                           # Reference workflows
+│   └── DRAM_qwen_image_edit_2511.json  # ★ DRAM cache example workflow
 │
-├── config/                              # Configuration files
+├── docs/                                # Documentation
+│   ├── README.md
+│   ├── QWEN_PROMPT_GUIDE.md
+│   └── ... (camera, prompt, cinematography guides)
+│
+├── config/
 │   └── materials.yaml                   # Material presets (user-editable)
 │
-└── web/                                 # Web UI resources
-    └── (custom UI elements)
+└── web/                                 # Custom UI elements
 ```
 
 ---

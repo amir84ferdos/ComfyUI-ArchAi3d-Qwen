@@ -20,6 +20,10 @@ class ArchAi3D_Memory_Cleanup:
     def INPUT_TYPES(cls):
         return {
             "required": {
+                "unpin_all_vram": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "Remove all VRAM pins. Pinned models become eligible for auto-eviction again."
+                }),
                 "clear_dram_cache": ("BOOLEAN", {
                     "default": True,
                     "tooltip": "Remove all models from DRAM cache. Forces disk reload on next use."
@@ -49,8 +53,12 @@ class ArchAi3D_Memory_Cleanup:
     def IS_CHANGED(cls, **kwargs):
         return time.time()
 
-    def cleanup(self, clear_dram_cache, clear_vram, clear_cuda_cache):
+    def cleanup(self, unpin_all_vram, clear_dram_cache, clear_vram, clear_cuda_cache):
         actions = []
+
+        if unpin_all_vram:
+            dram_cache.unpin_all()
+            actions.append("VRAM pins cleared")
 
         if clear_dram_cache:
             dram_cache.clear()

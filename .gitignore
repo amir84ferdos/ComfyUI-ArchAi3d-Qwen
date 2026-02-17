@@ -50,6 +50,16 @@ gemini_cache.json
 notes/
 scratch/
 
+# Internal research/dev notes (moved to runpod-comfyui-worker)
+CINEMATOGRAPHY_PROMPT_BUILDER_COMPLETE.md
+CINEMATOGRAPHY_PROMPT_BUILDER_TESTS.md
+CUSTOM_DETAILS_TOOLTIP_ENHANCEMENT.md
+HORIZONTAL_ANGLE_PERSPECTIVE_CORRECTION.md
+PROMPT_FORMAT_FIXES.md
+SYSTEM_PROMPT_UPDATE.md
+COMFYUI_LAUNCH_ARGS.md
+*.bak
+
 # Local config files
 .mcp.json
 
