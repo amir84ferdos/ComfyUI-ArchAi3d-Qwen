@@ -1,14 +1,17 @@
 """
 Triggered Loader Nodes for ComfyUI
 Load diffusion models and CLIP with trigger inputs for execution order control.
+Supports DRAM cache for fast model reload across workflow runs.
 
 Author: Amir Ferdos (ArchAi3d)
 """
 
+import time
 import torch
 import folder_paths
 import comfy.sd
 from ..utils.local_model_cache import copy_to_local
+from ..utils.dram_cache import get as dram_get, get_memory_stats
 
 
 class ArchAi3D_Load_Diffusion_Model:
@@ -29,6 +32,10 @@ class ArchAi3D_Load_Diffusion_Model:
                 "trigger": ("*", {
                     "tooltip": "Connect to any output to ensure this node runs after that node completes"
                 }),
+                "use_dram": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "Check DRAM cache for previously offloaded model. Much faster than disk reload."
+                }),
                 "cache_to_local_ssd": ("BOOLEAN", {
                     "default": True,
                     "tooltip": "RunPod: copy model to local SSD for faster loading. No effect on local PC."
@@ -36,14 +43,30 @@ class ArchAi3D_Load_Diffusion_Model:
             }
         }
 
-    RETURN_TYPES = ("MODEL",)
-    RETURN_NAMES = ("model",)
+    RETURN_TYPES = ("MODEL", "STRING")
+    RETURN_NAMES = ("model", "memory_stats")
     FUNCTION = "load_unet"
     CATEGORY = "ArchAi3D/Loaders"
-    DESCRIPTION = "Load a diffusion model (UNET) with optional trigger for execution order control."
+    DESCRIPTION = "Load a diffusion model (UNET) with optional trigger for execution order control. When use_dram=True, checks DRAM cache first for fast reload."
 
-    def load_unet(self, unet_name, weight_dtype, trigger=None, cache_to_local_ssd=True):
-        # Trigger is ignored - it only creates execution dependency
+    @classmethod
+    def IS_CHANGED(cls, **kwargs):
+        if kwargs.get("use_dram", True):
+            return time.time()  # Force re-execution to always check DRAM
+        return "v3"
+
+    def load_unet(self, unet_name, weight_dtype, trigger=None, use_dram=True, cache_to_local_ssd=True):
+        cache_key = f"unet:{unet_name}:{weight_dtype}"
+
+        # Check DRAM cache first (fast reload from CPU RAM)
+        if use_dram:
+            cached = dram_get(cache_key)
+            if cached is not None:
+                print(f"[DRAM HIT] {unet_name} loaded from DRAM | dram_id: {cache_key}")
+                return (cached, get_memory_stats())
+            print(f"[DRAM MISS] {unet_name} not in DRAM cache, loading from disk | dram_id: {cache_key}")
+
+        # Load from disk (slow path) — SSD cache is independent
         model_options = {}
 
         if weight_dtype == "fp8_e4m3fn":
@@ -57,7 +80,8 @@ class ArchAi3D_Load_Diffusion_Model:
         unet_path = folder_paths.get_full_path_or_raise("diffusion_models", unet_name)
         unet_path = copy_to_local(unet_path, enabled=cache_to_local_ssd)
         model = comfy.sd.load_diffusion_model(unet_path, model_options=model_options)
-        return (model,)
+        model._dram_cache_key = cache_key
+        return (model, get_memory_stats())
 
 
 class ArchAi3D_Load_CLIP:
@@ -109,6 +133,10 @@ class ArchAi3D_Load_CLIP:
                 "trigger": ("*", {
                     "tooltip": "Connect to any output to ensure this node runs after that node completes"
                 }),
+                "use_dram": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "Check DRAM cache for previously offloaded CLIP. Much faster than disk reload."
+                }),
                 "device": (["default", "cpu"], {
                     "tooltip": "Device to load CLIP on. Use 'cpu' to save VRAM."
                 }),
@@ -119,11 +147,11 @@ class ArchAi3D_Load_CLIP:
             }
         }
 
-    RETURN_TYPES = ("CLIP",)
-    RETURN_NAMES = ("clip",)
+    RETURN_TYPES = ("CLIP", "STRING")
+    RETURN_NAMES = ("clip", "memory_stats")
     FUNCTION = "load_clip"
     CATEGORY = "ArchAi3D/Loaders"
-    DESCRIPTION = """Load CLIP text encoder with trigger for execution order control.
+    DESCRIPTION = """Load CLIP text encoder with trigger for execution order control. When use_dram=True, checks DRAM cache first.
 
 [Recipes]
 stable_diffusion: clip-l
@@ -138,9 +166,24 @@ hidream: llama-3.1 or t5
 omnigen2: qwen vl 2.5 3B
 qwen_image: Qwen VL models"""
 
-    def load_clip(self, clip_name, type, trigger=None, device="default", cache_to_local_ssd=True):
-        # Trigger is ignored - it only creates execution dependency
-        # Use getattr for dynamic enum lookup (matches original ComfyUI)
+    @classmethod
+    def IS_CHANGED(cls, **kwargs):
+        if kwargs.get("use_dram", True):
+            return time.time()
+        return "v3"
+
+    def load_clip(self, clip_name, type, trigger=None, use_dram=True, device="default", cache_to_local_ssd=True):
+        cache_key = f"clip:{clip_name}:{type}"
+
+        # Check DRAM cache first (fast reload from CPU RAM)
+        if use_dram:
+            cached = dram_get(cache_key)
+            if cached is not None:
+                print(f"[DRAM HIT] {clip_name} loaded from DRAM | dram_id: {cache_key}")
+                return (cached, get_memory_stats())
+            print(f"[DRAM MISS] {clip_name} not in DRAM cache, loading from disk | dram_id: {cache_key}")
+
+        # Load from disk (slow path) — SSD cache is independent
         clip_type = getattr(comfy.sd.CLIPType, type.upper(), comfy.sd.CLIPType.STABLE_DIFFUSION)
 
         model_options = {}
@@ -155,7 +198,8 @@ qwen_image: Qwen VL models"""
             clip_type=clip_type,
             model_options=model_options
         )
-        return (clip,)
+        clip._dram_cache_key = cache_key
+        return (clip, get_memory_stats())
 
 
 class ArchAi3D_Load_Dual_CLIP:
@@ -200,6 +244,10 @@ class ArchAi3D_Load_Dual_CLIP:
                 "trigger": ("*", {
                     "tooltip": "Connect to any output to ensure this node runs after that node completes"
                 }),
+                "use_dram": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "Check DRAM cache for previously offloaded CLIP. Much faster than disk reload."
+                }),
                 "device": (["default", "cpu"], {
                     "tooltip": "Device to load CLIP on. Use 'cpu' to save VRAM."
                 }),
@@ -210,11 +258,11 @@ class ArchAi3D_Load_Dual_CLIP:
             }
         }
 
-    RETURN_TYPES = ("CLIP",)
-    RETURN_NAMES = ("clip",)
+    RETURN_TYPES = ("CLIP", "STRING")
+    RETURN_NAMES = ("clip", "memory_stats")
     FUNCTION = "load_clip"
     CATEGORY = "ArchAi3D/Loaders"
-    DESCRIPTION = """Load two CLIP text encoders with trigger for execution order control.
+    DESCRIPTION = """Load two CLIP text encoders with trigger for execution order control. When use_dram=True, checks DRAM cache first.
 
 [Recipes]
 sdxl: clip-l, clip-g
@@ -224,8 +272,24 @@ hidream: t5 + llama (recommended)
 hunyuan_image: qwen2.5vl 7b, byt5 small
 newbie: gemma-3-4b-it, jina clip v2"""
 
-    def load_clip(self, clip_name1, clip_name2, type, trigger=None, device="default", cache_to_local_ssd=True):
-        # Trigger is ignored - it only creates execution dependency
+    @classmethod
+    def IS_CHANGED(cls, **kwargs):
+        if kwargs.get("use_dram", True):
+            return time.time()
+        return "v3"
+
+    def load_clip(self, clip_name1, clip_name2, type, trigger=None, use_dram=True, device="default", cache_to_local_ssd=True):
+        cache_key = f"dualclip:{clip_name1}:{clip_name2}:{type}"
+
+        # Check DRAM cache first (fast reload from CPU RAM)
+        if use_dram:
+            cached = dram_get(cache_key)
+            if cached is not None:
+                print(f"[DRAM HIT] {clip_name1}+{clip_name2} loaded from DRAM | dram_id: {cache_key}")
+                return (cached, get_memory_stats())
+            print(f"[DRAM MISS] {clip_name1}+{clip_name2} not in DRAM, loading from disk | dram_id: {cache_key}")
+
+        # Load from disk (slow path) — SSD cache is independent
         clip_type = getattr(comfy.sd.CLIPType, type.upper(), comfy.sd.CLIPType.STABLE_DIFFUSION)
 
         clip_path1 = folder_paths.get_full_path_or_raise("text_encoders", clip_name1)
@@ -243,7 +307,8 @@ newbie: gemma-3-4b-it, jina clip v2"""
             clip_type=clip_type,
             model_options=model_options
         )
-        return (clip,)
+        clip._dram_cache_key = cache_key
+        return (clip, get_memory_stats())
 
 
 # Node mappings for ComfyUI registration

@@ -104,6 +104,8 @@ def main():
         # For fast HuggingFace downloads
         ("hf_transfer", "hf_transfer", "Fast HF downloads"),
         ("huggingface_hub", "huggingface_hub", "HuggingFace Hub"),
+        # For Panorama Conversion nodes
+        ("py360convert", "py360convert", "Panorama conversion"),
     ]
 
     # Install core dependencies

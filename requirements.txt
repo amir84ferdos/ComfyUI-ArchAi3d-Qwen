@@ -1,12 +1,10 @@
 # ArchAi3D Qwen ComfyUI Custom Nodes - Dependencies
 # Install with: pip install -r requirements.txt
 
-# Core dependencies
+# Core dependencies (torch/torchvision provided by ComfyUI - never list here or pip will downgrade)
 PyYAML>=6.0
 numpy
 Pillow
-torch
-torchvision
 requests
 
 # For SAM3 Segment node

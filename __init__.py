@@ -194,13 +194,21 @@ from .nodes.utils.archai3d_highpass_blend import ArchAi3D_HighPass_Blend
 from .nodes.utils.archai3d_any_index_switch import ArchAi3D_Any_Index_Switch
 from .nodes.utils.archai3d_extract_region_text import ArchAi3D_Extract_Region_Text
 
-# Panorama Conversion Nodes (optional - requires py360convert)
+# Panorama Conversion Nodes (requires py360convert - auto-install if missing)
+try:
+    import py360convert
+except ImportError:
+    import subprocess
+    print("[ArchAi3d] py360convert not found, installing...")
+    import sys as _sys
+    subprocess.check_call([_sys.executable, "-m", "pip", "install", "py360convert", "--quiet"])
+
 try:
     from .nodes.utils.archai3d_panorama_conversion import ArchAi3D_PanoramaToCubemap, ArchAi3D_CubemapToPanorama
     PY360_AVAILABLE = True
 except ImportError:
     PY360_AVAILABLE = False
-    print("[ArchAi3d] py360convert not installed. Panorama conversion nodes disabled.")
+    print("[ArchAi3d] py360convert installation failed. Panorama conversion nodes disabled.")
 
 from .nodes.utils.archai3d_batch_split_merge import ArchAi3D_BatchToSixImages, ArchAi3D_SixImagesToBatch
 from .nodes.utils.archai3d_circle_mask import ArchAi3D_CircleMask
@@ -208,6 +216,11 @@ from .nodes.utils.archai3d_multi_prompt import ArchAi3D_PromptLine
 
 from .nodes.utils.nunchaku_installer import ArchAi3D_Nunchaku_Installer
 from .nodes.utils.dependency_installer import ArchAi3D_Dependency_Installer
+
+# Memory Management Nodes (DRAM Cache)
+from .nodes.utils.archai3d_offload_model import ArchAi3D_Offload_Model
+from .nodes.utils.archai3d_offload_clip import ArchAi3D_Offload_CLIP
+from .nodes.utils.archai3d_memory_cleanup import ArchAi3D_Memory_Cleanup
 
 # ============================================================================
 # 3D EXPORT NODES
@@ -397,6 +410,11 @@ NODE_CLASS_MAPPINGS = {
     # Installer Nodes
     "ArchAi3D_Nunchaku_Installer": ArchAi3D_Nunchaku_Installer,
     "ArchAi3D_Dependency_Installer": ArchAi3D_Dependency_Installer,
+
+    # Memory Management (DRAM Cache)
+    "ArchAi3D_Offload_Model": ArchAi3D_Offload_Model,
+    "ArchAi3D_Offload_CLIP": ArchAi3D_Offload_CLIP,
+    "ArchAi3D_Memory_Cleanup": ArchAi3D_Memory_Cleanup,
 
     # Simple USDU - Modular Tile Processing (merged from usdu_simple)
     **USDU_SIMPLE_NODES,
@@ -592,6 +610,11 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # Installer Nodes
     "ArchAi3D_Nunchaku_Installer": "🔧 Nunchaku Installer",
     "ArchAi3D_Dependency_Installer": "🔧 Dependency Installer",
+
+    # Memory Management (DRAM Cache)
+    "ArchAi3D_Offload_Model": "🧠 Offload Model to DRAM",
+    "ArchAi3D_Offload_CLIP": "🧠 Offload CLIP to DRAM",
+    "ArchAi3D_Memory_Cleanup": "🧠 Memory Cleanup",
 
     # Simple USDU - Modular Tile Processing (merged from usdu_simple)
     **USDU_SIMPLE_NAMES,
