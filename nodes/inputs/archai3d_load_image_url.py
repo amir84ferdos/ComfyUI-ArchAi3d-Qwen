@@ -72,7 +72,6 @@ class ArchAi3D_Load_Image_URL:
     RETURN_NAMES = ("IMAGE", "MASK")
     FUNCTION = "execute"
     CATEGORY = "ArchAi3d/Inputs"
-    OUTPUT_NODE = True
 
     def _is_local_path(self, path):
         """Check if the path is a local file path."""
