@@ -213,6 +213,8 @@ except ImportError:
 from .nodes.utils.archai3d_batch_split_merge import ArchAi3D_BatchToSixImages, ArchAi3D_SixImagesToBatch
 from .nodes.utils.archai3d_circle_mask import ArchAi3D_CircleMask
 from .nodes.utils.archai3d_multi_prompt import ArchAi3D_PromptLine
+from .nodes.utils.archai3d_seed_list import ArchAi3D_SeedList
+from .nodes.utils.archai3d_float_list import ArchAi3D_FloatList
 
 from .nodes.utils.nunchaku_installer import ArchAi3D_Nunchaku_Installer
 from .nodes.utils.dependency_installer import ArchAi3D_Dependency_Installer
@@ -434,6 +436,8 @@ NODE_CLASS_MAPPINGS["ArchAi3D_BatchToSixImages"] = ArchAi3D_BatchToSixImages
 NODE_CLASS_MAPPINGS["ArchAi3D_SixImagesToBatch"] = ArchAi3D_SixImagesToBatch
 NODE_CLASS_MAPPINGS["ArchAi3D_CircleMask"] = ArchAi3D_CircleMask
 NODE_CLASS_MAPPINGS["ArchAi3D_PromptLine"] = ArchAi3D_PromptLine
+NODE_CLASS_MAPPINGS["ArchAi3D_SeedList"] = ArchAi3D_SeedList
+NODE_CLASS_MAPPINGS["ArchAi3D_FloatList"] = ArchAi3D_FloatList
 
 # ============================================================================
 # DISPLAY NAMES
@@ -633,6 +637,8 @@ NODE_DISPLAY_NAME_MAPPINGS["ArchAi3D_BatchToSixImages"] = "🌐 Batch to 6 Image
 NODE_DISPLAY_NAME_MAPPINGS["ArchAi3D_SixImagesToBatch"] = "🌐 6 Images to Batch"
 NODE_DISPLAY_NAME_MAPPINGS["ArchAi3D_CircleMask"] = "🌐 Circle Mask"
 NODE_DISPLAY_NAME_MAPPINGS["ArchAi3D_PromptLine"] = "🌐 Prompt Line"
+NODE_DISPLAY_NAME_MAPPINGS["ArchAi3D_SeedList"] = "🎲 Seed List"
+NODE_DISPLAY_NAME_MAPPINGS["ArchAi3D_FloatList"] = "🎛️ Float List"
 
 # ============================================================================
 # WEB DIRECTORY (for custom UI elements)
