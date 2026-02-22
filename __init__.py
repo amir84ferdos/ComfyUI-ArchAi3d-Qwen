@@ -103,14 +103,12 @@ from .nodes.editing.archai3d_qwen_style_transfer import ArchAi3D_Qwen_Style_Tran
 
 from .nodes.utils.archai3d_mask_to_position_guide import ArchAi3D_Mask_To_Position_Guide
 from .nodes.utils.archai3d_smart_tile_calculator import ArchAi3D_Smart_Tile_Calculator
-from .nodes.utils.archai3d_smart_tile_prompter import ArchAi3D_Smart_Tile_Prompter
 from .nodes.utils.archai3d_smart_tile_segs import ArchAi3D_Smart_Tile_SEGS
 from .nodes.utils.archai3d_smart_tile_conditioning import ArchAi3D_Smart_Tile_Conditioning
 from .nodes.utils.archai3d_smart_tile_detailer import ArchAi3D_Smart_Tile_Detailer
 from .nodes.utils.archai3d_segs_mask_blur import ArchAi3D_SEGS_Mask_Blur
 from .nodes.utils.archai3d_segs_mask_irregularity import ArchAi3D_SEGS_Mask_Irregularity
 from .nodes.utils.archai3d_segs_to_bundle import ArchAi3D_SEGS_To_Bundle
-from .nodes.utils.archai3d_smart_tile_prompter_turbo import ArchAi3D_Smart_Tile_Prompter_Turbo
 from .nodes.utils.archai3d_smart_tile_segs_blur import ArchAi3D_Smart_Tile_SEGS_Blur
 from .nodes.utils.archai3d_smart_tile_merger import ArchAi3D_Smart_Tile_Merger
 from .nodes.utils.archai3d_smart_tile_sampler import ArchAi3D_Smart_Tile_Sampler
@@ -175,8 +173,6 @@ try:
     from .nodes.inputs.archai3d_gemini import ArchAi3D_Gemini, GEMINI_AVAILABLE
 except Exception:
     GEMINI_AVAILABLE = False
-from .nodes.inputs.archai3d_qwenvl_gguf import ArchAi3D_QwenVL_GGUF, ArchAi3D_QwenVL_Server_Control
-from .nodes.inputs.archai3d_llama_cpp_installer import ArchAi3D_LlamaCpp_Installer
 from .nodes.inputs.archai3d_hf_download import ArchAi3D_HF_Download
 from .nodes.inputs.archai3d_civitai_download import ArchAi3D_CivitAI_Download
 from .nodes.inputs.archai3d_gdrive_download import ArchAi3D_GDrive_Download
@@ -324,14 +320,12 @@ NODE_CLASS_MAPPINGS = {
     # Utils
     "ArchAi3D_Mask_To_Position_Guide": ArchAi3D_Mask_To_Position_Guide,
     "ArchAi3D_Smart_Tile_Calculator": ArchAi3D_Smart_Tile_Calculator,
-    "ArchAi3D_Smart_Tile_Prompter": ArchAi3D_Smart_Tile_Prompter,
     "ArchAi3D_Smart_Tile_SEGS": ArchAi3D_Smart_Tile_SEGS,
     "ArchAi3D_Smart_Tile_Conditioning": ArchAi3D_Smart_Tile_Conditioning,
     "ArchAi3D_Smart_Tile_Detailer": ArchAi3D_Smart_Tile_Detailer,
     "ArchAi3D_SEGS_Mask_Blur": ArchAi3D_SEGS_Mask_Blur,
     "ArchAi3D_SEGS_Mask_Irregularity": ArchAi3D_SEGS_Mask_Irregularity,
     "ArchAi3D_SEGS_To_Bundle": ArchAi3D_SEGS_To_Bundle,
-    "ArchAi3D_Smart_Tile_Prompter_Turbo": ArchAi3D_Smart_Tile_Prompter_Turbo,
     "ArchAi3D_Smart_Tile_SEGS_Blur": ArchAi3D_Smart_Tile_SEGS_Blur,
     "ArchAi3D_Smart_Tile_Merger": ArchAi3D_Smart_Tile_Merger,
     "ArchAi3D_Smart_Tile_Sampler": ArchAi3D_Smart_Tile_Sampler,
@@ -385,9 +379,6 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_Save_Image": ArchAi3D_Save_Image,
     "ArchAi3D_Conditioning_Balance": ArchAi3D_Conditioning_Balance,
     "ArchAi3D_Gemini_Model": ArchAi3D_Gemini_Model,
-    "ArchAi3D_QwenVL_GGUF": ArchAi3D_QwenVL_GGUF,
-    "ArchAi3D_QwenVL_Server_Control": ArchAi3D_QwenVL_Server_Control,
-    "ArchAi3D_LlamaCpp_Installer": ArchAi3D_LlamaCpp_Installer,
 
     # Download Nodes
     "ArchAi3D_HF_Download": ArchAi3D_HF_Download,
@@ -524,14 +515,12 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # Utils
     "ArchAi3D_Mask_To_Position_Guide": "🎯 Mask to Position Guide",
     "ArchAi3D_Smart_Tile_Calculator": "🧮 Smart Tile Calculator",
-    "ArchAi3D_Smart_Tile_Prompter": "🧩 Smart Tile Prompter",
     "ArchAi3D_Smart_Tile_SEGS": "🧱 Smart Tile SEGS",
     "ArchAi3D_Smart_Tile_Conditioning": "🎯 Smart Tile Conditioning",
     "ArchAi3D_Smart_Tile_Detailer": "🔧 Smart Tile Detailer",
     "ArchAi3D_SEGS_Mask_Blur": "🌫️ SEGS Mask Blur",
     "ArchAi3D_SEGS_Mask_Irregularity": "🎭 SEGS Mask Irregularity",
     "ArchAi3D_SEGS_To_Bundle": "🔗 SEGS To Bundle",
-    "ArchAi3D_Smart_Tile_Prompter_Turbo": "🚀 Smart Tile Prompter Turbo",
     "ArchAi3D_Smart_Tile_SEGS_Blur": "🧱 Smart Tile SEGS Blur",
     "ArchAi3D_Smart_Tile_Merger": "🔀 Smart Tile Merger",
     "ArchAi3D_Smart_Tile_Sampler": "🎨 Smart Tile Sampler",
@@ -585,9 +574,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Save_Image": "💾 Save Image",
     "ArchAi3D_Conditioning_Balance": "⚖️ Conditioning Balance",
     "ArchAi3D_Gemini_Model": "🤖 Gemini Model Selector",
-    "ArchAi3D_QwenVL_GGUF": "🚀 QwenVL GGUF (Fast)",
-    "ArchAi3D_QwenVL_Server_Control": "🎛️ QwenVL Server Control",
-    "ArchAi3D_LlamaCpp_Installer": "⚙️ Llama.cpp Installer",
 
     # Download Nodes
     "ArchAi3D_HF_Download": "📥 HF Download (Rename)",
@@ -646,7 +632,7 @@ WEB_DIRECTORY = os.path.join(os.path.dirname(__file__), "web")
 # ============================================================================
 
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
-__version__ = "3.41"
+__version__ = "3.50"
 __author__ = "Amir Ferdos (ArchAi3d)"
 
 # ============================================================================
