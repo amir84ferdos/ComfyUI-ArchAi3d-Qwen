@@ -1,12 +1,14 @@
 """
 ArchAi3D Qwen Image Scale V2
-Version: 2.0.1
+Version: 2.0.2
 
 Intelligent image scaling for QwenVL with preferred aspect ratios + mask-based cropping.
 - All V1 features: Aspect selection, VL/Latent scaling, pixel-perfect alignment
 - NEW: Mask-based crop mode with padding and context factor
 - NEW: Outputs STITCH_DATA for seamless re-compositing
 - FIX: Forces stretch mode in mask_crop to prevent pixel shift when stitching
+- FIX: Debug toggle now properly disables all output (bool cast + no stray prints)
+- FIX: Debug text now includes full V1-level diagnostics (aspect lock, tolerance, divisibility)
 
 Author: Amir Ferdos (ArchAi3d)
 Email: Amir84ferdos@gmail.com
@@ -409,8 +411,8 @@ class ArchAi3D_Qwen_Image_Scale_V2:
                     "tooltip": "Resampling algorithm for latent."
                 }),
                 "latent_crop": (["disabled", "center"], {
-                    "default": "center",
-                    "tooltip": "Crop mode for latent output."
+                    "default": "disabled",
+                    "tooltip": "Crop mode for latent output. disabled: stretch to fit (no content lost). center: crop to fill frame."
                 }),
                 "latent_letterbox": ("BOOLEAN", {
                     "default": False,
@@ -448,19 +450,19 @@ class ArchAi3D_Qwen_Image_Scale_V2:
         preferred_aspect_ratio = kwargs.get("preferred_aspect_ratio", "16:9 (Panorama)")
         vl_target_area = kwargs.get("vl_target_area", 147456)
         vl_divisible_by = kwargs.get("vl_divisible_by", 32)
-        vl_use_latent_source = kwargs.get("vl_use_latent_source", True)
-        vl_ignore_latent_letterbox = kwargs.get("vl_ignore_latent_letterbox", True)
-        vl_ignore_latent_crop = kwargs.get("vl_ignore_latent_crop", True)
+        vl_use_latent_source = bool(kwargs.get("vl_use_latent_source", True))
+        vl_ignore_latent_letterbox = bool(kwargs.get("vl_ignore_latent_letterbox", True))
+        vl_ignore_latent_crop = bool(kwargs.get("vl_ignore_latent_crop", True))
         latent_target_area = kwargs.get("latent_target_area", 1048576)
         latent_divisible_by = kwargs.get("latent_divisible_by", 32)
         latent_area_tolerance = kwargs.get("latent_area_tolerance", 0.3)
         vl_upscale_method = kwargs.get("vl_upscale_method", "area")
         vl_crop = kwargs.get("vl_crop", "disabled")
-        vl_letterbox = kwargs.get("vl_letterbox", False)
+        vl_letterbox = bool(kwargs.get("vl_letterbox", False))
         latent_upscale_method = kwargs.get("latent_upscale_method", "lanczos")
-        latent_crop = kwargs.get("latent_crop", "center")
-        latent_letterbox = kwargs.get("latent_letterbox", False)
-        debug = kwargs.get("debug", True)
+        latent_crop = kwargs.get("latent_crop", "disabled")
+        latent_letterbox = bool(kwargs.get("latent_letterbox", False))
+        debug = bool(kwargs.get("debug", True))
         input_mask = kwargs.get("mask", None)
 
         # Get original dimensions
@@ -501,10 +503,6 @@ class ArchAi3D_Qwen_Image_Scale_V2:
 
                 # Crop mask to same region
                 crop_mask_tensor = input_mask[:, y1:y2, x1:x2] if len(input_mask.shape) == 3 else input_mask[y1:y2, x1:x2]
-
-                if debug:
-                    print(f"\n📏 V2 CROP MODE: Cropped to bbox ({x1}, {y1}, {x2}, {y2})")
-                    print(f"   Original: {orig_width}x{orig_height} → Cropped: {x2-x1}x{y2-y1}")
 
         # Get working image dimensions
         _, height, width, _ = working_image.shape
@@ -554,10 +552,11 @@ class ArchAi3D_Qwen_Image_Scale_V2:
         # Force stretch mode when in mask_crop to preserve ALL content for proper stitching
         # Center crop would lose content, causing pixel shift when stitching back
         effective_latent_crop = latent_crop
+        latent_crop_overridden = False
         if crop_mode == "mask_crop" and crop_bbox is not None:
+            if latent_crop != "disabled":
+                latent_crop_overridden = True
             effective_latent_crop = "disabled"  # Override: preserve all content
-            if debug and latent_crop != "disabled":
-                print(f"   ⚠️ Overriding latent_crop from '{latent_crop}' to 'disabled' for mask_crop mode")
 
         # Process LATENT
         if latent_letterbox:
@@ -654,42 +653,125 @@ class ArchAi3D_Qwen_Image_Scale_V2:
             input_area = width * height
             vl_area = vl_width * vl_height
             latent_area = latent_width * latent_height
+            preferred_aspect = w_ratio / h_ratio
+
             vl_aspect = vl_width / vl_height
             latent_aspect = latent_width / latent_height
 
+            # Aspect ratio differences
+            aspect_diff_input_preferred = abs(input_aspect - preferred_aspect) / input_aspect * 100
+            aspect_diff_vl_preferred = abs(vl_aspect - preferred_aspect) / preferred_aspect * 100
+            aspect_diff_vl_latent = abs(vl_aspect - latent_aspect) / vl_aspect * 100
+
+            # Aspect ratio selection quality
+            if aspect_diff_input_preferred < 0.1:
+                match_quality = "✅ PERFECT (0.1%)"
+            elif aspect_diff_input_preferred < 1.0:
+                match_quality = "✅ EXCELLENT (<1%)"
+            elif aspect_diff_input_preferred < 5.0:
+                match_quality = "✅ GOOD (<5%)"
+            else:
+                match_quality = f"⚠️ ADJUSTED ({aspect_diff_input_preferred:.1f}%)"
+
+            # Aspect ratio lock quality
+            if aspect_diff_vl_latent < 0.01:
+                aspect_lock_status = "✅ PERFECT - Locked at <0.01%"
+            elif aspect_diff_vl_latent < 0.1:
+                aspect_lock_status = "✅ EXCELLENT - Locked at <0.1%"
+            elif aspect_diff_vl_latent < 0.5:
+                aspect_lock_status = "✅ GOOD - Locked at <0.5%"
+            else:
+                aspect_lock_status = "⚠️ ACCEPTABLE - Check tolerance"
+
+            # Divisibility check
+            vl_w_div = "✅" if vl_width % vl_divisible_by == 0 else "❌"
+            vl_h_div = "✅" if vl_height % vl_divisible_by == 0 else "❌"
+            lat_w_div = "✅" if latent_width % latent_divisible_by == 0 else "❌"
+            lat_h_div = "✅" if latent_height % latent_divisible_by == 0 else "❌"
+            vl_div_perfect = vl_width % vl_divisible_by == 0 and vl_height % vl_divisible_by == 0
+            lat_div_perfect = latent_width % latent_divisible_by == 0 and latent_height % latent_divisible_by == 0
+            div_status = "✅ PERFECT" if (vl_div_perfect and lat_div_perfect) else "⚠️ CHECK"
+
+            # VL source display
+            if vl_use_latent_source:
+                vl_source_display = "🔗 LATENT (pixel-perfect alignment)"
+            else:
+                vl_source_display = "📥 INPUT (traditional mode)"
+
+            # Pixel alignment status
+            if vl_use_latent_source:
+                if aspect_diff_vl_latent < 0.01:
+                    pixel_alignment = "✅ PERFECT - Zero pixel shift guaranteed"
+                elif aspect_diff_vl_latent < 0.1:
+                    pixel_alignment = "✅ EXCELLENT - Minimal pixel shift"
+                else:
+                    pixel_alignment = "⚠️ GOOD - Minor aspect adjustment"
+            else:
+                pixel_alignment = "⚠️ Independent processing - Pixel shifts may occur"
+
+            # Area tolerance check
+            area_min = int(latent_target_area * (1 - latent_area_tolerance))
+            area_max = int(latent_target_area * (1 + latent_area_tolerance))
+            area_delta = latent_area - latent_target_area
+            delta_percent = (area_delta / latent_target_area) * 100
+            if area_min <= latent_area <= area_max:
+                tolerance_status = f"✅ Within ±{int(latent_area_tolerance*100)}% tolerance"
+            else:
+                tolerance_status = f"⚠️ Outside ±{int(latent_area_tolerance*100)}% tolerance"
+
+            # Processing strategy display
+            latent_process_mode = "LETTERBOX (add black bars)" if latent_letterbox else f"CROP ({effective_latent_crop})" if effective_latent_crop != "disabled" else "STRETCH (disabled)"
+
+            # Crop mode info
             crop_info = ""
             if crop_mode == "mask_crop" and crop_bbox is not None:
                 x1, y1, x2, y2 = crop_bbox
+                override_note = f"\n   ⚠️ latent_crop overridden: '{latent_crop}' → 'disabled' for mask_crop" if latent_crop_overridden else ""
                 crop_info = f"""
 🔲 CROP MODE: mask_crop
    Original: {orig_width}x{orig_height}
    Crop bbox: ({x1}, {y1}, {x2}, {y2})
    Cropped size: {x2-x1}x{y2-y1}
-   Padding: {crop_padding}px
-   Context factor: {context_factor}x
-   Blend pixels: {blend_pixels}
-   STITCH_DATA: ✅ Generated"""
+   Padding: {crop_padding}px | Context: {context_factor}x | Blend: {blend_pixels}px
+   STITCH_DATA: ✅ Generated{override_note}"""
             else:
-                crop_info = f"""
-🔲 CROP MODE: disabled (full image)
-   STITCH_DATA: None"""
+                crop_info = """
+🔲 CROP MODE: disabled (full image)"""
 
             debug_text = f"""📏 Qwen Image Scale V2 Debug Info
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━{crop_info}
 
-🎨 ASPECT RATIO:
-   Mode: {aspect_ratio_mode.upper()}
-   Selected: {ratio_name} ({w_ratio}:{h_ratio})
-   Input aspect: {input_aspect:.4f}
+🎨 ASPECT RATIO SELECTION:
+  Mode:      {aspect_ratio_mode.upper()}
+  Input:     {width} × {height} | aspect: {input_aspect:.4f}
+  Selected:  {ratio_name} | aspect: {preferred_aspect:.4f}
+  Match:     {match_quality} ({aspect_diff_input_preferred:.2f}% difference)
 
+🔧 PROCESSING STRATEGY:
+  1️⃣ LATENT: {latent_process_mode} | {latent_target_area//1000}K px target ±{int(latent_area_tolerance*100)}%
+  2️⃣ VL: Source={vl_source_display} | {vl_target_area//1000}K px target
+
+🔒 ASPECT RATIO LOCK: {aspect_lock_status}
+🎯 PIXEL ALIGNMENT: {pixel_alignment}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📐 DIMENSIONS:
-   Working: {width}x{height} = {input_area:,}px
-   VL:      {vl_width}x{vl_height} = {vl_area:,}px | aspect: {vl_aspect:.4f}
-   LATENT:  {latent_width}x{latent_height} = {latent_area:,}px | aspect: {latent_aspect:.4f}
+  INPUT:  {width:4d} × {height:4d} = {input_area:8,d} px ({input_area//1000}K) | aspect: {input_aspect:.4f}
+  VL:     {vl_width:4d} × {vl_height:4d} = {vl_area:8,d} px ({vl_area//1000}K) | aspect: {vl_aspect:.4f} ({w_ratio}:{h_ratio}) ✅
+  LATENT: {latent_width:4d} × {latent_height:4d} = {latent_area:8,d} px ({latent_area//1000}K) | aspect: {latent_aspect:.4f} ({w_ratio}:{h_ratio}) ✅
+
+📊 AREA TOLERANCE CHECK:
+  Target:  {latent_target_area:,d} px ({latent_target_area//1000}K)
+  Range:   {area_min:,d} - {area_max:,d} px ({area_min//1000}K - {area_max//1000}K)
+  Actual:  {latent_area:,d} px ({latent_area//1000}K)
+  Delta:   {area_delta:+,d} px ({delta_percent:+.1f}%) {tolerance_status}
+
+🔢 DIVISIBILITY CHECK (VL÷{vl_divisible_by}, Latent÷{latent_divisible_by}): {div_status}
+  VL:     Width {vl_w_div} ({vl_width}÷{vl_divisible_by}={vl_width/vl_divisible_by:.1f})  |  Height {vl_h_div} ({vl_height}÷{vl_divisible_by}={vl_height/vl_divisible_by:.1f})
+  LATENT: Width {lat_w_div} ({latent_width}÷{latent_divisible_by}={latent_width/latent_divisible_by:.1f})  |  Height {lat_h_div} ({latent_height}÷{latent_divisible_by}={latent_height/latent_divisible_by:.1f})
 
 📊 SCALE FACTORS:
-   VL:     {vl_width/width:.3f}x width | {vl_height/height:.3f}x height
-   LATENT: {latent_width/width:.3f}x width | {latent_height/height:.3f}x height
+  VL:     {vl_width/width:.3f}× width  |  {vl_height/height:.3f}× height
+  LATENT: {latent_width/width:.3f}× width  |  {latent_height/height:.3f}× height
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
 
             print(debug_text)
