@@ -255,16 +255,5 @@ class ArchAi3D_Load_Image_URL:
 
     @classmethod
     def VALIDATE_INPUTS(cls, name, image=None, url=None, return_image_mode="RGB", enabled=True):
-        """Validate that the image file exists."""
-        if not enabled:
-            return True
-
-        if url and url.strip():
-            # URL validation is handled at runtime
-            return True
-
-        if image and image.strip():
-            if not folder_paths.exists_annotated_filepath(image):
-                return f"Invalid image file: {image}"
-
+        """Always pass validation — execute() handles missing images gracefully."""
         return True
