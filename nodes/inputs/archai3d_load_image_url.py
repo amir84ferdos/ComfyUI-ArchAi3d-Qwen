@@ -50,12 +50,12 @@ class ArchAi3D_Load_Image_URL:
                     "multiline": False,
                     "tooltip": "Identifier name for this input (used by web interface)"
                 }),
+            },
+            "optional": {
                 "image": (sorted(files), {
                     "image_upload": True,
                     "tooltip": "Drag & drop image here, or click to browse"
                 }),
-            },
-            "optional": {
                 "url": ("STRING", {
                     "default": "",
                     "multiline": False,
@@ -64,6 +64,10 @@ class ArchAi3D_Load_Image_URL:
                 "return_image_mode": (["RGB", "RGBA", "L"], {
                     "default": "RGB",
                     "tooltip": "Output image mode: RGB (color), RGBA (with alpha), L (grayscale)"
+                }),
+                "enabled": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "When disabled, returns a 64x64 placeholder image. Useful for API calls where this input is not needed."
                 }),
             },
         }
@@ -106,11 +110,16 @@ class ArchAi3D_Load_Image_URL:
             response.raise_for_status()
             return Image.open(BytesIO(response.content))
 
-    def execute(self, name, image, url=None, return_image_mode="RGB"):
+    def execute(self, name, image=None, url=None, return_image_mode="RGB", enabled=True):
         """
         Load image from uploaded file or URL.
-        Priority: URL (if provided) > Uploaded image
+        Priority: enabled check > URL (if provided) > Uploaded image
         """
+        if not enabled:
+            empty_image = torch.zeros((1, 64, 64, 3), dtype=torch.float32)
+            empty_mask = torch.zeros((1, 64, 64), dtype=torch.float32)
+            return {"ui": {"images": []}, "result": (empty_image, empty_mask)}
+
         pil_image = None
         source_info = None
 
@@ -220,8 +229,10 @@ class ArchAi3D_Load_Image_URL:
         return results
 
     @classmethod
-    def IS_CHANGED(cls, name, image, url=None, return_image_mode="RGB"):
+    def IS_CHANGED(cls, name, image=None, url=None, return_image_mode="RGB", enabled=True):
         """Return a hash that changes when the image/URL changes, forcing re-execution."""
+        if not enabled:
+            return "skip"
         # Check URL first
         if url and url.strip():
             url = url.strip()
@@ -243,8 +254,11 @@ class ArchAi3D_Load_Image_URL:
         return ""
 
     @classmethod
-    def VALIDATE_INPUTS(cls, name, image, url=None, return_image_mode="RGB"):
+    def VALIDATE_INPUTS(cls, name, image=None, url=None, return_image_mode="RGB", enabled=True):
         """Validate that the image file exists."""
+        if not enabled:
+            return True
+
         if url and url.strip():
             # URL validation is handled at runtime
             return True
