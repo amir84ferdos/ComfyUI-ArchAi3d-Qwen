@@ -36,13 +36,6 @@ class ArchAi3D_Load_Image_URL:
 
     @classmethod
     def INPUT_TYPES(cls):
-        input_dir = folder_paths.get_input_directory()
-        files = []
-        for f in os.listdir(input_dir):
-            if os.path.isfile(os.path.join(input_dir, f)):
-                files.append(f)
-        files = folder_paths.filter_files_content_types(files, ["image"])
-
         return {
             "required": {
                 "name": ("STRING", {
@@ -52,7 +45,8 @@ class ArchAi3D_Load_Image_URL:
                 }),
             },
             "optional": {
-                "image": (sorted(files), {
+                "image": ("STRING", {
+                    "default": "",
                     "image_upload": True,
                     "tooltip": "Drag & drop image here, or click to browse"
                 }),
