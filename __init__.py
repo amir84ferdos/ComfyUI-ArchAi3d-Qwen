@@ -183,8 +183,6 @@ from .nodes.utils.archai3d_color_correction_bt709 import ArchAi3D_Color_Correcti
 from .nodes.utils.archai3d_color_correction_advanced import ArchAi3D_Color_Correction_Advanced
 from .nodes.utils.archai3d_average_color import ArchAi3D_Average_Color
 from .nodes.utils.archai3d_solid_color_image import ArchAi3D_Solid_Color_Image
-from .nodes.utils.archai3d_mask_crop_rotate import ArchAi3D_Mask_Crop_Rotate
-from .nodes.utils.archai3d_mask_uncrop import ArchAi3D_Mask_Uncrop
 from .nodes.utils.archai3d_highpass_blend import ArchAi3D_HighPass_Blend
 from .nodes.utils.archai3d_any_index_switch import ArchAi3D_Any_Index_Switch
 from .nodes.utils.archai3d_extract_region_text import ArchAi3D_Extract_Region_Text
@@ -343,8 +341,6 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_Color_Correction_Advanced": ArchAi3D_Color_Correction_Advanced,
     "ArchAi3D_Average_Color": ArchAi3D_Average_Color,
     "ArchAi3D_Solid_Color_Image": ArchAi3D_Solid_Color_Image,
-    "ArchAi3D_Mask_Crop_Rotate": ArchAi3D_Mask_Crop_Rotate,
-    "ArchAi3D_Mask_Uncrop": ArchAi3D_Mask_Uncrop,
     "ArchAi3D_HighPass_Blend": ArchAi3D_HighPass_Blend,
     "ArchAi3D_Any_Index_Switch": ArchAi3D_Any_Index_Switch,
     "ArchAi3D_Extract_Region_Text": ArchAi3D_Extract_Region_Text,
@@ -527,8 +523,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Color_Correction_Advanced": "✨ Color Correction Advanced",
     "ArchAi3D_Average_Color": "🎨 Average Color",
     "ArchAi3D_Solid_Color_Image": "🎨 Solid Color Image",
-    "ArchAi3D_Mask_Crop_Rotate": "✂️ Mask Crop & Rotate",
-    "ArchAi3D_Mask_Uncrop": "🔙 Mask Uncrop (Stitch-Back)",
     "ArchAi3D_HighPass_Blend": "✨ High-Pass Filter + Blend",
     "ArchAi3D_Any_Index_Switch": "🔀 Any Index Switch",
     "ArchAi3D_Extract_Region_Text": "📝 Extract Region Text",
