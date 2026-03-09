@@ -113,11 +113,6 @@ from .nodes.utils.archai3d_smart_tile_segs_blur import ArchAi3D_Smart_Tile_SEGS_
 from .nodes.utils.archai3d_smart_tile_merger import ArchAi3D_Smart_Tile_Merger
 from .nodes.utils.archai3d_smart_tile_sampler import ArchAi3D_Smart_Tile_Sampler
 from .nodes.utils.archai3d_info import ArchAi3D_Info
-from .nodes.utils.archai3d_batch_text_encode import (
-    ArchAi3D_Batch_Text_Encode,
-    ArchAi3D_Batch_Text_Encode_SDXL,
-    ArchAi3D_Empty_Latent_Batch,
-)
 from .nodes.utils.archai3d_smart_usdu import (
     ArchAi3D_Smart_Ultimate_SD_Upscale,
     ArchAi3D_Smart_Ultimate_SD_Upscale_NoUpscale,
@@ -308,9 +303,6 @@ NODE_CLASS_MAPPINGS = {
     "ArchAi3D_Smart_Tile_Merger": ArchAi3D_Smart_Tile_Merger,
     "ArchAi3D_Smart_Tile_Sampler": ArchAi3D_Smart_Tile_Sampler,
     "ArchAi3D_Info": ArchAi3D_Info,
-    "ArchAi3D_Batch_Text_Encode": ArchAi3D_Batch_Text_Encode,
-    "ArchAi3D_Batch_Text_Encode_SDXL": ArchAi3D_Batch_Text_Encode_SDXL,
-    "ArchAi3D_Empty_Latent_Batch": ArchAi3D_Empty_Latent_Batch,
     "ArchAi3D_Smart_Ultimate_SD_Upscale": ArchAi3D_Smart_Ultimate_SD_Upscale,
     "ArchAi3D_Smart_Ultimate_SD_Upscale_NoUpscale": ArchAi3D_Smart_Ultimate_SD_Upscale_NoUpscale,
     "ArchAi3D_Smart_Ultimate_SD_Upscale_CustomSample": ArchAi3D_Smart_Ultimate_SD_Upscale_CustomSample,
@@ -490,9 +482,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchAi3D_Smart_Tile_Merger": "🔀 Smart Tile Merger",
     "ArchAi3D_Smart_Tile_Sampler": "🎨 Smart Tile Sampler",
     "ArchAi3D_Info": "ℹ️ ArchAi3D Info",
-    "ArchAi3D_Batch_Text_Encode": "📦 Batch Text Encode",
-    "ArchAi3D_Batch_Text_Encode_SDXL": "📦 Batch Text Encode (SDXL)",
-    "ArchAi3D_Empty_Latent_Batch": "📦 Empty Latent (Batch)",
     "ArchAi3D_Smart_Ultimate_SD_Upscale": "🚀 Smart Ultimate SD Upscale",
     "ArchAi3D_Smart_Ultimate_SD_Upscale_NoUpscale": "🚀 Smart Ultimate SD Upscale (No Upscale)",
     "ArchAi3D_Smart_Ultimate_SD_Upscale_CustomSample": "🚀 Smart Ultimate SD Upscale (Custom Sample)",

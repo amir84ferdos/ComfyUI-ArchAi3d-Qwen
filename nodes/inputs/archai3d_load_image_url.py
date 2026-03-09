@@ -63,6 +63,9 @@ class ArchAi3D_Load_Image_URL:
                     "default": True,
                     "tooltip": "When disabled, returns a 64x64 placeholder image. Useful for API calls where this input is not needed."
                 }),
+                "fallback_image": ("IMAGE", {
+                    "tooltip": "Fallback image returned when URL is empty and no file uploaded. Useful for pipelines where a crop can serve as default."
+                }),
             },
         }
 
@@ -104,10 +107,10 @@ class ArchAi3D_Load_Image_URL:
             response.raise_for_status()
             return Image.open(BytesIO(response.content))
 
-    def execute(self, name, image=None, url=None, return_image_mode="RGB", enabled=True):
+    def execute(self, name, image=None, url=None, return_image_mode="RGB", enabled=True, fallback_image=None):
         """
         Load image from uploaded file or URL.
-        Priority: enabled check > URL (if provided) > Uploaded image
+        Priority: enabled check > URL (if provided) > Uploaded image > Fallback image
         """
         if not enabled:
             empty_image = torch.zeros((1, 64, 64, 3), dtype=torch.float32)
@@ -131,8 +134,18 @@ class ArchAi3D_Load_Image_URL:
                 pil_image = ImageOps.exif_transpose(pil_image)
                 source_info = image_path
 
-            # No input provided
+            # No input provided — try fallback image
             if pil_image is None:
+                if fallback_image is not None:
+                    # Return fallback image tensor directly (already a ComfyUI tensor)
+                    fb = fallback_image
+                    if len(fb.shape) == 4:
+                        h, w = fb.shape[1], fb.shape[2]
+                    else:
+                        h, w = fb.shape[0], fb.shape[1]
+                    mask = torch.ones((1, h, w), dtype=torch.float32)
+                    print(f"[ArchAi3D_Load_Image_URL] No URL/file — using fallback image ({w}x{h})")
+                    return {"ui": {"images": []}, "result": (fb, mask)}
                 empty_image = torch.zeros((1, 64, 64, 3), dtype=torch.float32)
                 empty_mask = torch.zeros((1, 64, 64), dtype=torch.float32)
                 return {"ui": {"images": []}, "result": (empty_image, empty_mask)}
@@ -223,7 +236,7 @@ class ArchAi3D_Load_Image_URL:
         return results
 
     @classmethod
-    def IS_CHANGED(cls, name, image=None, url=None, return_image_mode="RGB", enabled=True):
+    def IS_CHANGED(cls, name, image=None, url=None, return_image_mode="RGB", enabled=True, fallback_image=None):
         """Return a hash that changes when the image/URL changes, forcing re-execution."""
         if not enabled:
             return "skip"
@@ -248,6 +261,6 @@ class ArchAi3D_Load_Image_URL:
         return ""
 
     @classmethod
-    def VALIDATE_INPUTS(cls, name, image=None, url=None, return_image_mode="RGB", enabled=True):
+    def VALIDATE_INPUTS(cls, name, image=None, url=None, return_image_mode="RGB", enabled=True, fallback_image=None):
         """Always pass validation — execute() handles missing images gracefully."""
         return True

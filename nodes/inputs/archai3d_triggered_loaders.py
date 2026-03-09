@@ -94,7 +94,11 @@ min_free_dram_gb: Threshold in GB for auto_free_dram. Example: 10 means "if less
         if kwargs.get("keep_on_vram", False):
             return "v5"  # Static — let ComfyUI execution cache handle it
         if kwargs.get("use_dram", True):
-            return time.time()  # Force re-execution to always check DRAM
+            # Return stable hash of inputs — prevents re-execution during list iteration
+            # while still re-executing when model/type changes
+            model = kwargs.get("unet_name", kwargs.get("clip_name", ""))
+            clip_type = kwargs.get("type", "")
+            return f"dram:{model}:{clip_type}"
         return "v5"
 
     def load_unet(self, unet_name, weight_dtype, trigger=None, keep_on_vram=False, use_dram=True, replace_cached=True, cache_to_local_ssd=True, auto_free_vram=False, min_free_vram_gb=10.0, auto_free_dram=False, min_free_dram_gb=10.0):
@@ -304,7 +308,9 @@ qwen_image: Qwen VL models"""
         if kwargs.get("keep_on_vram", False):
             return "v5"
         if kwargs.get("use_dram", True):
-            return time.time()
+            model = kwargs.get("unet_name", kwargs.get("clip_name", ""))
+            clip_type = kwargs.get("type", "")
+            return f"dram:{model}:{clip_type}"
         return "v5"
 
     def load_clip(self, clip_name, type, trigger=None, keep_on_vram=False, use_dram=True, replace_cached=True, device="default", cache_to_local_ssd=True, auto_free_vram=False, min_free_vram_gb=10.0, auto_free_dram=False, min_free_dram_gb=10.0):
@@ -504,7 +510,9 @@ newbie: gemma-3-4b-it, jina clip v2"""
         if kwargs.get("keep_on_vram", False):
             return "v5"
         if kwargs.get("use_dram", True):
-            return time.time()
+            model = kwargs.get("unet_name", kwargs.get("clip_name", ""))
+            clip_type = kwargs.get("type", "")
+            return f"dram:{model}:{clip_type}"
         return "v5"
 
     def load_clip(self, clip_name1, clip_name2, type, trigger=None, keep_on_vram=False, use_dram=True, replace_cached=True, device="default", cache_to_local_ssd=True, auto_free_vram=False, min_free_vram_gb=10.0, auto_free_dram=False, min_free_dram_gb=10.0):
