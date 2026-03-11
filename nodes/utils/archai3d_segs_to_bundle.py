@@ -22,7 +22,7 @@ class ArchAi3D_SEGS_To_Bundle:
     - Only mask_blur needs to be set manually (match your SEGS Mask Blur setting)
     """
 
-    CATEGORY = "ArchAi3d/Utils"
+    CATEGORY = "ArchAi3d/Mask/Segmentation"
     RETURN_TYPES = ("SMART_TILE_BUNDLE",)
     RETURN_NAMES = ("bundle",)
     FUNCTION = "convert_segs"

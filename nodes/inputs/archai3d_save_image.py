@@ -83,7 +83,7 @@ class ArchAi3D_Save_Image:
     RETURN_TYPES = ()
     FUNCTION = "save_images"  # Match standard SaveImage for proper history registration
     OUTPUT_NODE = True
-    CATEGORY = "ArchAi3d/Inputs"
+    CATEGORY = "ArchAi3d/Image"
 
     def _get_next_counter(self, folder, filename_prefix, ext):
         """Find the next available counter to avoid overwriting files."""

@@ -75,7 +75,7 @@ class ArchAi3D_Load_Diffusion_Model:
     RETURN_TYPES = ("MODEL", "STRING")
     RETURN_NAMES = ("model", "memory_stats")
     FUNCTION = "load_unet"
-    CATEGORY = "ArchAi3D/Loaders"
+    CATEGORY = "ArchAi3d/Loaders"
     DESCRIPTION = """Load a diffusion model (UNET) with memory management and execution order control.
 
 [Parameters]
@@ -275,7 +275,7 @@ class ArchAi3D_Load_CLIP:
     RETURN_TYPES = ("CLIP", "STRING")
     RETURN_NAMES = ("clip", "memory_stats")
     FUNCTION = "load_clip"
-    CATEGORY = "ArchAi3D/Loaders"
+    CATEGORY = "ArchAi3d/Loaders"
     DESCRIPTION = """Load CLIP text encoder with memory management and execution order control.
 
 [Parameters]
@@ -482,7 +482,7 @@ class ArchAi3D_Load_Dual_CLIP:
     RETURN_TYPES = ("CLIP", "STRING")
     RETURN_NAMES = ("clip", "memory_stats")
     FUNCTION = "load_clip"
-    CATEGORY = "ArchAi3D/Loaders"
+    CATEGORY = "ArchAi3d/Loaders"
     DESCRIPTION = """Load two CLIP text encoders with memory management and execution order control.
 
 [Parameters]

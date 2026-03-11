@@ -122,7 +122,7 @@ class ArchAi3D_Smart_Tile_Detailer:
     - Uses SEG masks directly for blending (pre-blur with SEGS Mask Blur node)
     """
 
-    CATEGORY = "ArchAi3d/Utils"
+    CATEGORY = "ArchAi3d/Upscaling/Smart Tile"
     RETURN_TYPES = ("IMAGE", "SEGS")
     RETURN_NAMES = ("image", "segs")
     FUNCTION = "process_tiles"

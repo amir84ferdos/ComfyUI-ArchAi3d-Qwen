@@ -311,7 +311,7 @@ class ArchAi3D_Gemini:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("response",)
     FUNCTION = "execute"
-    CATEGORY = "ArchAi3d/Inputs"
+    CATEGORY = "ArchAi3d/Edit/VLM"
 
     def _convert_image(self, img):
         """Convert ComfyUI image tensor to PIL Image. Memory optimized."""

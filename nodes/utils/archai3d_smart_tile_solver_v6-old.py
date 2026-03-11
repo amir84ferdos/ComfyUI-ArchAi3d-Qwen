@@ -154,7 +154,7 @@ class ArchAi3D_Smart_Tile_Solver_V6_Old:
     RETURN_NAMES = ("upscaled_image", "tile_width", "tile_height", "overlap", "output_width", "output_height",
                     "tiles_x", "tiles_y", "total_tiles", "actual_upscale", "efficiency", "debug_info")
     FUNCTION = "solve"
-    CATEGORY = "ArchAi3d/Upscaling"
+    CATEGORY = "ArchAi3d/Upscaling/Smart Tile"
 
     def _generate_grid_candidates(self, estimated_tiles, img_ratio):
         """

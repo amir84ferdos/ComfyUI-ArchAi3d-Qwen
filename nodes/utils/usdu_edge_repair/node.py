@@ -45,7 +45,7 @@ class ArchAi3D_USDU_EdgeRepair:
     RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE", "IMAGE", "IMAGE", "IMAGE", "STRING")
     RETURN_NAMES = ("image", "tiles_original", "tiles_padded", "tiles_blend_mask", "tiles_edge_mask", "tiles_processed", "debug_info")
     FUNCTION = "upscale"
-    CATEGORY = "ArchAi3d/Upscaling"
+    CATEGORY = "ArchAi3d/Upscaling/USDU"
 
     def upscale(self, upscaled_image, output_width, output_height, tiles_x, tiles_y, safe_guard,
                 enable_diffdiff, enable_controlnet, preview_mode, model, conditionings, negative, vae, seed,

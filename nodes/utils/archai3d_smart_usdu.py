@@ -119,7 +119,7 @@ class ArchAi3D_Smart_Ultimate_SD_Upscale:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "upscale"
-    CATEGORY = "ArchAi3d/Upscaling"
+    CATEGORY = "ArchAi3d/Upscaling/USDU"
 
     def upscale(self, image, model, conditionings, negative, vae, upscale_by, seed,
                 steps, cfg, sampler_name, scheduler, denoise, upscale_model,
@@ -257,7 +257,7 @@ class ArchAi3D_Smart_Ultimate_SD_Upscale_NoUpscale(ArchAi3D_Smart_Ultimate_SD_Up
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "upscale"
-    CATEGORY = "ArchAi3d/Upscaling"
+    CATEGORY = "ArchAi3d/Upscaling/USDU"
 
     def upscale(self, upscaled_image, model, conditionings, negative, vae, seed,
                 steps, cfg, sampler_name, scheduler, denoise,
@@ -286,7 +286,7 @@ class ArchAi3D_Smart_Ultimate_SD_Upscale_CustomSample(ArchAi3D_Smart_Ultimate_SD
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "upscale"
-    CATEGORY = "ArchAi3d/Upscaling"
+    CATEGORY = "ArchAi3d/Upscaling/USDU"
 
     def upscale(self, image, model, conditionings, negative, vae, upscale_by, seed,
                 steps, cfg, sampler_name, scheduler, denoise,

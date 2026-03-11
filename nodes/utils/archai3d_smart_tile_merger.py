@@ -126,7 +126,7 @@ class ArchAi3D_Smart_Tile_Merger:
     - Configurable overlap and blur
     """
 
-    CATEGORY = "ArchAi3d/Utils"
+    CATEGORY = "ArchAi3d/Upscaling/Smart Tile"
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("image",)
     FUNCTION = "merge_tiles"

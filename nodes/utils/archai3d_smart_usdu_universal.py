@@ -638,7 +638,7 @@ class ArchAi3D_Smart_USDU_Universal:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "upscale"
-    CATEGORY = "ArchAi3d/Upscaling"
+    CATEGORY = "ArchAi3d/Upscaling/USDU"
 
     def upscale(self, image, enable_diffdiff, enable_controlnet, model, conditionings, negative, vae, upscale_by, seed,
                 steps, cfg, sampler_name, scheduler, denoise, upscale_model,
@@ -890,7 +890,7 @@ class ArchAi3D_Smart_USDU_Universal_NoUpscale:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "upscale"
-    CATEGORY = "ArchAi3d/Upscaling"
+    CATEGORY = "ArchAi3d/Upscaling/USDU"
 
     def upscale(self, upscaled_image, output_width, output_height, tiles_x, tiles_y, safe_guard,
                 enable_diffdiff, enable_controlnet, model, conditionings, negative, vae, seed,
@@ -1122,7 +1122,7 @@ class ArchAi3D_Smart_USDU_Universal_NoUpscale_V2:
     RETURN_TYPES = ("IMAGE", "STRING")
     RETURN_NAMES = ("image", "debug_info")
     FUNCTION = "upscale"
-    CATEGORY = "ArchAi3d/Upscaling"
+    CATEGORY = "ArchAi3d/Upscaling/USDU"
 
     def upscale(self, upscaled_image, output_width, output_height, tiles_x, tiles_y, safe_guard,
                 enable_diffdiff, enable_controlnet, model, conditionings, negative, vae, seed,
@@ -1347,7 +1347,7 @@ class ArchAi3D_Smart_USDU_Universal_CustomSample(ArchAi3D_Smart_USDU_Universal):
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "upscale"
-    CATEGORY = "ArchAi3d/Upscaling"
+    CATEGORY = "ArchAi3d/Upscaling/USDU"
 
     def upscale(self, image, enable_diffdiff, enable_controlnet, model, conditionings, negative, vae, upscale_by, seed,
                 steps, cfg, sampler_name, scheduler, denoise,
@@ -1392,7 +1392,7 @@ class ArchAi3D_Smart_USDU_Universal_NoUpscale_V3:
     RETURN_TYPES = ("IMAGE", "STRING", "IMAGE", "IMAGE", "IMAGE")
     RETURN_NAMES = ("image", "debug_info", "debug_tiles", "debug_feather_masks", "debug_combined")
     FUNCTION = "upscale"
-    CATEGORY = "ArchAi3d/Upscaling"
+    CATEGORY = "ArchAi3d/Upscaling/USDU"
 
     def upscale(self, upscaled_image, output_width, output_height, tiles_x, tiles_y, safe_guard,
                 enable_diffdiff, enable_controlnet,

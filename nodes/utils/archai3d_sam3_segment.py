@@ -163,7 +163,7 @@ class ArchAi3D_SAM3_Segment:
     RETURN_TYPES = ("IMAGE", "MASK", "IMAGE")
     RETURN_NAMES = ("IMAGE", "MASK", "MASK_IMAGE")
     FUNCTION = "segment"
-    CATEGORY = "ArchAi3d/Utils"
+    CATEGORY = "ArchAi3d/Mask/Segmentation"
 
     def _compute_cache_key(self, image, prompt, confidence, mask_blur, mask_offset, invert, background, bg_color):
         """Compute a unique cache key based on inputs."""

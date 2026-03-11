@@ -144,7 +144,7 @@ class ArchAi3D_Metric3D_Normal:
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("normal_map",)
     FUNCTION = "execute"
-    CATEGORY = "ArchAi3d/Utils"
+    CATEGORY = "ArchAi3d/3D"
 
     def _compute_cache_key(self, image, backbone, resolution, fx, fy):
         """Compute a unique cache key based on inputs."""
@@ -361,7 +361,7 @@ class ArchAi3D_Metric3D_Depth:
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("depth_map",)
     FUNCTION = "execute"
-    CATEGORY = "ArchAi3d/Utils"
+    CATEGORY = "ArchAi3d/3D"
 
     def _compute_cache_key(self, image, backbone, resolution, fx, fy):
         """Compute a unique cache key based on inputs."""

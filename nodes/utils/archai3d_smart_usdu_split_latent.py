@@ -120,7 +120,7 @@ class ArchAi3D_Smart_USDU_Split_Latent:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "upscale"
-    CATEGORY = "ArchAi3d/Upscaling"
+    CATEGORY = "ArchAi3d/Upscaling/USDU"
 
     def upscale(self, image, model, conditionings, negative, vae, mask,
                 denoise_high, denoise_low, upscale_by, seed, steps, cfg,

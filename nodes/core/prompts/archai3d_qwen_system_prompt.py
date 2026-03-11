@@ -111,7 +111,7 @@ class ArchAi3D_Qwen_System_Prompt:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("system_prompt",)
     FUNCTION = "load_prompt"
-    CATEGORY = "ArchAi3d/Qwen"
+    CATEGORY = "ArchAi3d/Qwen/Prompts"
 
     def load_prompt(self, preset="Default Helper", custom_prompt=""):
         """Execute the system prompt loader.

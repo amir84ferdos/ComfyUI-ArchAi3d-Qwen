@@ -52,7 +52,7 @@ class ArchAi3D_Gemini_Model:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("model",)
     FUNCTION = "execute"
-    CATEGORY = "ArchAi3d/Inputs"
+    CATEGORY = "ArchAi3d/Edit/VLM"
 
     def execute(self, name, model):
         return (model,)

@@ -63,7 +63,7 @@ class ArchAi3D_Panorama_Offset:
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("offset_image",)
     FUNCTION = "execute"
-    CATEGORY = "ArchAi3d/Utils"
+    CATEGORY = "ArchAi3d/Panorama"
 
     def execute(self, image, offset_percent=50.0, direction="right"):
         """Execute the Panorama Offset."""

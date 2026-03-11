@@ -248,7 +248,7 @@ class ArchAi3D_Clean_Room_Prompt:
     RETURN_TYPES = ("STRING", "STRING")
     RETURN_NAMES = ("user_prompt", "system_prompt")
     FUNCTION = "build_prompt"
-    CATEGORY = "ArchAi3d/Qwen"
+    CATEGORY = "ArchAi3d/Qwen/Prompts"
 
     def build_prompt(self, mode, image_reference, objects_to_remove,
                      scene_context="",  # NEW in v2.1.0

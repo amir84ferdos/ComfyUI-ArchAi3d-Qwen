@@ -183,7 +183,7 @@ class ArchAi3D_Smart_Tile_SEGS:
     this node supports rectangular tiles and explicit grid dimensions.
     """
 
-    CATEGORY = "ArchAi3d/Utils"
+    CATEGORY = "ArchAi3d/Upscaling/Smart Tile"
     RETURN_TYPES = ("SEGS", "SMART_TILE_BUNDLE")
     RETURN_NAMES = ("segs", "bundle")
     FUNCTION = "create_segs"

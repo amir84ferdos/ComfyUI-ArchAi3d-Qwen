@@ -176,7 +176,7 @@ class ArchAi3D_Smart_USDU_Mask_Denoise:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "upscale"
-    CATEGORY = "ArchAi3d/Upscaling"
+    CATEGORY = "ArchAi3d/Upscaling/USDU"
 
     def upscale(self, image, model, conditionings, negative, vae, upscale_by, seed,
                 steps, cfg, sampler_name, scheduler,

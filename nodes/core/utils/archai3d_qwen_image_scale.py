@@ -424,7 +424,7 @@ class ArchAi3D_Qwen_Image_Scale:
     RETURN_TYPES = ("IMAGE", "IMAGE", "MASK", "INT", "INT", "STRING")
     RETURN_NAMES = ("image_vl", "image_latent", "mask", "latent_width", "latent_height", "debug_text")
     FUNCTION = "process"
-    CATEGORY = "ArchAi3d/Qwen"
+    CATEGORY = "ArchAi3d/Qwen/Image"
 
     def process(self, image: torch.Tensor, **kwargs) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, int, int, str]:
         """

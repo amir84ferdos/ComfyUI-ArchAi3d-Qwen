@@ -717,7 +717,7 @@ class ArchAi3D_Smart_USDU_Universal_NoUpscale_V3:
     RETURN_TYPES = ("IMAGE", "STRING", "IMAGE", "IMAGE", "IMAGE", "IMAGE")
     RETURN_NAMES = ("image", "debug_info", "input_tiles", "output_tiles", "feather_masks", "combined_view")
     FUNCTION = "process"
-    CATEGORY = "ArchAi3d/Upscaling"
+    CATEGORY = "ArchAi3d/Utils"
 
     def process(
         self,

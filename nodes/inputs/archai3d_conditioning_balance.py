@@ -46,7 +46,7 @@ class ArchAi3D_Conditioning_Balance:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("conditioning_balance",)
     FUNCTION = "execute"
-    CATEGORY = "ArchAi3d/Inputs"
+    CATEGORY = "ArchAi3d/Conditioning"
 
     def execute(self, name, conditioning_balance):
         return (conditioning_balance,)

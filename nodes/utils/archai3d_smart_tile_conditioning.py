@@ -70,7 +70,7 @@ class ArchAi3D_Smart_Tile_Conditioning:
     - Bundle support for one-wire connection from Prompter
     """
 
-    CATEGORY = "ArchAi3d/Utils"
+    CATEGORY = "ArchAi3d/Upscaling/Smart Tile"
     RETURN_TYPES = ("CONDITIONING_LIST", "CONDITIONING", "STRING")
     RETURN_NAMES = ("conditionings", "negative", "debug_info")
     FUNCTION = "encode_batch"

@@ -152,7 +152,7 @@ class ArchAi3D_Smart_Tile_Calculator_V5:
     RETURN_TYPES = ("IMAGE", "INT", "INT", "INT", "INT", "INT", "INT", "INT", "INT", "FLOAT", "FLOAT", "STRING", "IMAGE")
     RETURN_NAMES = ("upscaled_image", "tile_width", "tile_height", "overlap", "output_width", "output_height", "tiles_x", "tiles_y", "total_tiles", "upscale", "efficiency", "debug_info", "efficiency_plot")
     FUNCTION = "calculate"
-    CATEGORY = "ArchAi3d/Upscaling"
+    CATEGORY = "ArchAi3d/Upscaling/Smart Tile"
 
     # =========================================================================
     # VECTORIZED CORE ENGINE

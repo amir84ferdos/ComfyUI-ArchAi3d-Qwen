@@ -113,7 +113,7 @@ class ArchAi3D_SEGS_Mask_Irregularity:
     to the mask boundaries. Works on any SEGS input.
     """
 
-    CATEGORY = "ArchAi3d/Utils"
+    CATEGORY = "ArchAi3d/Mask/Segmentation"
     RETURN_TYPES = ("SEGS",)
     RETURN_NAMES = ("segs",)
     FUNCTION = "add_irregularity"

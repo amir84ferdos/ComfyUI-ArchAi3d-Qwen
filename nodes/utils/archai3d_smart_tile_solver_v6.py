@@ -172,7 +172,7 @@ class ArchAi3D_Smart_Tile_Solver_V6:
                     "tiles_x", "tiles_y", "total_tiles", "latent_tile_w", "latent_tile_h",
                     "actual_upscale", "efficiency", "debug_info")
     FUNCTION = "solve"
-    CATEGORY = "ArchAi3d/Upscaling"
+    CATEGORY = "ArchAi3d/Upscaling/Smart Tile"
 
     def _generate_grid_candidates(self, estimated_tiles, img_ratio):
         """

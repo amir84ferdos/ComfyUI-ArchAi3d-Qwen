@@ -435,7 +435,7 @@ class ArchAi3D_Qwen_Image_Scale_V2:
     RETURN_TYPES = ("IMAGE", "IMAGE", "MASK", "INT", "INT", "STITCH_DATA", "STRING")
     RETURN_NAMES = ("image_vl", "image_latent", "mask", "latent_width", "latent_height", "stitch_data", "debug_text")
     FUNCTION = "process"
-    CATEGORY = "ArchAi3d/Qwen"
+    CATEGORY = "ArchAi3d/Qwen/Image"
 
     def process(self, image: torch.Tensor, **kwargs) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, int, int, Optional[Dict], str]:
         """Process image with optional mask-based cropping."""

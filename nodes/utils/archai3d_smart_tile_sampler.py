@@ -73,7 +73,7 @@ class ArchAi3D_Smart_Tile_Sampler:
     Calculator → SEGS Blur → Sampler → Merger → Final Image
     """
 
-    CATEGORY = "ArchAi3d/Utils"
+    CATEGORY = "ArchAi3d/Upscaling/Smart Tile"
     RETURN_TYPES = ("IMAGE", "SEGS")
     RETURN_NAMES = ("image", "segs")
     FUNCTION = "sample_tiles"

@@ -31,7 +31,7 @@ class ArchAi3D_Extract_Region_Text:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("text",)
     FUNCTION = "execute"
-    CATEGORY = "ArchAi3d/Utils"
+    CATEGORY = "ArchAi3d/Edit/Region"
 
     def execute(self, text):
         # Extract all quoted strings

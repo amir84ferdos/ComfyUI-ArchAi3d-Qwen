@@ -552,7 +552,7 @@ class ArchAi3D_Smart_Tile_Calculator:
                     "efficiency", "crop_factor", "output_width", "output_height", "debug_info", "guide_size",
                     "bundle")
     FUNCTION = "calculate"
-    CATEGORY = "ArchAi3d/Utils"
+    CATEGORY = "ArchAi3d/Upscaling/Smart Tile"
 
     def calculate(self, image, target_upscale, min_tile_mp, max_tile_mp, upscale_tolerance, scaling_mode, overlap_scale):
         """

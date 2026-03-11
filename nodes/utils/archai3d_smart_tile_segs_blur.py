@@ -446,7 +446,7 @@ class ArchAi3D_Smart_Tile_SEGS_Blur:
     - Latent divisor ensures crop regions are sampler-compatible (8 or 32)
     """
 
-    CATEGORY = "ArchAi3d/Utils"
+    CATEGORY = "ArchAi3d/Upscaling/Smart Tile"
     RETURN_TYPES = ("SEGS", "SMART_TILE_BUNDLE")
     RETURN_NAMES = ("segs", "bundle")
     FUNCTION = "create_segs_with_blur"

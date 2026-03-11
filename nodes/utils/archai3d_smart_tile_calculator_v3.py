@@ -106,7 +106,7 @@ class ArchAi3D_Smart_Tile_Calculator_V3:
     RETURN_TYPES = ("IMAGE", "INT", "INT", "INT", "INT", "INT", "INT", "INT", "INT", "FLOAT", "FLOAT", "STRING")
     RETURN_NAMES = ("upscaled_image", "tile_width", "tile_height", "overlap", "output_width", "output_height", "tiles_x", "tiles_y", "total_tiles", "upscale", "efficiency", "debug_info")
     FUNCTION = "calculate"
-    CATEGORY = "ArchAi3d/Upscaling"
+    CATEGORY = "ArchAi3d/Upscaling/Smart Tile"
 
     def calculate(self, image, upscale, upscale_method, tile_aspect_ratio, target_tile_mp, padding_pixels, optimize_efficiency, mp_tolerance, aspect_freedom, upscale_tolerance):
         # ============================================================

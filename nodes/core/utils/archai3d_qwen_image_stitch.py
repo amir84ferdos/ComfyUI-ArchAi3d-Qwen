@@ -147,7 +147,7 @@ class ArchAi3D_Qwen_Image_Stitch:
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("image",)
     FUNCTION = "stitch"
-    CATEGORY = "ArchAi3d/Qwen"
+    CATEGORY = "ArchAi3d/Qwen/Image"
 
     def stitch(
         self,

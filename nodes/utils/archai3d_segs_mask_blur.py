@@ -30,7 +30,7 @@ class ArchAi3D_SEGS_Mask_Blur:
     Based on Ultimate SD Upscale's mask_blur approach.
     """
 
-    CATEGORY = "ArchAi3d/Utils"
+    CATEGORY = "ArchAi3d/Mask/Segmentation"
     RETURN_TYPES = ("SEGS",)
     RETURN_NAMES = ("segs",)
     FUNCTION = "blur_masks"
