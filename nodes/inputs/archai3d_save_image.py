@@ -2,6 +2,12 @@
 ArchAi3D Save Image Node
 Saves an image with format options and workflow embedding control.
 
+Version: 3.1.0 - Added advanced compression settings
+- WebP: method (0-6), lossless, exact, OpenCV fast path
+- PNG: compress_level (0-9)
+- JPG: optimize, subsampling
+- All new options at end of optional inputs (backwards compatible)
+
 Version: 3.0.0 - Fixed API/history registration for RunPod compatibility
 - Changed FUNCTION to "save_images" to match standard SaveImage
 - Fixed filename format with trailing underscore
@@ -10,6 +16,7 @@ Version: 3.0.0 - Fixed API/history registration for RunPod compatibility
 
 import os
 import json
+import time
 import numpy as np
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
@@ -73,6 +80,39 @@ class ArchAi3D_Save_Image:
                     "multiline": False,
                     "tooltip": "Identifier name for this output (used by web interface)"
                 }),
+                # --- Advanced WebP Settings ---
+                "webp_method": (["fastest (0)", "fast (1)", "medium (2)", "default (4)", "best (6)"], {
+                    "default": "default (4)",
+                    "tooltip": "WebP compression effort. 0=fastest encoding, 6=best compression/slowest. Only affects WebP.",
+                }),
+                "webp_lossless": ("BOOLEAN", {
+                    "default": False,
+                    "tooltip": "Force lossless WebP (overrides quality). Perfect quality but slower and larger files.",
+                }),
+                "webp_exact": ("BOOLEAN", {
+                    "default": False,
+                    "tooltip": "Preserve transparent area RGB values in WebP. Slightly larger files.",
+                }),
+                # --- Advanced PNG Settings ---
+                "png_compress_level": ("INT", {
+                    "default": 4,
+                    "min": 0, "max": 9, "step": 1,
+                    "tooltip": "PNG compression level. 0=no compression (fastest/largest), 9=max compression (slowest/smallest).",
+                }),
+                # --- Advanced JPG Settings ---
+                "jpg_optimize": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "JPG optimize flag. Slightly slower but better compression.",
+                }),
+                "jpg_subsampling": (["4:2:0 (default)", "4:2:2", "4:4:4 (best quality)"], {
+                    "default": "4:2:0 (default)",
+                    "tooltip": "JPG chroma subsampling. 4:4:4=best quality/larger, 4:2:0=smaller/default.",
+                }),
+                # --- Performance ---
+                "use_opencv": ("BOOLEAN", {
+                    "default": False,
+                    "tooltip": "Use OpenCV for WebP saving (5-10x faster on 4K+ images). Falls back to Pillow if unavailable.",
+                }),
             },
             "hidden": {
                 "prompt": "PROMPT",
@@ -97,7 +137,11 @@ class ArchAi3D_Save_Image:
 
     def save_images(self, images, save=True, filename_prefix="ComfyUI", format="PNG",
                     quality=95, embed_workflow=True, save_workflow_json=False,
-                    output_name="output_image", prompt=None, extra_pnginfo=None):
+                    output_name="output_image",
+                    webp_method="default (4)", webp_lossless=False, webp_exact=False,
+                    png_compress_level=4, jpg_optimize=True,
+                    jpg_subsampling="4:2:0 (default)", use_opencv=False,
+                    prompt=None, extra_pnginfo=None):
         """
         Save images with proper ComfyUI history registration.
 
@@ -147,6 +191,7 @@ class ArchAi3D_Save_Image:
                 filepath = os.path.join(full_output_folder, file)
 
             # Save based on format
+            t_save_start = time.perf_counter()
             if format == "PNG":
                 # Prepare metadata (only for PNG and if embed_workflow is True)
                 metadata = None
@@ -159,18 +204,54 @@ class ArchAi3D_Save_Image:
                             metadata.add_text(x, json.dumps(extra_pnginfo[x]))
                     metadata.add_text("output_name", output_name)
 
-                img.save(filepath, pnginfo=metadata, compress_level=self.compress_level)
+                img.save(filepath, pnginfo=metadata, compress_level=png_compress_level)
 
             elif format == "JPG":
                 # JPG doesn't support alpha channel
                 if img.mode in ('RGBA', 'LA', 'P'):
                     img = img.convert('RGB')
-                img.save(filepath, quality=quality, optimize=True)
+                # Parse subsampling: "4:2:0 (default)" -> 2, "4:2:2" -> 1, "4:4:4 ..." -> 0
+                subsample_map = {"4:2:0 (default)": 2, "4:2:2": 1, "4:4:4 (best quality)": 0}
+                subsample_val = subsample_map.get(jpg_subsampling, 2)
+                img.save(filepath, quality=quality, optimize=jpg_optimize,
+                         subsampling=subsample_val)
 
             elif format == "WebP":
-                # WebP with quality (100 = lossless)
-                lossless = (quality == 100)
-                img.save(filepath, quality=quality, lossless=lossless)
+                # Parse method: "fastest (0)" -> 0, "default (4)" -> 4, etc.
+                method_map = {"fastest (0)": 0, "fast (1)": 1, "medium (2)": 2,
+                              "default (4)": 4, "best (6)": 6}
+                method_val = method_map.get(webp_method, 4)
+                lossless = webp_lossless or (quality == 100)
+                save_backend = "Pillow"
+
+                if use_opencv and not lossless:
+                    # OpenCV fast path — go straight from tensor numpy, skip PIL round-trip
+                    try:
+                        import cv2
+                        cv_img = np.clip(255. * image.cpu().numpy(), 0, 255).astype(np.uint8)
+                        # Tensor is RGB, OpenCV needs BGR
+                        cv_img = cv_img[:, :, ::-1].copy()
+                        cv2.imwrite(filepath, cv_img, [cv2.IMWRITE_WEBP_QUALITY, quality])
+                        save_backend = "OpenCV"
+                    except ImportError:
+                        print("[ArchAi3D Save Image] OpenCV not available, falling back to Pillow")
+                        img.save(filepath, quality=quality, lossless=False,
+                                 method=method_val, exact=webp_exact)
+                else:
+                    img.save(filepath, quality=quality, lossless=lossless,
+                             method=method_val, exact=webp_exact)
+
+            t_save_end = time.perf_counter()
+            save_ms = (t_save_end - t_save_start) * 1000
+            backend_info = ""
+            if format == "WebP":
+                backend_info = f" [{save_backend}]" if 'save_backend' in dir() else ""
+                backend_info = f" [{save_backend}, method={method_val}, q={quality}{'  LOSSLESS' if lossless else ''}]"
+            elif format == "PNG":
+                backend_info = f" [compress={png_compress_level}]"
+            elif format == "JPG":
+                backend_info = f" [q={quality}, sub={jpg_subsampling}]"
+            print(f"[ArchAi3D Save Image] {format} {img.size[0]}x{img.size[1]} saved in {save_ms:.0f}ms{backend_info}")
 
             # Save workflow as separate JSON file if requested
             if save_workflow_json and extra_pnginfo:
