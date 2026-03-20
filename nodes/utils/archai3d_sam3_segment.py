@@ -34,6 +34,14 @@ SAM3_LOCAL_DIR = os.path.join(CURRENT_DIR, "sam3")
 CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cache", "sam3")
 os.makedirs(CACHE_DIR, exist_ok=True)
 
+# torch.compile inductor cache — persists compiled kernels per GPU arch
+# On RunPod: /runpod-volume/cache/sam3_compile/ (survives cold starts)
+# Locally: <node_dir>/cache/sam3_compile/
+_NV_COMPILE_CACHE = "/runpod-volume/cache/sam3_compile"
+_LOCAL_COMPILE_CACHE = os.path.join(CACHE_DIR, "compile")
+COMPILE_CACHE_DIR = _NV_COMPILE_CACHE if os.path.isdir("/runpod-volume") else _LOCAL_COMPILE_CACHE
+os.makedirs(COMPILE_CACHE_DIR, exist_ok=True)
+
 # Cache index file
 CACHE_INDEX_FILE = os.path.join(CACHE_DIR, "cache_index.json")
 
@@ -76,10 +84,15 @@ def process_mask(mask_image, invert_output=False, mask_blur=0, mask_offset=0):
     if mask_blur > 0:
         mask_image = mask_image.filter(ImageFilter.GaussianBlur(radius=mask_blur))
     if mask_offset != 0:
-        filt = ImageFilter.MaxFilter if mask_offset > 0 else ImageFilter.MinFilter
-        size = abs(mask_offset) * 2 + 1
-        for _ in range(abs(mask_offset)):
-            mask_image = mask_image.filter(filt(size))
+        import cv2
+        mask_np = np.array(mask_image)
+        kernel_size = abs(mask_offset) * 2 + 1
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
+        if mask_offset > 0:
+            mask_np = cv2.dilate(mask_np, kernel, iterations=1)
+        else:
+            mask_np = cv2.erode(mask_np, kernel, iterations=1)
+        mask_image = Image.fromarray(mask_np)
     return mask_image
 
 
@@ -145,6 +158,13 @@ class ArchAi3D_SAM3_Segment:
                     "step": 0.01,
                     "tooltip": "Confidence threshold for segmentation"
                 }),
+                "segment_pick": ("INT", {
+                    "default": 0,
+                    "min": 0,
+                    "max": 128,
+                    "step": 1,
+                    "tooltip": "0 = merge all segments, 1+ = pick specific segment by confidence rank"
+                }),
                 "use_cache": ("BOOLEAN", {
                     "default": True,
                     "tooltip": "Use disk cache to avoid reprocessing identical inputs"
@@ -157,6 +177,10 @@ class ArchAi3D_SAM3_Segment:
                 "background": (["Alpha", "Color"], {"default": "Alpha"}),
                 "background_color": ("STRING", {"default": "#222222"}),
                 "device": (["Auto", "CPU", "GPU"], {"default": "Auto"}),
+                "compile_model": ("BOOLEAN", {
+                    "default": False,
+                    "tooltip": "torch.compile for faster inference. First run compiles (~60s), cached per GPU arch for instant reuse"
+                }),
             },
         }
 
@@ -165,7 +189,7 @@ class ArchAi3D_SAM3_Segment:
     FUNCTION = "segment"
     CATEGORY = "ArchAi3d/Mask/Segmentation"
 
-    def _compute_cache_key(self, image, prompt, confidence, mask_blur, mask_offset, invert, background, bg_color):
+    def _compute_cache_key(self, image, prompt, confidence, segment_pick, mask_blur, mask_offset, invert, background, bg_color):
         """Compute a unique cache key based on inputs."""
         # Sample image pixels for fast hashing (corners + center)
         with torch.no_grad():
@@ -182,7 +206,7 @@ class ArchAi3D_SAM3_Segment:
             del img_cpu
 
         # Combine all parameters into hash
-        hash_data = f"{shape_str}_{samples}_{prompt}_{confidence}_{mask_blur}_{mask_offset}_{invert}_{background}_{bg_color}"
+        hash_data = f"{shape_str}_{samples}_{prompt}_{confidence}_{segment_pick}_{mask_blur}_{mask_offset}_{invert}_{background}_{bg_color}"
         return hashlib.md5(hash_data.encode()).hexdigest()
 
     def _get_cached_result(self, cache_key):
@@ -247,30 +271,42 @@ class ArchAi3D_SAM3_Segment:
 
     def _get_model_path(self):
         """Get or download SAM3 model file."""
-        # Check folder_paths first
+        # Check folder_paths first (covers extra_model_paths.yaml + symlinks)
         local_path = None
         if hasattr(folder_paths, "get_full_path"):
             local_path = folder_paths.get_full_path("sam3", self.SAM3_FILENAME)
         if local_path and os.path.isfile(local_path):
+            print(f"[ArchAi3D SAM3] Found model via folder_paths: {local_path}")
             return local_path
 
-        # Fall back to models directory
+        # Check standard models directory (symlinked from network volume on RunPod)
         base_models_dir = getattr(folder_paths, "models_dir", os.path.join(CURRENT_DIR, "models"))
         models_dir = os.path.join(base_models_dir, "sam3")
+        local_path = os.path.join(models_dir, self.SAM3_FILENAME)
+        if os.path.isfile(local_path):
+            print(f"[ArchAi3D SAM3] Found model in models dir: {local_path}")
+            return local_path
+
+        # Check RunPod network volume directly
+        nv_path = os.path.join("/runpod-volume", "models", "sam3", self.SAM3_FILENAME)
+        if os.path.isfile(nv_path):
+            print(f"[ArchAi3D SAM3] Found model on network volume: {nv_path}")
+            return nv_path
+
+        # Fall back to download
         os.makedirs(models_dir, exist_ok=True)
         local_path = os.path.join(models_dir, self.SAM3_FILENAME)
-
-        if not os.path.exists(local_path):
-            print(f"[ArchAi3D SAM3] Downloading model from {self.SAM3_MODEL_URL}...")
-            download_url_to_file(self.SAM3_MODEL_URL, local_path)
+        print(f"[ArchAi3D SAM3] Downloading model from {self.SAM3_MODEL_URL}...")
+        download_url_to_file(self.SAM3_MODEL_URL, local_path)
 
         return local_path
 
-    def _load_model(self, device_str):
+    def _load_model(self, device_str, compile_model=False):
         """Load SAM3 model (will be unloaded after use)."""
-        # Add SAM3 path if not already there
-        if SAM3_LOCAL_DIR not in sys.path:
-            sys.path.insert(0, SAM3_LOCAL_DIR)
+        # Add parent of SAM3 dir so 'sam3' is importable as a package
+        sam3_parent = os.path.dirname(SAM3_LOCAL_DIR)
+        if sam3_parent not in sys.path:
+            sys.path.insert(0, sam3_parent)
 
         # Check for BPE file
         bpe_path = os.path.join(SAM3_LOCAL_DIR, "assets", "bpe_simple_vocab_16e6.txt.gz")
@@ -292,6 +328,19 @@ class ArchAi3D_SAM3_Segment:
             enable_inst_interactivity=False,
         )
 
+        if compile_model and device_str == "cuda":
+            # Set inductor cache to persistent dir (keyed by GPU arch automatically)
+            import torch._inductor.config as inductor_config
+            inductor_config.cache_dir = COMPILE_CACHE_DIR
+            inductor_config.fx_graph_cache = True
+
+            gpu_name = torch.cuda.get_device_name(0)
+            cap = torch.cuda.get_device_capability(0)
+            print(f"[ArchAi3D SAM3] Compiling model for {gpu_name} (sm_{cap[0]}{cap[1]})...")
+            print(f"[ArchAi3D SAM3] Cache dir: {COMPILE_CACHE_DIR}")
+            model = torch.compile(model, mode="max-autotune-no-cudagraphs")
+            print(f"[ArchAi3D SAM3] Model compiled (cached kernels will be reused on next run)")
+
         processor = Sam3Processor(model, device=device_str)
         return model, processor
 
@@ -308,9 +357,9 @@ class ArchAi3D_SAM3_Segment:
         mask_rgb = empty_mask.reshape((-1, 1, h, w)).movedim(1, -1).expand(-1, -1, -1, 3)
         return result_image, mask_image, empty_mask, mask_rgb
 
-    def segment(self, name, image, prompt, confidence_threshold=0.5, use_cache=True,
+    def segment(self, name, image, prompt, confidence_threshold=0.5, segment_pick=0, use_cache=True,
                 mask_blur=0, mask_offset=0, invert_output=False,
-                background="Alpha", background_color="#222222", device="Auto"):
+                background="Alpha", background_color="#222222", device="Auto", compile_model=False):
         """
         Execute SAM3 segmentation with caching and aggressive memory cleanup.
         """
@@ -321,7 +370,7 @@ class ArchAi3D_SAM3_Segment:
         cache_key = None
         if use_cache:
             cache_key = self._compute_cache_key(
-                image, prompt, confidence_threshold, mask_blur, mask_offset,
+                image, prompt, confidence_threshold, segment_pick, mask_blur, mask_offset,
                 invert_output, background, background_color
             )
             cached = self._get_cached_result(cache_key)
@@ -339,7 +388,7 @@ class ArchAi3D_SAM3_Segment:
 
         try:
             # Load model
-            model, processor = self._load_model(device_str)
+            model, processor = self._load_model(device_str, compile_model=compile_model)
 
             autocast_device = comfy.model_management.get_autocast_device(torch_device)
             autocast_enabled = torch_device.type == "cuda" and not comfy.model_management.is_device_mps(torch_device)
@@ -360,6 +409,7 @@ class ArchAi3D_SAM3_Segment:
                     state = processor.set_text_prompt(text, state)
 
                     masks = state.get("masks")
+                    scores = state.get("scores")
                     if masks is None or masks.numel() == 0:
                         result_image, mask_image, mask_tensor, mask_rgb = self._empty_result(
                             img_pil, background, background_color
@@ -368,7 +418,30 @@ class ArchAi3D_SAM3_Segment:
                         masks = masks.float().to("cpu")
                         if masks.ndim == 4:
                             masks = masks.squeeze(1)
-                        combined = masks.amax(dim=0)
+
+                        # Sort by confidence (descending)
+                        if scores is not None and scores.numel() > 0:
+                            sorted_idx = scores.cpu().argsort(descending=True)
+                            masks = masks[sorted_idx]
+
+                        if segment_pick > 0:
+                            # Pick specific segment (1-indexed)
+                            idx = segment_pick - 1
+                            if idx < masks.shape[0]:
+                                combined = masks[idx]
+                                print(f"[ArchAi3D SAM3] Picked segment {segment_pick}/{masks.shape[0]}")
+                            else:
+                                print(f"[ArchAi3D SAM3] segment_pick {segment_pick} > {masks.shape[0]} found, returning empty")
+                                result_image, mask_image, mask_tensor, mask_rgb = self._empty_result(
+                                    img_pil, background, background_color
+                                )
+                                result_images.append(pil2tensor(result_image))
+                                result_masks.append(mask_tensor)
+                                result_mask_images.append(mask_rgb)
+                                continue
+                        else:
+                            # Merge all segments
+                            combined = masks.amax(dim=0)
                         mask_np = (combined.clamp(0, 1).numpy() * 255).astype(np.uint8)
                         mask_image = Image.fromarray(mask_np, mode="L")
                         mask_image = process_mask(mask_image, invert_output, mask_blur, mask_offset)
@@ -424,7 +497,7 @@ class ArchAi3D_SAM3_Segment:
             print("[ArchAi3D SAM3] GPU memory freed!")
 
     @classmethod
-    def IS_CHANGED(cls, name, image, prompt, confidence_threshold, use_cache, **kwargs):
+    def IS_CHANGED(cls, name, image, prompt, confidence_threshold, segment_pick, use_cache, **kwargs):
         """Return unique value to control caching behavior."""
         if not use_cache:
             # Always re-run if cache disabled
