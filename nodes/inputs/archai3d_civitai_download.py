@@ -15,6 +15,8 @@ Version: 2.0.0
 import os
 import requests
 import shutil
+import threading
+import time
 from tqdm import tqdm
 import re
 import subprocess
@@ -26,6 +28,38 @@ try:
     HAS_SERVER = True
 except ImportError:
     HAS_SERVER = False
+
+
+# Module-level lock — serializes CivitAI downloads so concurrent or rapid-fire
+# nodes don't trigger CivitAI rate limits (429/503). One download at a time.
+_CIVITAI_DOWNLOAD_LOCK = threading.Lock()
+
+
+def _request_with_retry(method, url, *, max_retries=4, backoff_base=2.0, **kwargs):
+    """GET/HEAD with retry on 429/5xx/timeout. Returns final Response."""
+    last_exc = None
+    for attempt in range(max_retries):
+        try:
+            response = requests.request(method, url, **kwargs)
+            if response.status_code in (429, 500, 502, 503, 504):
+                # Respect Retry-After header if present
+                retry_after = response.headers.get('Retry-After')
+                wait = float(retry_after) if retry_after else backoff_base ** attempt
+                print(f"[ArchAi3D CivitAI] Got {response.status_code}, retrying in {wait:.1f}s "
+                      f"(attempt {attempt + 1}/{max_retries})")
+                response.close()
+                time.sleep(wait)
+                continue
+            return response
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            last_exc = e
+            wait = backoff_base ** attempt
+            print(f"[ArchAi3D CivitAI] {type(e).__name__}: retrying in {wait:.1f}s "
+                  f"(attempt {attempt + 1}/{max_retries})")
+            time.sleep(wait)
+    if last_exc:
+        raise last_exc
+    raise Exception(f"Failed after {max_retries} retries with 429/5xx responses")
 
 
 def get_model_dirs():
@@ -43,9 +77,10 @@ def get_model_dirs():
 def check_aria2():
     """Check if aria2c is available."""
     try:
-        result = subprocess.run(['aria2c', '--version'], capture_output=True, text=True)
+        result = subprocess.run(['aria2c', '--version'], capture_output=True,
+                                text=True, timeout=5)
         return result.returncode == 0
-    except FileNotFoundError:
+    except (FileNotFoundError, subprocess.TimeoutExpired):
         return False
 
 
@@ -146,14 +181,16 @@ class ArchAi3D_CivitAI_Download:
         """Download using aria2c for maximum speed."""
         cmd = [
             'aria2c',
-            '-x', str(connections),  # Max connections per server
-            '-s', str(connections),  # Split file into N parts
-            '-k', '1M',              # Min split size
+            '-x', str(connections),
+            '-s', str(connections),
+            '-k', '1M',
             '-o', os.path.basename(output_path),
             '-d', os.path.dirname(output_path),
             '--file-allocation=none',
             '--console-log-level=error',
             '--summary-interval=1',
+            '--allow-overwrite=true',
+            '--auto-file-renaming=false',
         ]
 
         if token:
@@ -162,50 +199,81 @@ class ArchAi3D_CivitAI_Download:
         cmd.append(url)
 
         print(f"[ArchAi3D CivitAI] Using aria2c with {connections} connections...")
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        # 1 hour max — large models can take 10+ minutes on slow links
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
 
-        if result.returncode == 0 and os.path.exists(output_path):
-            return output_path
-        else:
-            raise Exception(f"aria2c failed: {result.stderr}")
+        if result.returncode != 0:
+            raise Exception(f"aria2c failed (exit {result.returncode}): {result.stderr}")
+        if not os.path.exists(output_path):
+            raise Exception("aria2c reported success but output file missing")
+        if os.path.getsize(output_path) == 0:
+            os.remove(output_path)
+            raise Exception("aria2c produced 0-byte file (likely auth/redirect issue)")
+        return output_path
 
-    def _download_chunk(self, url, start, end, temp_file, chunk_id, token=None):
-        """Download a chunk of the file."""
+    def _download_chunk(self, url, start, end, temp_file, chunk_id):
+        """Download a chunk of the file. `url` is the resolved CDN URL (no auth needed)."""
         headers = {'Range': f'bytes={start}-{end}'}
-        if token:
-            headers['Authorization'] = f'Bearer {token}'
 
-        response = requests.get(url, headers=headers, stream=True)
+        response = _request_with_retry('GET', url, headers=headers, stream=True, timeout=120)
         response.raise_for_status()
 
-        with open(temp_file, 'r+b') as f:
-            f.seek(start)
-            for chunk in response.iter_content(chunk_size=1024*1024):
-                if chunk:
-                    f.write(chunk)
+        written = 0
+        try:
+            with open(temp_file, 'r+b') as f:
+                f.seek(start)
+                for chunk in response.iter_content(chunk_size=1024 * 1024):
+                    if chunk:
+                        f.write(chunk)
+                        written += len(chunk)
+        finally:
+            response.close()
 
+        expected = end - start + 1
+        if written < expected:
+            raise Exception(f"Chunk {chunk_id} short read: got {written}/{expected} bytes")
         return chunk_id
 
-    def _download_parallel(self, url, output_path, connections=16, token=None):
-        """Download using parallel connections."""
-        # Get file size
+    def _resolve_download(self, url, token=None):
+        """Resolve redirects and return (final_url, content_length).
+
+        CivitAI's /api/download/models/{id}?token=XXX redirects to a presigned
+        CDN URL that does NOT need Authorization. We follow the redirect once
+        here so parallel chunks can hit the CDN directly without auth issues.
+        """
         headers = {}
         if token:
             headers['Authorization'] = f'Bearer {token}'
 
-        response = requests.head(url, headers=headers, allow_redirects=True)
-        total_size = int(response.headers.get('content-length', 0))
+        # Use streaming GET so we can see the final URL after redirects without
+        # actually downloading the body. `with` guarantees the connection returns
+        # to the pool even if we raise — otherwise the next run hangs on connection reuse.
+        with requests.get(url, headers=headers, stream=True,
+                          allow_redirects=True, timeout=60) as response:
+            response.raise_for_status()
+            final_url = response.url
+            total_size = int(response.headers.get('content-length', 0))
+            content_type = response.headers.get('content-type', '')
 
-        if total_size == 0:
-            # Fallback to single connection
-            return self._download_single(url, output_path, token)
+        # CivitAI returns text/html or application/json for auth errors
+        if total_size == 0 or 'html' in content_type.lower() or \
+                (content_type.startswith('application/json') and 'octet-stream' not in content_type):
+            raise Exception(
+                f"Server did not return a binary download (content-type: {content_type}, "
+                f"length: {total_size}). Check your API token or model ID."
+            )
 
-        # Create empty file
+        return final_url, total_size
+
+    def _download_parallel(self, url, output_path, connections=16, token=None):
+        """Download using parallel Range requests to the resolved CDN URL."""
+        final_url, total_size = self._resolve_download(url, token)
+
+        # Pre-allocate file (sparse is fine — chunks fill it)
         with open(output_path, 'wb') as f:
             f.seek(total_size - 1)
             f.write(b'\0')
 
-        # Calculate chunk sizes
         chunk_size = total_size // connections
         chunks = []
         for i in range(connections):
@@ -213,50 +281,88 @@ class ArchAi3D_CivitAI_Download:
             end = start + chunk_size - 1 if i < connections - 1 else total_size - 1
             chunks.append((start, end, i))
 
-        print(f"[ArchAi3D CivitAI] Downloading with {connections} parallel connections...")
+        print(f"[ArchAi3D CivitAI] Downloading {total_size / 1e6:.1f} MB "
+              f"via {connections} parallel connections...")
 
-        # Download chunks in parallel
+        # Fail fast on any chunk error — otherwise we end up with a sparse/partial file
         downloaded_chunks = 0
         with ThreadPoolExecutor(max_workers=connections) as executor:
             futures = {
                 executor.submit(
-                    self._download_chunk, url, start, end, output_path, chunk_id, token
+                    self._download_chunk, final_url, start, end, output_path, chunk_id
                 ): chunk_id for start, end, chunk_id in chunks
             }
 
             for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    for f in futures:
+                        f.cancel()
+                    if os.path.exists(output_path):
+                        os.remove(output_path)
+                    raise Exception(f"Parallel chunk failed: {e}")
                 downloaded_chunks += 1
-                progress = (downloaded_chunks / connections) * 100
-                self.set_progress(progress)
+                self.set_progress((downloaded_chunks / connections) * 100)
+
+        actual = os.path.getsize(output_path)
+        if actual != total_size:
+            os.remove(output_path)
+            raise Exception(f"Size mismatch after parallel download: got {actual}, expected {total_size}")
 
         return output_path
 
     def _download_single(self, url, output_path, token=None):
-        """Single connection download fallback."""
+        """Single connection streaming download with content-type and size verification."""
         headers = {}
         if token:
             headers['Authorization'] = f'Bearer {token}'
 
-        response = requests.get(url, headers=headers, stream=True)
-        response.raise_for_status()
+        with requests.get(url, headers=headers, stream=True,
+                          allow_redirects=True, timeout=120) as response:
+            response.raise_for_status()
 
-        total_size = int(response.headers.get('content-length', 0))
-        downloaded = 0
+            content_type = response.headers.get('content-type', '').lower()
+            if 'html' in content_type or content_type.startswith('application/json'):
+                raise Exception(
+                    f"Server returned {content_type} instead of binary file — "
+                    f"likely auth or model-ID error."
+                )
 
-        with open(output_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=1024*1024):
-                if chunk:
-                    f.write(chunk)
-                    downloaded += len(chunk)
-                    if total_size > 0:
-                        self.set_progress((downloaded / total_size) * 100)
+            total_size = int(response.headers.get('content-length', 0))
+            downloaded = 0
 
+            with open(output_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=1024 * 1024):
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if total_size > 0:
+                            self.set_progress((downloaded / total_size) * 100)
+
+        actual = os.path.getsize(output_path)
+        if actual == 0:
+            os.remove(output_path)
+            raise Exception("Download produced 0-byte file")
+        if total_size > 0 and actual != total_size:
+            os.remove(output_path)
+            raise Exception(f"Size mismatch: got {actual}, expected {total_size}")
         return output_path
 
     def download(self, model_id, api_token, save_dir, node_id=None,
                  custom_name="", overwrite=False, save_dir_override="", connections=16):
-        """Download file from CivitAI."""
+        """Download file from CivitAI.
 
+        Serialized via module-level lock so multiple CivitAI Download nodes in
+        the same workflow run one at a time. Prevents CivitAI rate-limiting
+        when the workflow has several downloads queued back-to-back.
+        """
+        with _CIVITAI_DOWNLOAD_LOCK:
+            return self._download_impl(model_id, api_token, save_dir, node_id,
+                                       custom_name, overwrite, save_dir_override, connections)
+
+    def _download_impl(self, model_id, api_token, save_dir, node_id=None,
+                       custom_name="", overwrite=False, save_dir_override="", connections=16):
         self.node_id = node_id
 
         if not model_id:
@@ -277,15 +383,30 @@ class ArchAi3D_CivitAI_Download:
         print(f"[ArchAi3D CivitAI Download] Model ID: {model_id}")
 
         try:
-            # First get the filename from headers
+            # First get the filename from headers.
+            # Use GET with stream=True instead of HEAD — CivitAI is more reliable
+            # with GET, and closing the response before reading the body avoids
+            # downloading content. Always use a timeout so we never hang.
             headers = {}
             if token:
                 headers['Authorization'] = f'Bearer {token}'
 
-            response = requests.head(url, headers=headers, allow_redirects=True, params={'token': token} if token else None)
-
-            # Get filename
-            original_filename = self._get_filename_from_response(response, url)
+            # Retry through _request_with_retry for 429/5xx resilience
+            with _request_with_retry(
+                'GET', url, headers=headers, stream=True, allow_redirects=True,
+                params={'token': token} if token else None, timeout=60,
+            ) as response:
+                if response.status_code == 401:
+                    msg = "❌ Unauthorized: Check your API token"
+                    print(f"[ArchAi3D CivitAI Download] {msg}")
+                    return (msg,)
+                if response.status_code == 404:
+                    msg = (f"❌ Model not found (404): version ID '{model_id}' does not exist "
+                           f"or is not downloadable. Use the modelVersionId from the CivitAI URL.")
+                    print(f"[ArchAi3D CivitAI Download] {msg}")
+                    return (msg,)
+                response.raise_for_status()
+                original_filename = self._get_filename_from_response(response, url)
 
             # Determine final filename
             if custom_name.strip():
@@ -314,11 +435,25 @@ class ArchAi3D_CivitAI_Download:
                     self._download_with_aria2(download_url, full_path, connections, token)
                 except Exception as e:
                     print(f"[ArchAi3D CivitAI] aria2c failed, trying parallel: {e}")
-                    self._download_parallel(download_url, full_path, connections, token)
+                    try:
+                        self._download_parallel(download_url, full_path, connections, token)
+                    except Exception as e2:
+                        print(f"[ArchAi3D CivitAI] parallel failed, trying single: {e2}")
+                        self._download_single(download_url, full_path, token)
             else:
-                self._download_parallel(download_url, full_path, connections, token)
+                try:
+                    self._download_parallel(download_url, full_path, connections, token)
+                except Exception as e:
+                    print(f"[ArchAi3D CivitAI] parallel failed, trying single: {e}")
+                    self._download_single(download_url, full_path, token)
 
-            # Get file size
+            # Final verification — never let a 0-byte file through
+            if not os.path.exists(full_path):
+                return ("❌ Download failed: output file not created",)
+            if os.path.getsize(full_path) == 0:
+                os.remove(full_path)
+                return ("❌ Download failed: 0-byte file (check API token and model ID)",)
+
             size_mb = os.path.getsize(full_path) / (1024 * 1024)
             size_str = f"{size_mb:.1f} MB" if size_mb < 1024 else f"{size_mb/1024:.2f} GB"
 
@@ -330,10 +465,16 @@ class ArchAi3D_CivitAI_Download:
             return (status,)
 
         except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 401:
-                return ("❌ Unauthorized: Check your API token",)
-            if e.response.status_code == 404:
-                return (f"❌ Model not found: ID {model_id}",)
-            return (f"❌ HTTP Error: {e}",)
+            code = e.response.status_code if e.response is not None else 0
+            if code == 401:
+                msg = "❌ Unauthorized: Check your API token"
+            elif code == 404:
+                msg = f"❌ Model not found: ID {model_id}"
+            else:
+                msg = f"❌ HTTP Error: {e}"
+            print(f"[ArchAi3D CivitAI Download] {msg}")
+            return (msg,)
         except Exception as e:
-            return (f"❌ Download failed: {str(e)}",)
+            msg = f"❌ Download failed: {type(e).__name__}: {str(e)}"
+            print(f"[ArchAi3D CivitAI Download] {msg}")
+            return (msg,)
